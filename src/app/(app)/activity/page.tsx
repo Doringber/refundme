@@ -11,7 +11,7 @@ export default function ActivityPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl text-night">פעילות אחרונה</h1>
+        <h1 className="font-display text-2xl text-forest">פעילות אחרונה</h1>
         <p className="text-sm text-eggplant">כל פעולה מקשרת למסמך הרלוונטי</p>
       </div>
       {demo.activity.length === 0 ? (

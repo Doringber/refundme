@@ -32,8 +32,8 @@ export default function DashboardPage() {
 
       <section className="space-y-3">
         <div className="flex items-end justify-between">
-          <h2 className="font-display text-xl text-night">לפי חנות</h2>
-          <Link href="/vouchers" className="text-sm font-semibold text-pool">
+          <h2 className="font-display text-xl text-forest">לפי חנות</h2>
+          <Link href="/vouchers" className="text-sm font-bold text-forest">
             כל הזיכויים
           </Link>
         </div>
@@ -51,7 +51,7 @@ export default function DashboardPage() {
                     <p className="font-semibold text-night">{m.merchantName}</p>
                     <p className="text-xs text-eggplant">{m.count} מסמכים</p>
                   </div>
-                  <p className="font-display text-lg text-night">
+                  <p className="font-display text-lg text-forest">
                     {formatIls(m.totalAgorot)}
                   </p>
                 </Link>
@@ -62,7 +62,7 @@ export default function DashboardPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl text-night">פגים בקרוב</h2>
+        <h2 className="font-display text-xl text-forest">פגים בקרוב</h2>
         {summary.expiringSoon.length === 0 ? (
           <p className="text-sm text-eggplant">
             אין זיכויים עם תוקף מאומת ב־30 הימים הקרובים.
@@ -77,13 +77,13 @@ export default function DashboardPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl text-night">ציר תוקף</h2>
+        <h2 className="font-display text-xl text-forest">ציר תוקף</h2>
         {timeline.length === 0 ? (
           <p className="text-sm text-eggplant">
             אין תאריכי תוקף מאומתים להצגה. מסמכים ללא תאריך לא מקבלים ספירה לאחור.
           </p>
         ) : (
-          <ol className="relative space-y-3 border-r-2 border-[rgba(71,181,168,0.35)] pr-4">
+          <ol className="relative space-y-3 border-r-2 border-[rgba(53,94,78,0.28)] pr-4">
             {timeline.map(({ voucher, days }) => (
               <li key={voucher.id}>
                 <Link
@@ -110,8 +110,8 @@ export default function DashboardPage() {
 
       <section className="space-y-3">
         <div className="flex items-end justify-between">
-          <h2 className="font-display text-xl text-night">פעילות אחרונה</h2>
-          <Link href="/activity" className="text-sm font-semibold text-pool">
+          <h2 className="font-display text-xl text-forest">פעילות אחרונה</h2>
+          <Link href="/activity" className="text-sm font-bold text-forest">
             הכל
           </Link>
         </div>

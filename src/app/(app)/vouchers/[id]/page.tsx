@@ -62,12 +62,12 @@ export default function VoucherDetailPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <Link href="/vouchers" className="text-sm font-semibold text-pool">
+      <Link href="/vouchers" className="text-sm font-semibold text-forest">
         ← חזרה
       </Link>
 
       <header className="space-y-2">
-        <h1 className="font-display text-3xl text-night">{voucher.merchantName}</h1>
+        <h1 className="font-display text-3xl text-forest">{voucher.merchantName}</h1>
         <div className="flex flex-wrap gap-2">
           <TypeBadge type={voucher.documentType} />
           <StatusBadge status={voucher.status} />

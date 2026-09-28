@@ -100,7 +100,7 @@ export default function StoresPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl text-night">חנויות בקרבתי</h1>
+        <h1 className="font-display text-2xl text-forest">חנויות בקרבתי</h1>
         <p className="text-sm text-eggplant">
           מאגר סניפים קטן לתחזוקה. סימון הקבלה הוא לפי אימות ידני — לא מסיקים שכל
           סניף מקבל את השובר.
@@ -161,7 +161,7 @@ export default function StoresPage() {
             <li key={b.id} className="card-surface px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-display text-lg text-night">
+                  <p className="font-display text-lg text-forest">
                     {b.merchantNameHe}
                   </p>
                   <p className="font-medium text-night">{b.nameHe}</p>
@@ -173,7 +173,7 @@ export default function StoresPage() {
                   )}
                 </div>
                 {b.distanceKm != null && (
-                  <p className="text-sm font-semibold text-pool">
+                  <p className="text-sm font-semibold text-forest">
                     {b.distanceKm < 10
                       ? `${b.distanceKm.toFixed(1)} ק״מ`
                       : `${Math.round(b.distanceKm)} ק״מ`}

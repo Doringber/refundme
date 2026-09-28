@@ -12,7 +12,7 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg text-night">{voucher.merchantName}</h3>
+          <h3 className="font-display text-lg text-forest">{voucher.merchantName}</h3>
           <div className="mt-2 flex flex-wrap gap-2">
             <TypeBadge type={voucher.documentType} />
             <StatusBadge status={voucher.status} />
@@ -23,7 +23,7 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
           </div>
         </div>
         <div className="text-left">
-          <p className="font-display text-xl font-semibold text-night">
+          <p className="font-display text-xl text-forest">
             {formatIls(
               isReceipt
                 ? voucher.originalAmountAgorot

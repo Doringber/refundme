@@ -48,7 +48,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-display text-2xl text-night">הגדרות וחשבון</h1>
+        <h1 className="font-display text-2xl text-forest">הגדרות וחשבון</h1>
         <p className="text-sm text-eggplant">
           תזכורות, סולם כדור הזיכוי, ייצוא ומחיקה
         </p>

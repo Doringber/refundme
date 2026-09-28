@@ -131,10 +131,10 @@ export function CreditOrb({
 
   const ringColor =
     urgency === "urgent" || urgency === "expired"
-      ? "var(--poppy)"
+      ? "var(--blush-deep)"
       : urgency === "upcoming"
-        ? "var(--daffodil)"
-        : "var(--pool)";
+        ? "var(--lime-chip)"
+        : "var(--forest)";
 
   const hasConfirmedCountdown =
     nearestExpiring?.expiryConfidence === "confirmed" &&
@@ -175,10 +175,10 @@ export function CreditOrb({
               "linear-gradient(160deg, rgba(71,181,168,0.25), rgba(163,193,226,0.35), rgba(219,192,232,0.4))",
           }}
         >
-          <span className="font-display text-4xl text-night/40">₪0</span>
+          <span className="font-display text-4xl text-forest/35">₪0</span>
         </div>
         <div>
-          <h2 className="font-display text-2xl text-night">התחילו לאסוף זיכויים</h2>
+          <h2 className="font-display text-2xl text-forest">התחילו לאסוף זיכויים</h2>
           <p className="mt-2 text-sm text-eggplant">
             צלמו שובר נייר, אשרו את הפרטים — ותראו מיד כמה נשאר לכם.
           </p>
@@ -297,23 +297,23 @@ export function CreditOrb({
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <p className="text-sm font-medium text-night/80">זיכויים זמינים</p>
-          <p className="font-display mt-1 text-5xl font-semibold tracking-tight text-night">
+          <p className="text-sm font-semibold text-forest/80">זיכויים זמינים</p>
+          <p className="font-display mt-1 text-5xl tracking-tight text-forest">
             {formatIls(displayTotal)}
           </p>
           <p className="mt-1 text-xs font-medium text-eggplant">
             יתרה לפי הדיווח שלך
           </p>
           {scaleLabel ? (
-            <p className="mt-1 text-xs text-night/60">{scaleLabel}</p>
+            <p className="mt-1 text-xs text-forest/55">{scaleLabel}</p>
           ) : (
-            <p className="mt-1 text-xs text-night/45">גלים לנוי — ללא אחוזים</p>
+            <p className="mt-1 text-xs text-forest/40">גלים לנוי — ללא אחוזים</p>
           )}
         </div>
 
         {gainFlash != null && gainFlash > 0 && (
           <div
-            className="pointer-events-none absolute left-1/2 top-10 -translate-x-1/2 font-display text-2xl font-bold text-pool"
+            className="pointer-events-none absolute left-1/2 top-10 -translate-x-1/2 font-display text-2xl text-forest-soft"
             style={{
               animation: reducedMotion ? undefined : "count-pop 1s ease forwards",
             }}

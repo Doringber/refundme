@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Rubik } from "next/font/google";
+import { Assistant, Varela_Round } from "next/font/google";
 import { APP_NAME } from "@/lib/constants";
 import "./globals.css";
 
-const rubik = Rubik({
-  variable: "--font-rubik",
+const assistant = Assistant({
+  variable: "--font-assistant",
   subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const fredoka = Fredoka({
-  variable: "--font-fredoka",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const varelaRound = Varela_Round({
+  variable: "--font-varela",
+  subsets: ["hebrew", "latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="he"
       dir="rtl"
-      className={`${rubik.variable} ${fredoka.variable} h-full antialiased`}
+      className={`${assistant.variable} ${varelaRound.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

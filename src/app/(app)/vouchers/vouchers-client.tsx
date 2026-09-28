@@ -44,7 +44,7 @@ export function VouchersClient() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl text-night">הזיכויים שלי</h1>
+        <h1 className="font-display text-2xl text-forest">הזיכויים שלי</h1>
         <p className="text-sm text-eggplant">חיפוש וסינון לפי חנות, סוג, סטטוס ותוקף</p>
       </div>
 

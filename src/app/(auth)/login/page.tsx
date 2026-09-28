@@ -17,7 +17,7 @@ export default function LoginPage() {
   if (!isSupabaseConfigured()) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">
-        <h1 className="font-display text-3xl text-night">{APP_NAME}</h1>
+        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
         <p className="text-sm text-eggplant">
           Supabase אינו מוגדר. השתמשו במצב הדמו או הגדירו משתני סביבה.
         </p>
@@ -53,7 +53,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
       <div>
-        <h1 className="font-display text-3xl text-night">התחברות</h1>
+        <h1 className="font-display text-3xl text-forest">התחברות</h1>
         <p className="text-sm text-eggplant">{APP_NAME}</p>
       </div>
       <form onSubmit={onSubmit} className="card-surface space-y-3 p-5">
@@ -90,7 +90,7 @@ export default function LoginPage() {
       </form>
       <p className="text-center text-sm">
         אין חשבון?{" "}
-        <Link href="/signup" className="font-semibold text-pool">
+        <Link href="/signup" className="font-semibold text-forest">
           הרשמה
         </Link>
         {" · "}

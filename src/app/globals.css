@@ -1,9 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand palette — זיכוי שלי */
+  /* Warm boutique palette — inspired by the Hebrew reference */
   --warm-bg: #faf7f2;
+  --forest: #355e4e;
+  --forest-deep: #2a4b3c;
+  --forest-soft: #5e966b;
   --night: #252d45;
+  --bone: #f3efe6;
+  --cream-ink: #e8e8d5;
+
+  /* Soft pastel accents (pills / chips) */
+  --blush: #f4bdbe;
+  --blush-deep: #e8a0a0;
+  --rose: #f6bdc8;
+  --lime-chip: #cfe58e;
+  --dusty-blue: #98b9e3;
+  --mint-chip: #c3d6c1;
+
+  /* Legacy / orb accents kept purposeful */
   --pool: #47b5a8;
   --blue-skies: #a3c1e2;
   --baby-lavender: #dbc0e8;
@@ -20,15 +35,26 @@
   --foreground: var(--night);
   --card: #ffffff;
   --muted: #6b515e;
-  --ring-track: rgba(37, 45, 69, 0.12);
-  --shadow-soft: 0 12px 40px rgba(37, 45, 69, 0.08);
-  --radius-card: 1.5rem;
+  --ring-track: rgba(53, 94, 78, 0.14);
+  --shadow-soft: 0 14px 36px rgba(42, 75, 60, 0.08);
+  --radius-card: 1.75rem;
+  --radius-pill: 999px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-night: var(--night);
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-forest-soft: var(--forest-soft);
+  --color-bone: var(--bone);
+  --color-blush: var(--blush);
+  --color-blush-deep: var(--blush-deep);
+  --color-rose: var(--rose);
+  --color-lime-chip: var(--lime-chip);
+  --color-dusty-blue: var(--dusty-blue);
+  --color-mint-chip: var(--mint-chip);
   --color-pool: var(--pool);
   --color-blue-skies: var(--blue-skies);
   --color-lavender: var(--baby-lavender);
@@ -41,8 +67,8 @@
   --color-eggplant: var(--eggplant);
   --color-hay: var(--hay);
   --color-warm: var(--warm-bg);
-  --font-sans: var(--font-rubik);
-  --font-display: var(--font-fredoka);
+  --font-sans: var(--font-assistant);
+  --font-display: var(--font-varela);
 }
 
 * {
@@ -55,36 +81,39 @@ html {
 
 body {
   background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(163, 193, 226, 0.35), transparent 55%),
-    radial-gradient(900px 500px at -10% 20%, rgba(219, 192, 232, 0.28), transparent 50%),
-    radial-gradient(800px 400px at 50% 110%, rgba(247, 226, 137, 0.22), transparent 45%),
+    radial-gradient(900px 480px at 100% 0%, rgba(195, 214, 193, 0.45), transparent 55%),
+    radial-gradient(700px 420px at 0% 15%, rgba(244, 189, 190, 0.28), transparent 50%),
+    radial-gradient(800px 360px at 60% 100%, rgba(207, 229, 142, 0.22), transparent 45%),
     var(--warm-bg);
   color: var(--foreground);
-  font-family: var(--font-rubik), "Rubik", sans-serif;
+  font-family: var(--font-assistant), "Assistant", sans-serif;
   min-height: 100dvh;
+  letter-spacing: 0.01em;
 }
 
 .font-display {
-  font-family: var(--font-fredoka), "Fredoka", var(--font-rubik), sans-serif;
+  font-family: var(--font-varela), "Varela Round", var(--font-assistant), sans-serif;
+  letter-spacing: 0.01em;
+  font-weight: 400;
 }
 
 .card-surface {
-  background: color-mix(in srgb, white 92%, var(--blue-skies));
-  border: 1px solid rgba(37, 45, 69, 0.06);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(53, 94, 78, 0.08);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-soft);
 }
 
 .btn-primary {
-  background: var(--pool);
-  color: white;
-  border-radius: 999px;
-  font-weight: 600;
-  transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
+  background: var(--forest);
+  color: var(--cream-ink);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  transition: transform 160ms ease, background 160ms ease, filter 160ms ease;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.05);
+  background: var(--forest-deep);
 }
 
 .btn-primary:active {
@@ -92,68 +121,91 @@ body {
 }
 
 .btn-secondary {
-  background: white;
+  background: var(--blush);
   color: var(--night);
-  border: 1px solid rgba(37, 45, 69, 0.12);
-  border-radius: 999px;
-  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+}
+
+.btn-secondary:hover {
+  filter: brightness(0.98);
 }
 
 .btn-danger {
-  background: var(--poppy);
+  background: var(--blush-deep);
   color: white;
-  border-radius: 999px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
 }
 
 .input-field {
   width: 100%;
-  border-radius: 1rem;
-  border: 1px solid rgba(37, 45, 69, 0.14);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(53, 94, 78, 0.14);
   background: white;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1.25rem;
   color: var(--night);
   outline: none;
+  font-weight: 500;
 }
 
 .input-field:focus {
-  border-color: var(--pool);
-  box-shadow: 0 0 0 3px rgba(71, 181, 168, 0.22);
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(53, 94, 78, 0.16);
+}
+
+select.input-field {
+  border-radius: 1.25rem;
+}
+
+textarea.input-field {
+  border-radius: 1.5rem;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border-radius: 999px;
-  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.85rem;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .badge-pool {
-  background: rgba(71, 181, 168, 0.15);
-  color: #1f6f67;
+  background: var(--mint-chip);
+  color: var(--forest-deep);
 }
 
 .badge-daffodil {
-  background: rgba(247, 226, 137, 0.55);
-  color: #6a5310;
+  background: var(--lime-chip);
+  color: #3f4d1f;
 }
 
 .badge-poppy {
-  background: rgba(247, 111, 84, 0.16);
-  color: #a33a28;
+  background: var(--blush);
+  color: #7a3a3a;
 }
 
 .badge-lavender {
-  background: rgba(219, 192, 232, 0.45);
-  color: #5c3f6b;
+  background: var(--dusty-blue);
+  color: #24384f;
 }
 
 .badge-sage {
-  background: rgba(169, 175, 148, 0.35);
+  background: rgba(169, 175, 148, 0.4);
   color: #3f4634;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.organic-curve {
+  border-radius: 3rem 3rem 0 0;
 }
 
 .sr-only {

@@ -85,7 +85,7 @@ export default function NewVoucherPage() {
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
-        <h1 className="font-display text-2xl text-night">הוספת זיכוי</h1>
+        <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
           צילום, העלאת תמונה או PDF — ואז אישור הפרטים לפני שמירה
         </p>
@@ -94,7 +94,7 @@ export default function NewVoucherPage() {
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
           <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-10 text-center">
-            <span className="font-display text-xl text-night">צלמו או העלו מסמך</span>
+            <span className="font-display text-xl text-forest">צלמו או העלו מסמך</span>
             <span className="text-sm text-eggplant">
               JPEG, PNG, WebP או PDF · עד 10MB
             </span>
@@ -147,7 +147,7 @@ export default function NewVoucherPage() {
 
       {step === "success" && (
         <div className="card-surface px-6 py-12 text-center" role="status">
-          <p className="font-display text-2xl text-night">נשמר בהצלחה</p>
+          <p className="font-display text-2xl text-forest">נשמר בהצלחה</p>
           <p className="mt-2 text-sm text-eggplant">חוזרים ללוח הבקרה עם אנימציית הכדור…</p>
         </div>
       )}
