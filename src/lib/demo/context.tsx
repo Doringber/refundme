@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { buildDashboardSummary, filterVouchers } from "@/lib/calculations";
+import { DEMO_STORAGE_KEY } from "@/lib/constants";
 import type {
   ActivityEvent,
   DashboardSummary,
@@ -57,7 +58,7 @@ const DemoContext = createContext<DemoContextValue | null>(null);
 function subscribe(callback: () => void) {
   const unsub = subscribeDemoStore(callback);
   const onStorage = (e: StorageEvent) => {
-    if (e.key === null || e.key === "zikuy_sheli_demo_v1") callback();
+    if (e.key === null || e.key === DEMO_STORAGE_KEY) callback();
   };
   window.addEventListener("storage", onStorage);
   return () => {

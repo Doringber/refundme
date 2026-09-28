@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { suggestFieldsFromText, suggestFromFileName } from "@/lib/extract";
+import { extractFieldsForUpload } from "@/lib/extract-vision";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
 /**
  * Server-side extraction endpoint.
- * Privileged OCR keys (if any) stay here — never in the client.
- * Without OCR credentials, returns heuristic suggestions or empty manual flow.
+ * On Netlify with AI Gateway enabled, voucher photos are read with Gemini vision.
+ * Without vision credentials, falls back to filename/text heuristics.
  */
 export async function POST(request: Request) {
   try {
@@ -44,24 +45,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "הקובץ גדול מדי" }, { status: 400 });
     }
 
-    const ocrKey = process.env.DOCUMENT_OCR_API_KEY;
-    if (ocrKey) {
-      // Placeholder for a real OCR provider — keep the contract stable.
-      // Without implementing a paid vendor, fall through to heuristics.
-    }
-
-    // PDF text is not extracted without a dedicated parser in v1.
-    // Image OCR requires an external key. Offer filename heuristics only.
-    const fields = suggestFromFileName(file.name);
-
-    return NextResponse.json({
-      fields,
-      source: "heuristic",
-      message:
-        fields.confidence === "none"
-          ? "חילוץ אוטומטי אינו זמין. מלאו את השדות ידנית לפי המסמך."
-          : "הוצעו שדות ראשוניים — אשרו ותקנו לפני השמירה.",
-    });
+    const result = await extractFieldsForUpload(file);
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json(
       { error: "שגיאה בחילוץ", fields: suggestFromFileName("") },

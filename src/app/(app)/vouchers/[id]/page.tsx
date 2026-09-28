@@ -9,6 +9,7 @@ import {
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
 
@@ -117,33 +118,12 @@ export default function VoucherDetailPage() {
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">מסמך מקורי</h2>
-        {docUrl && voucher.documentMimeType?.startsWith("image/") ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={docUrl}
-            alt={`מסמך מקורי — ${voucher.merchantName}`}
-            className="max-h-96 w-full rounded-2xl object-contain bg-white"
-          />
-        ) : (
-          <div className="rounded-2xl bg-[rgba(163,193,226,0.2)] px-4 py-8 text-center text-sm text-eggplant">
-            {voucher.documentFileName
-              ? `הקובץ ${voucher.documentFileName} שמור${voucher.documentMimeType === "application/pdf" ? " (PDF)" : ""}.`
-              : "אין תצוגה מקדימה."}
-            <p className="mt-2 text-xs">
-              תמונה אינה מבטיחה שכל קופה תקבל את הצילום במקום המקור.
-            </p>
-            {docUrl && voucher.documentMimeType === "application/pdf" && (
-              <a
-                href={docUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex text-sm font-bold text-forest"
-              >
-                פתיחת PDF
-              </a>
-            )}
-          </div>
-        )}
+        <DocumentPreview
+          url={docUrl}
+          mimeType={voucher.documentMimeType}
+          fileName={voucher.documentFileName}
+          merchantName={voucher.merchantName}
+        />
       </section>
 
       <section className="card-surface space-y-2 p-5 text-sm">

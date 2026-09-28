@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Set these in Netlify UI → Site configuration → Environment variables
+# (never commit real values):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+#   SUPABASE_SECRET_KEY
+# Enable Netlify AI Gateway in the site UI so /api/extract can read voucher photos.

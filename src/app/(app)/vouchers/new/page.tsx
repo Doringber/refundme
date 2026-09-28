@@ -7,8 +7,9 @@ import {
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
+import { prepareUploadFile } from "@/lib/images/prepare-upload";
 import type { ExtractedFields, Voucher } from "@/lib/types";
-import { fileToDataUrl, validateUpload } from "@/lib/validation";
+import { validateUpload } from "@/lib/validation";
 
 type Step = "upload" | "review" | "success";
 
@@ -36,22 +37,41 @@ export default function NewVoucherPage() {
     }
     setBusy(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const prepared = await prepareUploadFile(file);
       setDocumentMeta({
-        fileName: file.name,
-        mimeType: file.type,
-        dataUrl,
+        fileName: prepared.fileName,
+        mimeType: prepared.mimeType,
+        dataUrl: prepared.dataUrl,
       });
 
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", prepared.file);
       const res = await fetch("/api/extract", { method: "POST", body: form });
-      const json = await res.json();
-      setFields(json.fields as ExtractedFields);
-      setExtractionNote(json.message ?? json.fields?.notes ?? null);
+      const json = (await res.json()) as {
+        fields?: ExtractedFields;
+        message?: string;
+        error?: string;
+      };
+      setFields(json.fields ?? null);
+      setExtractionNote(
+        json.message ??
+          json.fields?.notes ??
+          (prepared.convertedFromHeic
+            ? "הקובץ הומר מ־HEIC ל־JPEG לתצוגה."
+            : null),
+      );
+      if (prepared.convertedFromHeic && json.message) {
+        setExtractionNote(
+          `${json.message} הקובץ הומר מ־HEIC ל־JPEG לתצוגה.`,
+        );
+      }
       setStep("review");
-    } catch {
-      setError("העלאת הקובץ נכשלה. אפשר להמשיך למילוי ידני.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "העלאת הקובץ נכשלה. אפשר להמשיך למילוי ידני.",
+      );
     } finally {
       setBusy(false);
     }
@@ -114,6 +134,8 @@ export default function NewVoucherPage() {
             <span className="font-display text-xl text-forest">צלמו או העלו מסמך</span>
             <span className="text-sm text-eggplant">
               JPEG, PNG, WebP או PDF · עד 10MB
+              <br />
+              (HEIC מאייפון יומר אוטומטית אם אפשר)
             </span>
             <input
               type="file"
@@ -136,7 +158,7 @@ export default function NewVoucherPage() {
 
           {busy && (
             <p className="text-center text-sm text-eggplant" role="status">
-              מעבד את המסמך…
+              מעבד את המסמך וקורא מהתמונה…
             </p>
           )}
           {error && (
