@@ -2,28 +2,41 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   ExpiryBadge,
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
-import { useDemo } from "@/lib/demo/context";
 
 export default function VoucherDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const demo = useDemo();
+  const app = useAppData();
   const router = useRouter();
-  const voucher = demo.getVoucher(id);
-  const redemptions = demo.getRedemptions(id);
+  const voucher = app.getVoucher(id);
+  const redemptions = app.getRedemptions(id);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [docUrl, setDocUrl] = useState<string | null>(null);
 
-  if (!demo.ready) return <LoadingBlock />;
+  useEffect(() => {
+    let cancelled = false;
+    if (!voucher) return;
+    void app.resolveDocumentUrl(voucher).then((url) => {
+      if (!cancelled) setDocUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [app, voucher]);
+
+  if (!app.ready) return <LoadingBlock />;
   if (!voucher) {
     return (
       <div className="card-surface px-6 py-12 text-center">
@@ -41,7 +54,7 @@ export default function VoucherDetailPage() {
     (voucher.status === "active" || voucher.status === "partially_redeemed") &&
     voucher.remainingAmountAgorot > 0;
 
-  function handleRedeem(e: React.FormEvent) {
+  async function handleRedeem(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setOk(null);
@@ -50,13 +63,16 @@ export default function VoucherDetailPage() {
       setError("הזינו סכום מימוש תקין");
       return;
     }
+    setBusy(true);
     try {
-      demo.redeem(voucher!.id, agorot, note.trim() || null);
+      await app.redeem(voucher!.id, agorot, note.trim() || null);
       setAmount("");
       setNote("");
       setOk("המימוש נרשם. היתרה עודכנה לפי הדיווח שלך.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "המימוש נכשל");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -101,10 +117,10 @@ export default function VoucherDetailPage() {
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">מסמך מקורי</h2>
-        {voucher.documentDataUrl && voucher.documentMimeType?.startsWith("image/") ? (
+        {docUrl && voucher.documentMimeType?.startsWith("image/") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={voucher.documentDataUrl}
+            src={docUrl}
             alt={`מסמך מקורי — ${voucher.merchantName}`}
             className="max-h-96 w-full rounded-2xl object-contain bg-white"
           />
@@ -112,10 +128,20 @@ export default function VoucherDetailPage() {
           <div className="rounded-2xl bg-[rgba(163,193,226,0.2)] px-4 py-8 text-center text-sm text-eggplant">
             {voucher.documentFileName
               ? `הקובץ ${voucher.documentFileName} שמור${voucher.documentMimeType === "application/pdf" ? " (PDF)" : ""}.`
-              : "אין תצוגה מקדימה — בדמו ללא העלאה."}
+              : "אין תצוגה מקדימה."}
             <p className="mt-2 text-xs">
               תמונה אינה מבטיחה שכל קופה תקבל את הצילום במקום המקור.
             </p>
+            {docUrl && voucher.documentMimeType === "application/pdf" && (
+              <a
+                href={docUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex text-sm font-bold text-forest"
+              >
+                פתיחת PDF
+              </a>
+            )}
           </div>
         )}
       </section>
@@ -184,8 +210,8 @@ export default function VoucherDetailPage() {
                 {ok}
               </p>
             )}
-            <button type="submit" className="btn-primary w-full py-3">
-              שמירת מימוש
+            <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+              {busy ? "שומרים…" : "שמירת מימוש"}
             </button>
           </form>
         </section>
@@ -220,8 +246,9 @@ export default function VoucherDetailPage() {
         className="btn-danger w-full py-3"
         onClick={() => {
           if (confirm("למחוק את המסמך ואת היסטוריית המימושים שלו?")) {
-            demo.removeVoucher(voucher.id);
-            router.push("/vouchers");
+            void Promise.resolve(app.removeVoucher(voucher.id)).then(() => {
+              router.push("/vouchers");
+            });
           }
         }}
       >

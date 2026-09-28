@@ -6,11 +6,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading";
 import { VoucherCard } from "@/components/vouchers/voucher-card";
 import { DOCUMENT_TYPE_LABELS, STATUS_LABELS } from "@/lib/constants";
-import { useDemo } from "@/lib/demo/context";
+import { useAppData } from "@/lib/app-data/context";
 import type { DocumentType, VoucherStatus } from "@/lib/types";
 
 export function VouchersClient() {
-  const demo = useDemo();
+  const app = useAppData();
   const params = useSearchParams();
   const [query, setQuery] = useState("");
   const [merchant, setMerchant] = useState(params.get("merchant") ?? "all");
@@ -23,23 +23,23 @@ export function VouchersClient() {
   const [expiryBefore, setExpiryBefore] = useState("");
 
   const merchants = useMemo(
-    () => [...new Set(demo.vouchers.map((v) => v.merchantName))].sort(),
-    [demo.vouchers],
+    () => [...new Set(app.vouchers.map((v) => v.merchantName))].sort(),
+    [app.vouchers],
   );
 
   const filtered = useMemo(
     () =>
-      demo.filter({
+      app.filter({
         query,
         merchant,
         documentType,
         status,
         expiryBefore: expiryBefore || undefined,
       }),
-    [demo, query, merchant, documentType, status, expiryBefore],
+    [app, query, merchant, documentType, status, expiryBefore],
   );
 
-  if (!demo.ready) return <LoadingBlock />;
+  if (!app.ready) return <LoadingBlock />;
 
   return (
     <div className="space-y-5">

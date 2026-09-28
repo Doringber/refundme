@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { APP_NAME } from "@/lib/constants";
+import { DemoEntryButton } from "@/components/auth/demo-entry-button";
+import { enterDemoMode } from "@/lib/app-data/context";
+import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
+
+function clearDemoCookie() {
+  document.cookie = `${DEMO_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,9 +27,7 @@ export default function LoginPage() {
         <p className="text-sm text-eggplant">
           Supabase אינו מוגדר. השתמשו במצב הדמו או הגדירו משתני סביבה.
         </p>
-        <Link href="/dashboard" className="btn-primary px-5 py-3 text-center">
-          כניסה לדמו
-        </Link>
+        <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
       </div>
     );
   }
@@ -33,6 +37,7 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
+      clearDemoCookie();
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -43,6 +48,7 @@ export default function LoginPage() {
         return;
       }
       router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("ההתחברות נכשלה");
     } finally {
@@ -94,9 +100,13 @@ export default function LoginPage() {
           הרשמה
         </Link>
         {" · "}
-        <Link href="/dashboard" className="font-semibold text-night">
+        <button
+          type="button"
+          className="font-semibold text-night"
+          onClick={() => enterDemoMode()}
+        >
           דמו
-        </Link>
+        </button>
       </p>
     </div>
   );

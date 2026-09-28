@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { LoadingBlock } from "@/components/ui/loading";
-import { useDemo } from "@/lib/demo/context";
+import { useAppData } from "@/lib/app-data/context";
 
 export default function ActivityPage() {
-  const demo = useDemo();
-  if (!demo.ready) return <LoadingBlock />;
+  const app = useAppData();
+  if (!app.ready) return <LoadingBlock />;
 
   return (
     <div className="space-y-5">
@@ -14,11 +14,11 @@ export default function ActivityPage() {
         <h1 className="font-display text-2xl text-forest">פעילות אחרונה</h1>
         <p className="text-sm text-eggplant">כל פעולה מקשרת למסמך הרלוונטי</p>
       </div>
-      {demo.activity.length === 0 ? (
+      {app.activity.length === 0 ? (
         <p className="text-sm text-eggplant">אין פעילות עדיין.</p>
       ) : (
         <ul className="space-y-2">
-          {demo.activity.map((a) => (
+          {app.activity.map((a) => (
             <li key={a.id}>
               {a.voucherId ? (
                 <Link

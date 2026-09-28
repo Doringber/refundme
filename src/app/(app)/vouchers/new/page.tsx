@@ -6,14 +6,14 @@ import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
-import { useDemo } from "@/lib/demo/context";
+import { useAppData } from "@/lib/app-data/context";
 import type { ExtractedFields, Voucher } from "@/lib/types";
 import { fileToDataUrl, validateUpload } from "@/lib/validation";
 
 type Step = "upload" | "review" | "success";
 
 export default function NewVoucherPage() {
-  const demo = useDemo();
+  const app = useAppData();
   const router = useRouter();
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState<string | null>(null);
@@ -74,12 +74,20 @@ export default function NewVoucherPage() {
     setStep("review");
   }
 
-  function handleSave(voucher: Voucher) {
-    demo.saveVoucher(voucher);
-    setStep("success");
-    window.setTimeout(() => {
-      router.push("/dashboard");
-    }, 900);
+  async function handleSave(voucher: Voucher) {
+    setError(null);
+    setBusy(true);
+    try {
+      await app.saveVoucher(voucher);
+      setStep("success");
+      window.setTimeout(() => {
+        router.push("/dashboard");
+      }, 900);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "השמירה נכשלה");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -90,6 +98,15 @@ export default function NewVoucherPage() {
           צילום, העלאת תמונה או PDF — ואז אישור הפרטים לפני שמירה
         </p>
       </div>
+
+      {app.mode === "supabase" && !app.user && (
+        <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="status">
+          יש להתחבר כדי לשמור זיכויים בענן.{" "}
+          <a href="/login" className="font-bold text-forest">
+            התחברות
+          </a>
+        </p>
+      )}
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
@@ -137,10 +154,16 @@ export default function NewVoucherPage() {
               {extractionNote}
             </p>
           )}
+          {error && (
+            <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+              {error}
+            </p>
+          )}
           <VoucherReviewForm
             initial={valuesFromExtraction(fields)}
             documentMeta={documentMeta}
             onSubmit={handleSave}
+            busy={busy}
           />
         </div>
       )}

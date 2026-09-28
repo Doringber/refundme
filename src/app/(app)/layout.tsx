@@ -1,13 +1,19 @@
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
-import { DemoProvider } from "@/lib/demo/context";
-import { shouldPreferDemo } from "@/lib/demo/mode";
+import { AppDataProvider } from "@/lib/app-data/context";
+import { DEMO_COOKIE } from "@/lib/constants";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const demo = shouldPreferDemo();
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const jar = await cookies();
+  const demoCookie = jar.get(DEMO_COOKIE)?.value === "1";
 
   return (
-    <DemoProvider>
-      <AppShell demo={demo}>{children}</AppShell>
-    </DemoProvider>
+    <AppDataProvider initialDemoCookie={demoCookie}>
+      <AppShell>{children}</AppShell>
+    </AppDataProvider>
   );
 }
