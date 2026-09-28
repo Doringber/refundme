@@ -21,9 +21,10 @@ import {
   clearLastGain,
   deleteDemoVoucher,
   exportDemoJson,
-  loadDemoState,
+  getClientDemoSnapshot,
+  getServerDemoSnapshot,
   resetDemoState,
-  type DemoState,
+  subscribeDemoStore,
   updateDemoProfile,
   upsertDemoVoucher,
   wipeDemoAccount,
@@ -54,51 +55,35 @@ type DemoContextValue = {
 const DemoContext = createContext<DemoContextValue | null>(null);
 
 function subscribe(callback: () => void) {
-  const handler = () => callback();
-  window.addEventListener("zikuy-demo-updated", handler);
-  window.addEventListener("storage", handler);
+  const unsub = subscribeDemoStore(callback);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === null || e.key === "zikuy_sheli_demo_v1") callback();
+  };
+  window.addEventListener("storage", onStorage);
   return () => {
-    window.removeEventListener("zikuy-demo-updated", handler);
-    window.removeEventListener("storage", handler);
+    unsub();
+    window.removeEventListener("storage", onStorage);
   };
 }
 
-function getSnapshot(): DemoState {
-  return loadDemoState();
+function getReadySnapshot(): boolean {
+  return true;
 }
 
-function getServerSnapshot(): DemoState {
-  return {
-    profile: {
-      id: "demo-user",
-      displayName: "דמו",
-      orbScaleAgorot: 100000,
-      reminderDays: [30, 14, 7, 3, 1],
-      createdAt: "",
-      updatedAt: "",
-    },
-    vouchers: [],
-    redemptions: [],
-    activity: [],
-    lastGainAgorot: null,
-  };
-}
-
-function subscribeReady(onStoreChange: () => void) {
-  // Client hydration flips ready once; no further updates needed.
-  queueMicrotask(onStoreChange);
-  return () => {};
+function getReadyServerSnapshot(): boolean {
+  return false;
 }
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
-  const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const state = useSyncExternalStore(
+    subscribe,
+    getClientDemoSnapshot,
+    getServerDemoSnapshot,
+  );
   const ready = useSyncExternalStore(
-    subscribeReady,
-    () => {
-      loadDemoState();
-      return true;
-    },
-    () => false,
+    subscribe,
+    getReadySnapshot,
+    getReadyServerSnapshot,
   );
 
   const summary = useMemo(
@@ -107,7 +92,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   );
 
   const refresh = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("zikuy-demo-updated"));
+    // Force re-read by notifying subscribers after a no-op write of same cache
+    getClientDemoSnapshot();
   }, []);
 
   const value = useMemo<DemoContextValue>(
@@ -120,14 +106,28 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       summary,
       lastGainAgorot: state.lastGainAgorot,
       refresh,
-      saveVoucher: (v) => upsertDemoVoucher(v),
-      removeVoucher: (id) => deleteDemoVoucher(id),
-      redeem: (voucherId, amountAgorot, note) =>
-        addDemoRedemption(voucherId, amountAgorot, note),
-      setProfile: (patch) => updateDemoProfile(patch),
-      clearGain: () => clearLastGain(),
-      reset: () => resetDemoState(),
-      wipe: () => wipeDemoAccount(),
+      saveVoucher: (v) => {
+        upsertDemoVoucher(v);
+      },
+      removeVoucher: (id) => {
+        deleteDemoVoucher(id);
+      },
+      redeem: (voucherId, amountAgorot, note) => {
+        addDemoRedemption(voucherId, amountAgorot, note);
+      },
+      setProfile: (patch) => {
+        updateDemoProfile(patch);
+      },
+      clearGain: () => {
+        clearLastGain();
+      },
+      reset: () => {
+        resetDemoState();
+      },
+      wipe: () => {
+        wipeDemoAccount();
+        resetDemoState();
+      },
       exportJson: () => exportDemoJson(),
       filter: (filters) => filterVouchers(state.vouchers, filters),
       getVoucher: (id) => state.vouchers.find((v) => v.id === id),
