@@ -1,0 +1,20 @@
+# Minimal Supabase CLI config for local / linked projects.
+# Run: npx supabase start   (requires Docker)
+# Apply: npx supabase db reset
+
+project_id = "zikuy-sheli"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**"]
