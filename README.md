@@ -36,13 +36,15 @@ npm run lint
 ## חיבור Supabase
 
 1. צרו פרויקט ב־[Supabase](https://supabase.com).
-2. העתיקו `.env.example` ל־`.env.local` ומלאו:
+2. העתיקו `.env.example` ל־`.env.local` ומלאו (אל תעלו מפתחות ל־git):
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...   # רק בשרת — למחיקת חשבון
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...   # רק בשרת — למחיקת חשבון
 ```
+
+גם מפתחות קלאסיים (`ANON_KEY` / `SERVICE_ROLE_KEY`) נתמכים.
 
 3. הריצו את המיגרציה:
 

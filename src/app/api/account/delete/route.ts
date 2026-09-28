@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSecretKey, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * Deletes the authenticated user's documents, rows, and auth account.
- * Requires SUPABASE_SERVICE_ROLE_KEY on the server only.
+ * Requires SUPABASE_SECRET_KEY (or legacy SERVICE_ROLE) on the server only.
  */
 export async function POST() {
   if (!isSupabaseConfigured()) {
@@ -15,10 +15,10 @@ export async function POST() {
     );
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = getSecretKey();
   if (!serviceKey) {
     return NextResponse.json(
-      { error: "מפתח service role אינו מוגדר בשרת" },
+      { error: "מפתח secret אינו מוגדר בשרת" },
       { status: 500 },
     );
   }
