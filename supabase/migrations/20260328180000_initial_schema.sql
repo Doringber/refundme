@@ -386,3 +386,9 @@ insert into public.merchant_branches (merchant_id, name_he, city, address_he, la
   ('11111111-1111-1111-1111-111111111105', 'איקאה ראשון לציון', 'ראשון לציון', 'פארק עסקים', 31.9870, 34.7700, 'verified', null),
   ('11111111-1111-1111-1111-111111111105', 'איקאה נתניה', 'נתניה', 'פארק התעשייה', 32.3100, 34.8700, 'unverified', null),
   ('11111111-1111-1111-1111-111111111106', 'מקס סטוק פתח תקווה', 'פתח תקווה', 'ז׳בוטינסקי 100', 32.0900, 34.8800, 'unverified', null);
+
+-- Harden: trigger helpers must not be callable via PostgREST RPC
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.recalc_voucher_remaining() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to postgres, service_role;
+grant execute on function public.recalc_voucher_remaining() to postgres, service_role;
