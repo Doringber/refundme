@@ -95,9 +95,33 @@ export function loadDemoState(): DemoState {
 export function saveDemoState(state: DemoState): void {
   if (!canUseStorage()) return;
   const serialized = JSON.stringify(state);
-  localStorage.setItem(DEMO_STORAGE_KEY, serialized);
-  cachedClientState = state;
-  cachedSerialized = serialized;
+  try {
+    localStorage.setItem(DEMO_STORAGE_KEY, serialized);
+    cachedClientState = state;
+    cachedSerialized = serialized;
+  } catch {
+    // QuotaExceeded — strip bulky data URLs and retry once
+    const slim: DemoState = {
+      ...state,
+      vouchers: state.vouchers.map((v) => ({
+        ...v,
+        documentDataUrl:
+          v.documentDataUrl && v.documentDataUrl.length > 80_000
+            ? null
+            : v.documentDataUrl,
+      })),
+    };
+    try {
+      const slimSerialized = JSON.stringify(slim);
+      localStorage.setItem(DEMO_STORAGE_KEY, slimSerialized);
+      cachedClientState = slim;
+      cachedSerialized = slimSerialized;
+    } catch {
+      throw new Error(
+        "אין מספיק מקום לשמור את התמונה במכשיר. התחברו לחשבון לשמירה בענן, או העלו תמונה קטנה יותר.",
+      );
+    }
+  }
   notify();
   window.dispatchEvent(new CustomEvent("zikuy-demo-updated"));
 }

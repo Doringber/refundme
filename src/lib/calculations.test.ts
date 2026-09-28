@@ -81,9 +81,10 @@ describe("credit calculations", () => {
   it("demo seed totals exclude receipt and include partial redemption", () => {
     const seed = createDemoSeed();
     const summary = buildDashboardSummary(seed.vouchers, seed.activity, today);
-    // FOX 280 + Zara 120 + Super-Pharm 80 = 480; receipt excluded
-    assert.equal(summary.totalActiveCreditAgorot, 48000);
+    // Shufersal 19.90 + Super-Pharm 35.20 + FOX 280 + Zara 120 = 455.10; receipt excluded
+    assert.equal(summary.totalActiveCreditAgorot, 45510);
     assert.ok(summary.nearestExpiring);
     assert.equal(summary.nearestExpiring?.merchantName, "זארה");
   });
 });
+

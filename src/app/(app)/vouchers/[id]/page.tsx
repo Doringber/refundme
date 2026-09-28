@@ -9,6 +9,7 @@ import {
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
 
@@ -78,12 +79,30 @@ export default function VoucherDetailPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <Link href="/vouchers" className="text-sm font-semibold text-forest">
-        ← חזרה
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/vouchers" className="text-sm font-semibold text-forest">
+          ← חזרה
+        </Link>
+        <p className="text-xs font-bold text-eggplant">
+          {isReceipt ? "קבלה" : "תעודת זיכוי"}
+        </p>
+      </div>
 
       <header className="space-y-2">
         <h1 className="font-display text-3xl text-forest">{voucher.merchantName}</h1>
+        <p className="font-display text-3xl text-night">
+          {formatIls(
+            isReceipt
+              ? voucher.originalAmountAgorot
+              : voucher.remainingAmountAgorot,
+          )}
+        </p>
+        <p className="text-sm text-eggplant">
+          {isReceipt ? "סכום קבלה" : "יתרה לפי הדיווח שלך"}
+          {!isReceipt && voucher.originalAmountAgorot !== voucher.remainingAmountAgorot
+            ? ` · מקורי ${formatIls(voucher.originalAmountAgorot)}`
+            : ""}
+        </p>
         <div className="flex flex-wrap gap-2">
           <TypeBadge type={voucher.documentType} />
           <StatusBadge status={voucher.status} />
@@ -94,60 +113,44 @@ export default function VoucherDetailPage() {
         </div>
       </header>
 
-      <section className="card-surface grid gap-3 p-5 sm:grid-cols-2">
-        <div>
-          <p className="text-xs text-eggplant">סכום מקורי</p>
-          <p className="font-display text-2xl">
-            {formatIls(voucher.originalAmountAgorot)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-eggplant">
-            {isReceipt ? "סכום קבלה" : "יתרה לפי הדיווח שלך"}
-          </p>
-          <p className="font-display text-2xl">
-            {formatIls(
-              isReceipt
-                ? voucher.originalAmountAgorot
-                : voucher.remainingAmountAgorot,
-            )}
-          </p>
-        </div>
+      {/* Invoice first — the main thing users need at the register */}
+      <section className="space-y-2">
+        <h2 className="font-display text-lg text-forest">תעודת הזיכוי</h2>
+        <DocumentPreview
+          url={docUrl}
+          mimeType={voucher.documentMimeType}
+          fileName={voucher.documentFileName}
+          merchantName={voucher.merchantName}
+          hero
+        />
       </section>
 
-      <section className="card-surface space-y-3 p-5">
-        <h2 className="font-display text-lg">מסמך מקורי</h2>
-        {docUrl && voucher.documentMimeType?.startsWith("image/") ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={docUrl}
-            alt={`מסמך מקורי — ${voucher.merchantName}`}
-            className="max-h-96 w-full rounded-2xl object-contain bg-white"
-          />
-        ) : (
-          <div className="rounded-2xl bg-[rgba(163,193,226,0.2)] px-4 py-8 text-center text-sm text-eggplant">
-            {voucher.documentFileName
-              ? `הקובץ ${voucher.documentFileName} שמור${voucher.documentMimeType === "application/pdf" ? " (PDF)" : ""}.`
-              : "אין תצוגה מקדימה."}
-            <p className="mt-2 text-xs">
-              תמונה אינה מבטיחה שכל קופה תקבל את הצילום במקום המקור.
-            </p>
-            {docUrl && voucher.documentMimeType === "application/pdf" && (
-              <a
-                href={docUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex text-sm font-bold text-forest"
+      {(voucher.voucherCode || voucher.barcodeValue) && (
+        <section className="card-surface space-y-3 p-5 text-center">
+          {voucher.voucherCode && (
+            <div>
+              <p className="text-xs text-eggplant">קוד שובר</p>
+              <p className="mt-1 font-mono text-xl tracking-wide text-night">
+                {voucher.voucherCode}
+              </p>
+            </div>
+          )}
+          {voucher.barcodeValue && (
+            <div>
+              <p className="text-xs text-eggplant">ברקוד</p>
+              <p
+                className="mt-1 font-mono text-2xl tracking-[0.28em] text-night"
+                aria-label={`ברקוד ${voucher.barcodeValue}`}
               >
-                פתיחת PDF
-              </a>
-            )}
-          </div>
-        )}
-      </section>
+                {voucher.barcodeValue}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="card-surface space-y-2 p-5 text-sm">
-        <h2 className="font-display text-lg">פרטים מאושרים</h2>
+        <h2 className="font-display text-lg">פרטים</h2>
         <Row label="תאריך הנפקה" value={voucher.issueDate ?? "—"} />
         <Row
           label="תוקף"
@@ -157,23 +160,9 @@ export default function VoucherDetailPage() {
               : "תוקף לא אומת"
           }
         />
-        <Row label="קוד" value={voucher.voucherCode ?? "—"} />
-        <Row label="ברקוד" value={voucher.barcodeValue ?? "—"} />
         <Row label="תנאים" value={voucher.usageTerms ?? "—"} />
         <Row label="הערות" value={voucher.notes ?? "—"} />
       </section>
-
-      {voucher.barcodeValue && (
-        <section className="card-surface p-5 text-center">
-          <p className="text-xs text-eggplant">ברקוד כפי שנרשם</p>
-          <p
-            className="mt-2 font-mono text-2xl tracking-[0.3em] text-night"
-            aria-label={`ברקוד ${voucher.barcodeValue}`}
-          >
-            {voucher.barcodeValue}
-          </p>
-        </section>
-      )}
 
       {canRedeem && (
         <section className="card-surface space-y-3 p-5">
@@ -181,7 +170,7 @@ export default function VoucherDetailPage() {
           <p className="text-xs text-eggplant">
             מימוש מלא או חלקי. היתרה מחושבת מהסכום המקורי ומהמימושים שדיווחתם.
           </p>
-          <form onSubmit={handleRedeem} className="space-y-3">
+          <form onSubmit={(e) => void handleRedeem(e)} className="space-y-3">
             <label className="block text-sm">
               <span className="mb-1 block font-medium">סכום שמומש (₪)</span>
               <input

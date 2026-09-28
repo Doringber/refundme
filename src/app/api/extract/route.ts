@@ -1,19 +1,48 @@
 import { NextResponse } from "next/server";
 import { suggestFieldsFromText, suggestFromFileName } from "@/lib/extract";
+import { extractFieldsFromImage } from "@/lib/extract-vision";
+import type { ExtractedFields } from "@/lib/types";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/constants";
 
 export const runtime = "nodejs";
 
+function mergeFields(
+  a: ExtractedFields | null,
+  b: ExtractedFields | null,
+): ExtractedFields | null {
+  if (!a) return b;
+  if (!b) return a;
+  const merged: ExtractedFields = {
+    merchantName: a.merchantName ?? b.merchantName,
+    documentType: a.documentType ?? b.documentType,
+    amountAgorot: a.amountAgorot ?? b.amountAgorot,
+    issueDate: a.issueDate ?? b.issueDate,
+    expiryDate: a.expiryDate ?? b.expiryDate,
+    voucherCode: a.voucherCode ?? b.voucherCode,
+    barcodeValue: a.barcodeValue ?? b.barcodeValue,
+    usageTerms: a.usageTerms ?? b.usageTerms,
+    confidence:
+      a.confidence === "high" || b.confidence === "high"
+        ? "high"
+        : a.confidence === "low" || b.confidence === "low"
+          ? "low"
+          : "none",
+    notes: a.notes ?? b.notes,
+  };
+  return merged;
+}
+
 /**
- * Server-side extraction endpoint.
- * Privileged OCR keys (if any) stay here — never in the client.
- * Without OCR credentials, returns heuristic suggestions or empty manual flow.
+ * Extraction endpoint for uploaded voucher photos.
+ * Accepts optional `ocrText` from browser OCR + the image file.
+ * Prefers Gemini vision when Netlify AI Gateway is available, then OCR text heuristics.
  */
 export async function POST(request: Request) {
   try {
     const form = await request.formData();
     const file = form.get("file");
     const pastedText = form.get("text");
+    const ocrText = form.get("ocrText");
 
     if (typeof pastedText === "string" && pastedText.trim()) {
       return NextResponse.json({
@@ -22,7 +51,22 @@ export async function POST(request: Request) {
       });
     }
 
+    const fromOcr =
+      typeof ocrText === "string" && ocrText.trim()
+        ? suggestFieldsFromText(ocrText)
+        : null;
+
     if (!(file instanceof File)) {
+      if (fromOcr) {
+        return NextResponse.json({
+          fields: fromOcr,
+          source: "ocr",
+          message:
+            fromOcr.confidence === "none"
+              ? "קראנו את התמונה אך לא זוהו שדות ברורים. מלאו ידנית."
+              : "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
+        });
+      }
       return NextResponse.json(
         { error: "לא התקבל קובץ", fields: suggestFromFileName("") },
         { status: 400 },
@@ -44,23 +88,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "הקובץ גדול מדי" }, { status: 400 });
     }
 
-    const ocrKey = process.env.DOCUMENT_OCR_API_KEY;
-    if (ocrKey) {
-      // Placeholder for a real OCR provider — keep the contract stable.
-      // Without implementing a paid vendor, fall through to heuristics.
+    let fromVision: ExtractedFields | null = null;
+    if (file.type.startsWith("image/")) {
+      fromVision = await extractFieldsFromImage(file);
     }
 
-    // PDF text is not extracted without a dedicated parser in v1.
-    // Image OCR requires an external key. Offer filename heuristics only.
-    const fields = suggestFromFileName(file.name);
+    const merged = mergeFields(fromVision, fromOcr);
+    if (merged && merged.confidence !== "none") {
+      const source =
+        fromVision && fromVision.confidence !== "none"
+          ? fromOcr
+            ? "vision+ocr"
+            : "vision"
+          : "ocr";
+      return NextResponse.json({
+        fields: {
+          ...merged,
+          notes: "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
+        },
+        source,
+        message: "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
+      });
+    }
 
+    const fields = fromOcr ?? suggestFromFileName(file.name);
     return NextResponse.json({
       fields,
-      source: "heuristic",
+      source: fromOcr ? "ocr" : "heuristic",
       message:
         fields.confidence === "none"
-          ? "חילוץ אוטומטי אינו זמין. מלאו את השדות ידנית לפי המסמך."
-          : "הוצעו שדות ראשוניים — אשרו ותקנו לפני השמירה.",
+          ? "לא הצלחנו לקרוא את כל השדות מהתמונה. מלאו ידנית לפי המסמך — התמונה תישמר."
+          : "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
     });
   } catch {
     return NextResponse.json(

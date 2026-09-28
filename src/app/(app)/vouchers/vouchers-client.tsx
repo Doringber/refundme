@@ -45,7 +45,9 @@ export function VouchersClient() {
     <div className="space-y-5">
       <div>
         <h1 className="font-display text-2xl text-forest">הזיכויים שלי</h1>
-        <p className="text-sm text-eggplant">חיפוש וסינון לפי חנות, סוג, סטטוס ותוקף</p>
+        <p className="text-sm text-eggplant">
+          לחצו על התמונה להצגת תעודת הזיכוי · או על הפרטים לעריכה
+        </p>
       </div>
 
       <div className="card-surface grid gap-3 p-4 sm:grid-cols-2">
