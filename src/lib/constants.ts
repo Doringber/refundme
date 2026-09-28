@@ -37,7 +37,7 @@ export const SPENDABLE_TYPES: DocumentType[] = [
 ];
 
 export const DEMO_COOKIE = "zikuy_demo";
-/** v2 adds demo document preview images */
-export const DEMO_STORAGE_KEY = "zikuy_sheli_demo_v2";
+/** v3 seeds real sample refund invoices for quick viewing */
+export const DEMO_STORAGE_KEY = "zikuy_sheli_demo_v3";
 
 export const APP_NAME = "זיכוי שלי";
