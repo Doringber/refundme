@@ -1,24 +1,40 @@
 @import "tailwindcss";
 
+/*
+  Visual language borrowed from MiaAI gallery examples:
+  - 046 Tend (habit garden): sage/forest/clay product UI
+  - 048 Squishy (claymorphism): Varela Round, soft clay shadows, pill chrome
+  Adapted for Hebrew RTL + זיכוי שלי Credit Orb.
+*/
+
 :root {
-  /* Warm boutique palette — inspired by the Hebrew reference */
-  --warm-bg: #faf7f2;
-  --forest: #355e4e;
-  --forest-deep: #2a4b3c;
-  --forest-soft: #5e966b;
-  --night: #252d45;
-  --bone: #f3efe6;
-  --cream-ink: #e8e8d5;
+  /* Tend-inspired product palette */
+  --warm-bg: #f4f6f0;
+  --paper: #fbfcf8;
+  --forest: #2f4f3a;
+  --forest-deep: #264231;
+  --forest-soft: #456b52;
+  --sage: #9cb59a;
+  --sage-l: #dfe8da;
+  --sage-ll: #eaf0e6;
+  --clay: #d98e73;
+  --clay-d: #c2765c;
+  --sun: #f2c14e;
+  --ink: #2f4f3a;
+  --ink-2: #5d7564;
+  --ink-3: #8a9c8d;
+  --line: rgba(47, 79, 58, 0.12);
 
-  /* Soft pastel accents (pills / chips) */
-  --blush: #f4bdbe;
-  --blush-deep: #e8a0a0;
-  --rose: #f6bdc8;
-  --lime-chip: #cfe58e;
-  --dusty-blue: #98b9e3;
-  --mint-chip: #c3d6c1;
+  /* Soft pastel chips (Squishy / boutique) */
+  --blush: #ffb3c6;
+  --blush-deep: #e88aa3;
+  --butter: #ffe5a5;
+  --mint: #b8f2e6;
+  --peri: #aab7ff;
+  --peach: #ffcfb0;
+  --cream: #fffaf6;
 
-  /* Legacy / orb accents kept purposeful */
+  /* Orb / urgency accents */
   --pool: #47b5a8;
   --blue-skies: #a3c1e2;
   --baby-lavender: #dbc0e8;
@@ -27,16 +43,40 @@
   --poppy: #f76f54;
   --fuchsia: #ea5e86;
   --cotton-candy: #f9a2c5;
-  --sage: #a9af94;
-  --eggplant: #6b515e;
   --hay: #b99a65;
+  --night: #2f4f3a;
+  --eggplant: #5d7564;
+  --bone: #fbfcf8;
+  --cream-ink: #eaf0e6;
+
+  /* Squishy clay shadows (green-tinted instead of lilac) */
+  --sh: 47 79 58;
+  --soft: 1;
+  --boing: cubic-bezier(0.34, 1.8, 0.5, 1);
+  --clay-out: calc(var(--soft) * 10px) calc(var(--soft) * 14px) calc(var(--soft) * 28px)
+    rgb(var(--sh) / 0.18);
+  --clay-in: inset calc(var(--soft) * -6px) calc(var(--soft) * -8px) calc(var(--soft) * 14px)
+      rgba(47, 79, 58, 0.1),
+    inset calc(var(--soft) * 6px) calc(var(--soft) * 8px) calc(var(--soft) * 12px)
+      rgba(255, 255, 255, 0.85);
+  --clay-shadow: var(--clay-out), var(--clay-in);
+  --clay-press: calc(var(--soft) * 2px) calc(var(--soft) * 3px) calc(var(--soft) * 8px)
+      rgb(var(--sh) / 0.18),
+    inset calc(var(--soft) * 5px) calc(var(--soft) * 7px) calc(var(--soft) * 12px)
+      rgba(47, 79, 58, 0.16),
+    inset calc(var(--soft) * -3px) calc(var(--soft) * -4px) calc(var(--soft) * 8px)
+      rgba(255, 255, 255, 0.7);
+  --well: inset calc(var(--soft) * 4px) calc(var(--soft) * 5px) calc(var(--soft) * 10px)
+      rgba(47, 79, 58, 0.12),
+    inset calc(var(--soft) * -4px) calc(var(--soft) * -5px) calc(var(--soft) * 10px)
+      rgba(255, 255, 255, 0.92);
 
   --background: var(--warm-bg);
-  --foreground: var(--night);
-  --card: #ffffff;
-  --muted: #6b515e;
-  --ring-track: rgba(53, 94, 78, 0.14);
-  --shadow-soft: 0 14px 36px rgba(42, 75, 60, 0.08);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --muted: var(--ink-2);
+  --ring-track: rgba(47, 79, 58, 0.14);
+  --shadow-soft: var(--clay-shadow);
   --radius-card: 1.75rem;
   --radius-pill: 999px;
 }
@@ -51,10 +91,10 @@
   --color-bone: var(--bone);
   --color-blush: var(--blush);
   --color-blush-deep: var(--blush-deep);
-  --color-rose: var(--rose);
-  --color-lime-chip: var(--lime-chip);
-  --color-dusty-blue: var(--dusty-blue);
-  --color-mint-chip: var(--mint-chip);
+  --color-rose: var(--blush);
+  --color-lime-chip: var(--butter);
+  --color-dusty-blue: var(--peri);
+  --color-mint-chip: var(--mint);
   --color-pool: var(--pool);
   --color-blue-skies: var(--blue-skies);
   --color-lavender: var(--baby-lavender);
@@ -67,6 +107,9 @@
   --color-eggplant: var(--eggplant);
   --color-hay: var(--hay);
   --color-warm: var(--warm-bg);
+  --color-clay: var(--clay);
+  --color-sun: var(--sun);
+  --color-cream-ink: var(--cream-ink);
   --font-sans: var(--font-assistant);
   --font-display: var(--font-varela);
 }
@@ -81,86 +124,104 @@ html {
 
 body {
   background:
-    radial-gradient(900px 480px at 100% 0%, rgba(195, 214, 193, 0.45), transparent 55%),
-    radial-gradient(700px 420px at 0% 15%, rgba(244, 189, 190, 0.28), transparent 50%),
-    radial-gradient(800px 360px at 60% 100%, rgba(207, 229, 142, 0.22), transparent 45%),
+    radial-gradient(900px 480px at 100% -5%, rgba(156, 181, 154, 0.35), transparent 55%),
+    radial-gradient(700px 400px at -5% 20%, rgba(255, 179, 198, 0.2), transparent 50%),
+    radial-gradient(700px 360px at 50% 110%, rgba(255, 229, 165, 0.28), transparent 45%),
     var(--warm-bg);
   color: var(--foreground);
-  font-family: var(--font-assistant), "Assistant", sans-serif;
+  /* Gallery 048/100 stack spirit → real Hebrew fonts via next/font */
+  font-family: var(--font-assistant), "Varela Round", ui-rounded, "SF Pro Rounded",
+    system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 16.5px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
   min-height: 100dvh;
-  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-display {
-  font-family: var(--font-varela), "Varela Round", var(--font-assistant), sans-serif;
+  font-family: var(--font-varela), "Varela Round", ui-rounded, "Nunito", sans-serif;
   letter-spacing: 0.01em;
   font-weight: 400;
 }
 
 .card-surface {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(53, 94, 78, 0.08);
+  background: var(--paper);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--clay-shadow);
 }
 
 .btn-primary {
   background: var(--forest);
-  color: var(--cream-ink);
+  color: #f4f6f0;
   border-radius: var(--radius-pill);
-  font-weight: 700;
-  transition: transform 160ms ease, background 160ms ease, filter 160ms ease;
+  font-weight: 800;
+  box-shadow: 0 10px 22px -12px rgba(47, 79, 58, 0.7);
+  transition: transform 0.18s var(--boing), box-shadow 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .btn-primary:hover {
   background: var(--forest-deep);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(2px) scale(0.97);
+  box-shadow: var(--clay-press);
 }
 
 .btn-secondary {
   background: var(--blush);
-  color: var(--night);
+  color: var(--ink);
   border: none;
   border-radius: var(--radius-pill);
-  font-weight: 700;
+  font-weight: 800;
+  box-shadow: var(--clay-out);
+  transition: transform 0.18s var(--boing), filter 0.18s ease;
 }
 
 .btn-secondary:hover {
   filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: var(--clay-press);
 }
 
 .btn-danger {
-  background: var(--blush-deep);
+  background: var(--clay-d);
   color: white;
   border-radius: var(--radius-pill);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .input-field {
   width: 100%;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(53, 94, 78, 0.14);
-  background: white;
-  padding: 0.9rem 1.25rem;
-  color: var(--night);
+  border: 0;
+  background: var(--sage-ll);
+  box-shadow: var(--well);
+  padding: 0.95rem 1.3rem;
+  color: var(--ink);
   outline: none;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .input-field:focus {
-  border-color: var(--forest);
-  box-shadow: 0 0 0 3px rgba(53, 94, 78, 0.16);
+  box-shadow: var(--well), 0 0 0 3px rgba(156, 181, 154, 0.45);
 }
 
 select.input-field {
-  border-radius: 1.25rem;
+  border-radius: 1.35rem;
 }
 
 textarea.input-field {
-  border-radius: 1.5rem;
+  border-radius: 1.6rem;
 }
 
 .badge {
@@ -168,34 +229,38 @@ textarea.input-field {
   align-items: center;
   gap: 0.35rem;
   border-radius: var(--radius-pill);
-  padding: 0.3rem 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 700;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 3px 4px 10px rgb(var(--sh) / 0.12),
+    inset -2px -3px 5px rgba(47, 79, 58, 0.08),
+    inset 2px 3px 4px rgba(255, 255, 255, 0.75);
 }
 
 .badge-pool {
-  background: var(--mint-chip);
+  background: var(--mint);
   color: var(--forest-deep);
 }
 
 .badge-daffodil {
-  background: var(--lime-chip);
-  color: #3f4d1f;
+  background: var(--butter);
+  color: #5a4810;
 }
 
 .badge-poppy {
   background: var(--blush);
-  color: #7a3a3a;
+  color: #7a3a4a;
 }
 
 .badge-lavender {
-  background: var(--dusty-blue);
-  color: #24384f;
+  background: var(--peri);
+  color: #2f355f;
 }
 
 .badge-sage {
-  background: rgba(169, 175, 148, 0.4);
-  color: #3f4634;
+  background: var(--sage-l);
+  color: var(--forest);
 }
 
 .chip-row {
@@ -206,6 +271,13 @@ textarea.input-field {
 
 .organic-curve {
   border-radius: 3rem 3rem 0 0;
+}
+
+.pill-nav {
+  border-radius: 999px;
+  background: rgba(251, 252, 248, 0.94);
+  box-shadow: var(--clay-shadow);
+  border: 1px solid var(--line);
 }
 
 .sr-only {

@@ -28,13 +28,13 @@ export function AppShell({
           <p className="font-display text-2xl leading-none text-forest md:text-3xl">
             {APP_NAME}
           </p>
-          <p className="mt-1 text-xs font-medium text-eggplant">
+          <p className="mt-1 text-xs font-bold tracking-wide text-eggplant">
             הזיכויים שלכם, במקום אחד
           </p>
         </Link>
         <div className="flex items-center gap-2">
           {demo && (
-            <span className="badge bg-blush text-night" title="נתוני דמו מקומיים">
+            <span className="badge bg-blush text-forest" title="נתוני דמו מקומיים">
               מצב דמו
             </span>
           )}
@@ -49,11 +49,12 @@ export function AppShell({
 
       <main className="flex-1">{children}</main>
 
+      {/* Sticky pill nav inspired by gallery 048 Squishy */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(53,94,78,0.08)] bg-[rgba(250,247,242,0.94)] backdrop-blur-md md:static md:mt-10 md:border-0 md:bg-transparent md:backdrop-blur-none"
+        className="fixed inset-x-3 bottom-3 z-40 md:static md:inset-auto md:mt-10 md:bottom-auto"
         aria-label="ניווט ראשי"
       >
-        <ul className="mx-auto grid max-w-3xl grid-cols-5 gap-1 px-2 py-2 md:flex md:justify-center md:gap-3">
+        <ul className="pill-nav mx-auto grid max-w-3xl grid-cols-5 gap-1 px-2 py-2 md:flex md:justify-center md:gap-2 md:px-3">
           {NAV.map((item) => {
             const active =
               pathname === item.href ||
@@ -62,10 +63,10 @@ export function AppShell({
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex flex-col items-center rounded-full px-2 py-2 text-xs font-bold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
+                  className={`flex flex-col items-center rounded-full px-2 py-2 text-xs font-extrabold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
                     active
-                      ? "bg-forest text-cream-ink"
-                      : "text-eggplant hover:bg-mint-chip/60"
+                      ? "bg-forest text-[var(--cream-ink)] shadow-sm"
+                      : "text-eggplant hover:bg-[var(--sage-ll)]"
                   }`}
                   aria-current={active ? "page" : undefined}
                 >
