@@ -1,5 +1,5 @@
 import type { DocumentType, ExtractedFields } from "./types";
-import { suggestFieldsFromText, suggestFromFileName } from "./extract";
+import { suggestFieldsFromText } from "./extract";
 
 type VisionJson = {
   merchantName?: string | null;
@@ -13,29 +13,50 @@ type VisionJson = {
   rawText?: string | null;
 };
 
-const SYSTEM_PROMPT = `You extract fields from Israeli store-credit / gift-voucher / shopping-voucher / receipt photos.
-Return ONLY valid JSON with keys:
-merchantName, documentType, amountShekels, issueDate, expiryDate, voucherCode, barcodeValue, usageTerms, rawText.
-Rules:
-- documentType must be one of: store_credit, gift_voucher, shopping_voucher, receipt, or null
-- Dates as YYYY-MM-DD only when clearly printed; otherwise null
-- Never invent barcode, voucher code, amount, or expiry — use null if unsure
-- amountShekels is a number in shekels (e.g. 280), not agorot
-- Prefer Hebrew merchant names when printed in Hebrew
-- rawText: short transcription of visible key lines`;
+const SYSTEM_PROMPT = `You OCR and extract fields from Israeli retail credit vouchers and receipts (thermal paper photos).
+Common Hebrew labels:
+- תעודת זיכוי / שובר זיכוי → documentType store_credit
+- חשבונית קבלה → documentType receipt (NOT store credit)
+- סה"כ זיכוי → amountShekels (the credit total, not VAT/net lines)
+- תאריך הפקה / תאריך הנפקה → issueDate
+- תוקף השובר DD/MM/YY → expiryDate
+- If text says תוקף לשנתיים מיום מסירתה with NO printed date → expiryDate null
+- שובר זיכוי : 27309137 → voucherCode
+- תעודת זיכוי מס' 1-117-07-046638 → voucherCode
+- Barcode digits under the barcode (e.g. 999027309137) → barcodeValue
+Merchants: שופרסל, סופר-פארם, יוחננוף, FOX, זארה, רמי לוי, איקאה
 
-function emptyFields(notes: string): ExtractedFields {
+Return ONLY valid JSON:
+merchantName, documentType, amountShekels, issueDate, expiryDate, voucherCode, barcodeValue, usageTerms, rawText
+Rules:
+- documentType one of: store_credit, gift_voucher, shopping_voucher, receipt, or null
+- Dates YYYY-MM-DD only when clearly printed
+- Never invent barcode, code, amount, or expiry — null if unsure
+- amountShekels in shekels (e.g. 19.9 or 35.2), not agorot
+- Prefer Hebrew merchant names
+- rawText: key printed lines transcribed`;
+
+function mergeFields(
+  primary: ExtractedFields,
+  secondary: ExtractedFields | null,
+): ExtractedFields {
+  if (!secondary) return primary;
   return {
-    merchantName: null,
-    documentType: null,
-    amountAgorot: null,
-    issueDate: null,
-    expiryDate: null,
-    voucherCode: null,
-    barcodeValue: null,
-    usageTerms: null,
-    confidence: "none",
-    notes,
+    merchantName: primary.merchantName ?? secondary.merchantName,
+    documentType: primary.documentType ?? secondary.documentType,
+    amountAgorot: primary.amountAgorot ?? secondary.amountAgorot,
+    issueDate: primary.issueDate ?? secondary.issueDate,
+    expiryDate: primary.expiryDate ?? secondary.expiryDate,
+    voucherCode: primary.voucherCode ?? secondary.voucherCode,
+    barcodeValue: primary.barcodeValue ?? secondary.barcodeValue,
+    usageTerms: primary.usageTerms ?? secondary.usageTerms,
+    confidence:
+      primary.confidence === "high" || secondary.confidence === "high"
+        ? "high"
+        : primary.confidence === "low" || secondary.confidence === "low"
+          ? "low"
+          : "none",
+    notes: primary.notes ?? secondary.notes,
   };
 }
 
@@ -53,24 +74,26 @@ function normalizeVision(json: VisionJson): ExtractedFields {
       ? json.documentType
       : null;
 
-  const confidence: ExtractedFields["confidence"] =
-    json.merchantName || amountAgorot || documentType ? "low" : "none";
-
-  // Prefer structured JSON; fill gaps from rawText heuristics without inventing.
-  const fromText = json.rawText ? suggestFieldsFromText(json.rawText) : null;
-
-  return {
-    merchantName: json.merchantName ?? fromText?.merchantName ?? null,
-    documentType: documentType ?? fromText?.documentType ?? null,
-    amountAgorot: amountAgorot ?? fromText?.amountAgorot ?? null,
-    issueDate: json.issueDate ?? fromText?.issueDate ?? null,
-    expiryDate: json.expiryDate ?? fromText?.expiryDate ?? null,
-    voucherCode: json.voucherCode ?? fromText?.voucherCode ?? null,
+  const fromVision: ExtractedFields = {
+    merchantName: json.merchantName ?? null,
+    documentType,
+    amountAgorot,
+    issueDate: json.issueDate ?? null,
+    expiryDate: json.expiryDate ?? null,
+    voucherCode: json.voucherCode ?? null,
     barcodeValue: json.barcodeValue ?? null,
     usageTerms: json.usageTerms ?? null,
-    confidence,
+    confidence:
+      json.merchantName || amountAgorot || documentType ? "low" : "none",
     notes: "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
   };
+
+  const fromText = json.rawText ? suggestFieldsFromText(json.rawText) : null;
+  const merged = mergeFields(fromVision, fromText);
+  if (merged.confidence !== "none") {
+    merged.notes = "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.";
+  }
+  return merged;
 }
 
 function parseJsonContent(text: string): VisionJson | null {
@@ -93,7 +116,6 @@ function parseJsonContent(text: string): VisionJson | null {
   }
 }
 
-/** True when Netlify AI Gateway / Gemini env is available */
 export function canUseVisionExtraction(): boolean {
   return Boolean(
     process.env.GEMINI_API_KEY ||
@@ -102,10 +124,6 @@ export function canUseVisionExtraction(): boolean {
   );
 }
 
-/**
- * Read printed fields from an uploaded voucher photo via Gemini
- * (works on Netlify AI Gateway without managing a provider key).
- */
 export async function extractFieldsFromImage(
   file: File,
 ): Promise<ExtractedFields | null> {
@@ -143,39 +161,9 @@ export async function extractFieldsFromImage(
     const text = response.text;
     if (!text) return null;
     const parsed = parseJsonContent(text);
-    if (!parsed) {
-      return emptyFields("החילוץ מהתמונה לא הצליח — מלאו ידנית.");
-    }
+    if (!parsed) return null;
     return normalizeVision(parsed);
   } catch {
     return null;
   }
-}
-
-export async function extractFieldsForUpload(
-  file: File,
-): Promise<{ fields: ExtractedFields; source: string; message: string }> {
-  if (file.type.startsWith("image/")) {
-    const vision = await extractFieldsFromImage(file);
-    if (vision) {
-      return {
-        fields: vision,
-        source: "vision",
-        message:
-          vision.confidence === "none"
-            ? "לא זוהו שדות ברורים בתמונה. מלאו ידנית לפי המסמך."
-            : "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
-      };
-    }
-  }
-
-  const fields = suggestFromFileName(file.name);
-  return {
-    fields,
-    source: "heuristic",
-    message:
-      fields.confidence === "none"
-        ? "חילוץ אוטומטי מהתמונה אינו זמין כרגע. מלאו את השדות ידנית לפי המסמך."
-        : "הוצעו שדות ראשוניים — אשרו ותקנו לפני השמירה.",
-  };
 }

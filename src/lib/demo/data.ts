@@ -59,6 +59,22 @@ export const DEMO_MERCHANTS: Merchant[] = [
     website: null,
     logoColor: "#A3C1E2",
   },
+  {
+    id: "11111111-1111-1111-1111-111111111107",
+    nameHe: "שופרסל",
+    slug: "shufersal",
+    category: "מזון",
+    website: null,
+    logoColor: "#E53935",
+  },
+  {
+    id: "11111111-1111-1111-1111-111111111108",
+    nameHe: "יוחננוף",
+    slug: "yochananof",
+    category: "מזון",
+    website: null,
+    logoColor: "#1B5E20",
+  },
 ];
 
 export const DEMO_BRANCHES: MerchantBranch[] = [
