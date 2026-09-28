@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { APP_NAME } from "@/lib/constants";
+import { DemoEntryButton } from "@/components/auth/demo-entry-button";
+import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
+
+function clearDemoCookie() {
+  document.cookie = `${DEMO_COOKIE}=; path=/; max-age=0; samesite=lax`;
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,9 +27,7 @@ export default function SignupPage() {
         <p className="text-sm text-eggplant">
           Supabase אינו מוגדר. השתמשו במצב הדמו.
         </p>
-        <Link href="/dashboard" className="btn-primary px-5 py-3 text-center">
-          כניסה לדמו
-        </Link>
+        <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
       </div>
     );
   }
@@ -34,6 +37,7 @@ export default function SignupPage() {
     setBusy(true);
     setError(null);
     try {
+      clearDemoCookie();
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signUp({
         email,
@@ -47,6 +51,7 @@ export default function SignupPage() {
         return;
       }
       router.push("/dashboard");
+      router.refresh();
     } catch {
       setError("ההרשמה נכשלה");
     } finally {

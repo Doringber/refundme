@@ -5,14 +5,14 @@ import { CreditOrb } from "@/components/orb/credit-orb";
 import { LoadingBlock } from "@/components/ui/loading";
 import { VoucherCard } from "@/components/vouchers/voucher-card";
 import { daysUntil, formatIls, isSpendable } from "@/lib/calculations";
-import { useDemo } from "@/lib/demo/context";
+import { useAppData } from "@/lib/app-data/context";
 
 export default function DashboardPage() {
-  const demo = useDemo();
+  const app = useAppData();
 
-  if (!demo.ready) return <LoadingBlock label="טוען את הזיכויים…" />;
+  if (!app.ready) return <LoadingBlock label="טוען את הזיכויים…" />;
 
-  const { summary, profile } = demo;
+  const { summary, profile } = app;
   const timeline = summary.vouchers
     .filter(isSpendable)
     .filter((v) => v.expiryConfidence === "confirmed" && v.expiryDate)
@@ -26,8 +26,8 @@ export default function DashboardPage() {
         nearestExpiring={summary.nearestExpiring}
         daysUntilNearestExpiry={summary.daysUntilNearestExpiry}
         orbScaleAgorot={profile.orbScaleAgorot}
-        gainAgorot={demo.lastGainAgorot}
-        onGainShown={() => demo.clearGain()}
+        gainAgorot={app.lastGainAgorot}
+        onGainShown={() => app.clearGain()}
       />
 
       <section className="space-y-3">

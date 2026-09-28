@@ -60,6 +60,7 @@ export function VoucherReviewForm({
   documentMeta,
   onSubmit,
   submitLabel = "שמירת זיכוי",
+  busy = false,
 }: {
   initial?: Partial<VoucherFormValues>;
   documentMeta: {
@@ -67,8 +68,9 @@ export function VoucherReviewForm({
     mimeType: string | null;
     dataUrl: string | null;
   };
-  onSubmit: (voucher: Voucher) => void;
+  onSubmit: (voucher: Voucher) => void | Promise<void>;
   submitLabel?: string;
+  busy?: boolean;
 }) {
   const [values, setValues] = useState<VoucherFormValues>({
     ...emptyValues,
@@ -292,8 +294,12 @@ export function VoucherReviewForm({
         </p>
       )}
 
-      <button type="submit" className="btn-primary w-full py-3.5 text-base">
-        {submitLabel}
+      <button
+        type="submit"
+        className="btn-primary w-full py-3.5 text-base"
+        disabled={busy}
+      >
+        {busy ? "שומרים…" : submitLabel}
       </button>
       <p className="text-center text-xs text-eggplant">
         תמונה של שובר אינה מבטיחה שכל חנות תקבל אותה בקופה. שמרו גם את המקור כשאפשר.

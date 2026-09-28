@@ -1,48 +1,64 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { LoadingBlock } from "@/components/ui/loading";
+import {
+  exitDemoMode,
+  useAppData,
+} from "@/lib/app-data/context";
 import { agorotToShekels, parseShekelInput, formatIls } from "@/lib/calculations";
-import { useDemo } from "@/lib/demo/context";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export default function SettingsPage() {
-  const demo = useDemo();
-  const [scaleInput, setScaleInput] = useState(
-    demo.profile.orbScaleAgorot
-      ? String(agorotToShekels(demo.profile.orbScaleAgorot))
-      : "1000",
-  );
+  const app = useAppData();
+  const router = useRouter();
+  const defaultScale = app.profile.orbScaleAgorot
+    ? String(agorotToShekels(app.profile.orbScaleAgorot))
+    : "1000";
+  const [scaleInput, setScaleInput] = useState(defaultScale);
+  const [scaleTouched, setScaleTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  if (!demo.ready) return <LoadingBlock />;
+  if (!app.ready) return <LoadingBlock />;
 
-  function saveScale(e: React.FormEvent) {
+  const displayScale = scaleTouched ? scaleInput : defaultScale;
+
+  async function saveScale(e: React.FormEvent) {
     e.preventDefault();
-    const agorot = parseShekelInput(scaleInput);
+    const agorot = parseShekelInput(displayScale);
     if (agorot === null || agorot <= 0) {
       setMessage("הזינו סכום חיובי לסולם התצוגה");
       return;
     }
-    demo.setProfile({ orbScaleAgorot: agorot });
+    await app.setProfile({ orbScaleAgorot: agorot });
+    setScaleTouched(false);
     setMessage(`סולם התצוגה עודכן ל־${formatIls(agorot)}`);
   }
 
-  function clearScale() {
-    demo.setProfile({ orbScaleAgorot: null });
+  async function clearScale() {
+    await app.setProfile({ orbScaleAgorot: null });
     setMessage("הסולם נוקה — הגלים דקורטיביים בלבד, ללא אחוזים");
   }
 
-  function handleExport() {
-    const json = demo.exportJson();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "zikuy-sheli-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-    setMessage("הייצוא הורד למכשיר");
+  async function handleExport() {
+    setBusy(true);
+    try {
+      const json = await app.exportJson();
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "zikuy-sheli-export.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage("הייצוא הורד למכשיר");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "הייצוא נכשל");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -55,24 +71,70 @@ export default function SettingsPage() {
       </div>
 
       <section className="card-surface space-y-3 p-5">
+        <h2 className="font-display text-lg">מצב נוכחי</h2>
+        <p className="text-sm text-eggplant">
+          {app.mode === "demo"
+            ? "מצב דמו — הנתונים נשמרים במכשיר בלבד."
+            : app.user
+              ? `מחוברים כ־${app.user.email ?? app.profile.displayName ?? "משתמש"}`
+              : "מחוברים לענן אך אין סשן — יש להתחבר כדי לשמור נתונים."}
+        </p>
+        {app.mode === "supabase" && !app.user && (
+          <Link href="/login" className="btn-primary inline-flex px-5 py-2.5">
+            התחברות
+          </Link>
+        )}
+        {app.mode === "supabase" && app.user && (
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2"
+            onClick={() =>
+              void app.signOut().then(() => {
+                router.push("/");
+                router.refresh();
+              })
+            }
+          >
+            התנתקות
+          </button>
+        )}
+        {app.mode === "demo" && (
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2"
+            onClick={() => exitDemoMode()}
+          >
+            יציאה מדמו
+          </button>
+        )}
+      </section>
+
+      <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">סולם תצוגה אישי לכדור</h2>
         <p className="text-sm text-eggplant">
           אופציונלי. מסמן כמה מהסכום שבחרתם מולאו הגלים — לדוגמה מתוך ₪1,000.
           בלי סולם הגלים דקורטיביים ואין אחוזים.
         </p>
-        <form onSubmit={saveScale} className="flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={(e) => void saveScale(e)} className="flex flex-col gap-3 sm:flex-row">
           <input
             className="input-field"
             inputMode="decimal"
-            value={scaleInput}
-            onChange={(e) => setScaleInput(e.target.value)}
+            value={displayScale}
+            onChange={(e) => {
+              setScaleTouched(true);
+              setScaleInput(e.target.value);
+            }}
             aria-label="סכום סולם בשקלים"
           />
           <button type="submit" className="btn-primary px-5 py-3">
             שמירה
           </button>
         </form>
-        <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={clearScale}>
+        <button
+          type="button"
+          className="btn-secondary px-4 py-2 text-sm"
+          onClick={() => void clearScale()}
+        >
           ניקוי סולם
         </button>
       </section>
@@ -84,8 +146,7 @@ export default function SettingsPage() {
           תוצג ההודעה ״תוקף לא אומת״ ולא תומצא ספירה לאחור.
         </p>
         <p className="text-sm font-medium">
-          ימים לפני פקיעה:{" "}
-          {demo.profile.reminderDays.join(", ")}
+          ימים לפני פקיעה: {app.profile.reminderDays.join(", ")}
         </p>
       </section>
 
@@ -95,48 +156,91 @@ export default function SettingsPage() {
           הורדת JSON של הזיכויים, המימושים והפעילות. היתרות מסומנות כיתרה לפי
           הדיווח שלך.
         </p>
-        <button type="button" className="btn-primary px-5 py-3" onClick={handleExport}>
+        <button
+          type="button"
+          className="btn-primary px-5 py-3"
+          onClick={() => void handleExport()}
+          disabled={busy}
+        >
           ייצוא JSON
         </button>
-        {isSupabaseConfigured() && (
-          <a href="/api/export" className="btn-secondary inline-flex px-5 py-3">
-            ייצוא מהשרת
-          </a>
-        )}
       </section>
 
-      <section className="card-surface space-y-3 p-5">
-        <h2 className="font-display text-lg">מצב דמו</h2>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="btn-secondary px-4 py-2"
-            onClick={() => {
-              demo.reset();
-              setMessage("נתוני הדמו אופסו לדוגמאות");
-            }}
-          >
-            איפוס לדמו לדוגמה
-          </button>
+      {app.mode === "demo" ? (
+        <section className="card-surface space-y-3 p-5">
+          <h2 className="font-display text-lg">מצב דמו</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-secondary px-4 py-2"
+              onClick={() => {
+                app.reset();
+                setMessage("נתוני הדמו אופסו לדוגמאות");
+              }}
+            >
+              איפוס לדמו לדוגמה
+            </button>
+            <button
+              type="button"
+              className="btn-danger px-4 py-2"
+              onClick={() => {
+                if (confirm("למחוק את כל נתוני הדמו מהמכשיר?")) {
+                  void Promise.resolve(app.wipe()).then(() => {
+                    app.reset();
+                    setMessage("הנתונים נמחקו ונטענו מחדש");
+                  });
+                }
+              }}
+            >
+              מחיקת נתוני דמו
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="card-surface space-y-3 p-5">
+          <h2 className="font-display text-lg">מחיקת חשבון</h2>
+          <p className="text-sm text-eggplant">
+            מוחק את כל הזיכויים, המסמכים והחשבון מהשרת. פעולה זו בלתי הפיכה.
+          </p>
           <button
             type="button"
             className="btn-danger px-4 py-2"
+            disabled={!app.user || busy}
             onClick={() => {
-              if (confirm("למחוק את כל נתוני הדמו מהמכשיר?")) {
-                demo.wipe();
-                demo.reset();
-                setMessage("הנתונים נמחקו ונטענו מחדש");
+              if (
+                confirm(
+                  "למחוק לצמיתות את החשבון ואת כל הנתונים? לא ניתן לשחזר.",
+                )
+              ) {
+                setBusy(true);
+                void Promise.resolve(app.wipe())
+                  .then(() => {
+                    router.push("/");
+                    router.refresh();
+                  })
+                  .catch((err: unknown) => {
+                    setMessage(
+                      err instanceof Error ? err.message : "מחיקת החשבון נכשלה",
+                    );
+                    setBusy(false);
+                  });
               }
             }}
           >
-            מחיקת נתוני דמו
+            מחיקת חשבון לצמיתות
           </button>
-        </div>
-      </section>
+        </section>
+      )}
 
       {message && (
         <p className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm" role="status">
           {message}
+        </p>
+      )}
+
+      {app.error && (
+        <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+          {app.error}
         </p>
       )}
 

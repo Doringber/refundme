@@ -64,14 +64,21 @@ npx supabase db push
 4. הפעילו Email Auth בלוח הבקרה של Supabase.
 5. `npm run dev` — מסכי התחברות/הרשמה יופיעו כשמשתני הסביבה מוגדרים.
 
-### משתני סביבה
+### משתני סביבה (לעולם לא ב־git)
+
+שמרו מפתחות רק ב־`.env.local` מקומית, וב־Vercel / Netlify Environment Variables בפרודקשן.
+`.env*` ב־`.gitignore` — רק `.env.example` (placeholders) נכנס ל־git.
 
 | משתנה | היכן | תפקיד |
 |--------|------|--------|
 | `NEXT_PUBLIC_SUPABASE_URL` | לקוח+שרת | כתובת הפרויקט |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | מפתח anon (כפוף ל־RLS) |
-| `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | מחיקת חשבון ומסמכים |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | לקוח+שרת | מפתח publishable (`sb_publishable_…`, כפוף ל־RLS) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | alias ישן ל־anon JWT |
+| `SUPABASE_SECRET_KEY` | שרת בלבד | מחיקת חשבון ומסמכים (`sb_secret_…`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | alias ישן ל־service_role |
 | `DOCUMENT_OCR_API_KEY` | שרת בלבד | אופציונלי ל־`/api/extract` |
+
+אחרי התחברות/הרשמה האפליקציה קוראת וכותבת ל־Supabase (`profiles`, `vouchers`, `redemptions`, `activity_events`, storage `voucher-documents`). מצב דמו נשאר מקומי דרך cookie `zikuy_demo`.
 
 ## כללי מוצר חשובים
 

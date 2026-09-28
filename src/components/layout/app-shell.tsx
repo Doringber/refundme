@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAppData } from "@/lib/app-data/context";
 import { APP_NAME } from "@/lib/constants";
 
 const NAV = [
@@ -12,14 +13,10 @@ const NAV = [
   { href: "/settings", label: "הגדרות", icon: "⚙" },
 ];
 
-export function AppShell({
-  children,
-  demo,
-}: {
-  children: React.ReactNode;
-  demo?: boolean;
-}) {
+export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const app = useAppData();
+  const demo = app.mode === "demo";
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pb-28 pt-4 md:max-w-5xl md:pb-10 md:pt-6">

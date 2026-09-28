@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { APP_NAME } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -17,7 +18,11 @@ export default function HomePage() {
           </p>
         </div>
         <div className="chip-row">
-          <span className="badge bg-blush text-forest">מצב דמו</span>
+          {supabaseReady ? (
+            <span className="badge bg-mint-chip text-forest-deep">Supabase מחובר</span>
+          ) : (
+            <span className="badge bg-blush text-forest">מצב דמו</span>
+          )}
           <span className="badge bg-dusty-blue text-forest">עברית RTL</span>
         </div>
       </header>
@@ -43,12 +48,7 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2">
-            <Link
-              href="/dashboard"
-              className="btn-primary px-7 py-3.5 text-base md:text-lg"
-            >
-              כניסה למצב דמו
-            </Link>
+            <DemoEntryButton className="btn-primary px-7 py-3.5 text-base md:text-lg" />
             {supabaseReady ? (
               <Link
                 href="/login"
