@@ -6,7 +6,8 @@
 
 ## תכונות בגרסה 1
 
-- התחברות עם Supabase Auth (או **מצב דמו** מלא בלי חשבון)
+- התחברות עם **Google** או אימייל דרך Supabase Auth (או **מצב דמו** מלא בלי חשבון)
+- פרופיל משתמש ב־Supabase (`profiles`: שם, אימייל, תמונה) עם RLS
 - העלאת תמונה / PDF / צילום מהנייד, שמירת המסמך המקורי
 - הצעת שדות מחילוץ טקסט כשזמין + מילוי ידני מלא
 - סוגי מסמך: זיכוי החזרה, שובר מתנה, שובר קנייה, קבלה/חשבונית (קבלה **לא** נספרת כזיכוי)
@@ -61,8 +62,17 @@ npx supabase db push
 - באקט פרטי `voucher-documents` (עד 10MB, תמונות/PDF) עם מדיניות לפי `user_id`
 - סט סניפים קטן עם סימון `verified` / `unverified`
 
-4. הפעילו Email Auth בלוח הבקרה של Supabase.
-5. `npm run dev` — מסכי התחברות/הרשמה יופיעו כשמשתני הסביבה מוגדרים.
+4. הפעילו **Email** ו־**Google** בלוח הבקרה של Supabase:
+   - [Authentication → Providers → Google](https://supabase.com/dashboard/project/_/auth/providers)
+   - צרו OAuth Client ב־[Google Cloud Console](https://console.cloud.google.com/apis/credentials) (סוג Web)
+   - Authorized redirect URI ב־Google: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+   - הדביקו Client ID + Client Secret ב־Supabase
+   - ב־Supabase → Authentication → URL Configuration הוסיפו:
+     - Site URL: כתובת האפליקציה
+     - Redirect URLs: `http://localhost:3000/auth/callback` ו־`https://YOUR_DOMAIN/auth/callback`
+5. `npm run dev` — מסכי התחברות/הרשמה (כולל כפתור Google) יופיעו כשמשתני הסביבה מוגדרים.
+
+אחרי התחברות עם Google נוצרת רשומה ב־`profiles` (שם, אימייל, `avatar_url`) אוטומטית דרך trigger על `auth.users`.
 
 ### משתני סביבה (לעולם לא ב־git)
 

@@ -91,6 +91,8 @@ export interface ActivityEvent {
 export interface UserProfile {
   id: string;
   displayName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
   /** Personal display scale for Credit Orb liquid, in agorot */
   orbScaleAgorot: number | null;
   reminderDays: number[];

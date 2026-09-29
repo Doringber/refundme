@@ -17,4 +17,16 @@ file_size_limit = "10MiB"
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/**"]
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "http://localhost:3000/auth/callback",
+]
+
+# Google OAuth — set client_id/secret via Dashboard or env when running locally.
+# Callback registered with Google must be:
+#   https://<project-ref>.supabase.co/auth/v1/callback
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false

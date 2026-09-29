@@ -72,13 +72,27 @@ export default function SettingsPage() {
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">מצב נוכחי</h2>
-        <p className="text-sm text-eggplant">
-          {app.mode === "demo"
-            ? "מצב דמו — הנתונים נשמרים במכשיר בלבד."
-            : app.user
-              ? `מחוברים כ־${app.user.email ?? app.profile.displayName ?? "משתמש"}`
-              : "מחוברים לענן אך אין סשן — יש להתחבר כדי לשמור נתונים."}
-        </p>
+        <div className="flex items-center gap-3">
+          {app.profile.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={app.profile.avatarUrl}
+              alt=""
+              className="h-12 w-12 rounded-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : null}
+          <p className="text-sm text-eggplant">
+            {app.mode === "demo"
+              ? "מצב דמו — הנתונים נשמרים במכשיר בלבד."
+              : app.user
+                ? `מחוברים כ־${app.profile.displayName ?? app.user.email ?? app.profile.email ?? "משתמש"}`
+                : "מחוברים לענן אך אין סשן — יש להתחבר כדי לשמור נתונים."}
+          </p>
+        </div>
+        {app.mode === "supabase" && app.user?.email && (
+          <p className="text-xs text-eggplant">{app.user.email}</p>
+        )}
         {app.mode === "supabase" && !app.user && (
           <Link href="/login" className="btn-primary inline-flex px-5 py-2.5">
             התחברות
