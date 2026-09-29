@@ -91,6 +91,8 @@ function defaultProfile(uid: string): UserProfile {
   return {
     id: uid,
     displayName: null,
+    email: null,
+    avatarUrl: null,
     orbScaleAgorot: 100000,
     reminderDays: [30, 14, 7, 3, 1],
     createdAt: new Date().toISOString(),

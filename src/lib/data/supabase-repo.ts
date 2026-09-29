@@ -45,6 +45,8 @@ export async function updateProfile(
     .from("profiles")
     .update({
       display_name: patch.displayName,
+      email: patch.email,
+      avatar_url: patch.avatarUrl,
       orb_scale_agorot: patch.orbScaleAgorot,
       reminder_days: patch.reminderDays,
       updated_at: new Date().toISOString(),

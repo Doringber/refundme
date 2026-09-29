@@ -27,6 +27,8 @@ export const SERVER_DEMO_SNAPSHOT: DemoState = {
   profile: {
     id: "demo-user",
     displayName: "דמו",
+    email: null,
+    avatarUrl: null,
     orbScaleAgorot: 100000,
     reminderDays: [30, 14, 7, 3, 1],
     createdAt: "",

@@ -417,6 +417,8 @@ export function createDemoSeed(): {
   const profile: UserProfile = {
     id: DEMO_USER_ID,
     displayName: "דמו",
+    email: null,
+    avatarUrl: null,
     orbScaleAgorot: 100000,
     reminderDays: [30, 14, 7, 3, 1],
     createdAt: now,

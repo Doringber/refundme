@@ -66,6 +66,8 @@ export function mapProfile(row: any): UserProfile {
   return {
     id: row.id,
     displayName: row.display_name,
+    email: row.email ?? null,
+    avatarUrl: row.avatar_url ?? null,
     orbScaleAgorot: row.orb_scale_agorot,
     reminderDays: row.reminder_days ?? [30, 14, 7, 3, 1],
     createdAt: row.created_at,

@@ -17,6 +17,8 @@ export interface Database {
         Row: {
           id: string;
           display_name: string | null;
+          email: string | null;
+          avatar_url: string | null;
           orb_scale_agorot: number | null;
           reminder_days: number[];
           created_at: string;
@@ -25,6 +27,8 @@ export interface Database {
         Insert: {
           id: string;
           display_name?: string | null;
+          email?: string | null;
+          avatar_url?: string | null;
           orb_scale_agorot?: number | null;
           reminder_days?: number[];
           created_at?: string;
