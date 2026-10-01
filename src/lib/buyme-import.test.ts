@@ -15,8 +15,8 @@ describe("buyme bulk import", () => {
     const { saved, skipped } = vouchersFromBuyMeGifts(gifts);
     assert.ok(saved.length >= 2);
     assert.ok(saved.every((v) => v.remainingAmountAgorot > 0));
-    assert.ok(saved.some((v) => v.merchantName === "BUYME FOODY"));
-    assert.ok(saved.some((v) => v.merchantName === "BUYME ALL"));
+    assert.ok(saved.some((v) => v.merchantName === "BUYME FOODY" && v.remainingAmountAgorot === 20000));
+    assert.ok(saved.some((v) => v.merchantName === "BUYME ALL" && v.remainingAmountAgorot === 88100));
     assert.ok(skipped.some((g) => g.title === "סינמה סיטי") || skipped.length >= 0);
   });
 

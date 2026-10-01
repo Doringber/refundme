@@ -194,16 +194,16 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          אחרי חיבור חד־פעמי הסנכרון רץ לבד (בכניסה לאפליקציה, כל 6 שעות, או
-          «סנכרן עכשיו») מול ה־API של BuyMe — בלי לצלם את הארנק בכל פעם. אם
-          הסשן פג תופיע בקשה להתחבר מחדש.
+          פתיחת BuyMe לא שומרת חיבור ולא מייבאת מתנות. «סנכרן עכשיו» עובד רק
+          אחרי שהטוקן חזר לאפליקציה. בינתיים הייבוא שעובד הוא צילום «המתנות
+          שלי».
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/vouchers/import/buyme"
+            href="/vouchers/new"
             className="btn-primary inline-flex px-4 py-2 text-sm"
           >
-            חבר / חבר מחדש את BuyMe
+            ייבוא מצילום «המתנות שלי»
           </Link>
           <button
             type="button"
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                   upserted?: number;
                 };
                 if (json.status === "login_required") {
-                  setMessage("BuyMe דורש חיבור מחדש");
+                  setMessage("אין חיבור BuyMe שמור. פתיחת האתר לא מספיקה — לא יובא כלום.");
                   return;
                 }
                 if (!res.ok) {

@@ -9,7 +9,7 @@ import {
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
-import { vouchersFromBuyMeGifts } from "@/lib/buyme-import";
+import { parseBuyMePageText, vouchersFromBuyMeGifts } from "@/lib/buyme-import";
 import {
   extractBuyMeGifts,
   looksLikeBuyMe,
@@ -27,6 +27,7 @@ export default function NewVoucherPage() {
   const app = useAppData();
   const router = useRouter();
   const buyMeInputRef = useRef<HTMLInputElement>(null);
+  const [paste, setPaste] = useState("");
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -259,6 +260,36 @@ export default function NewVoucherPage() {
             <span className="h-px flex-1 bg-white/10" />
           </div>
 
+          <label className="block text-xs font-bold text-forest" htmlFor="buyme-paste">
+            הדביקו את טקסט «המתנות שלי» (המסלול שנבדק)
+          </label>
+          <textarea
+            id="buyme-paste"
+            className="min-h-28 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm"
+            placeholder={"BUYME ALL\nיתרה: ₪881"}
+            value={paste}
+            onChange={(e) => setPaste(e.target.value)}
+            data-testid="buyme-paste-text"
+          />
+          <button
+            type="button"
+            className="btn-primary w-full py-3 text-sm"
+            disabled={!paste.trim()}
+            onClick={() => {
+              const gifts = parseBuyMePageText(paste);
+              if (!gifts.length) {
+                setError("לא מצאנו מתנות עם יתרה בטקסט. צריך שורה כמו «יתרה: ₪200».");
+                return;
+              }
+              setError(null);
+              setBuyMeGifts(gifts);
+              setExtractionNote("ייבוא מהטקסט שהודבק.");
+              setStep("pick-buyme");
+            }}
+            data-testid="buyme-parse-paste"
+          >
+            ייבוא מהטקסט
+          </button>
           <button
             type="button"
             className="btn-secondary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
@@ -266,9 +297,9 @@ export default function NewVoucherPage() {
             onClick={() => buyMeInputRef.current?.click()}
             data-testid="buyme-import-button"
           >
-            <span className="font-extrabold">צילום «המתנות שלי»</span>
+            <span className="font-extrabold">או צילום «המתנות שלי»</span>
             <span className="text-xs opacity-80">
-              ייבוא כל המתנות עם יתרה — בלי כרטיס־כרטיס
+              תלוי באיכות קריאת הטקסט מהתמונה
             </span>
           </button>
           <input
