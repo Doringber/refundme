@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ExpiryNotifier } from "@/components/notifications/expiry-notifier";
+import { BuyMeAutoSync } from "@/components/wallet/buyme-auto-sync";
 import { useAppData } from "@/lib/app-data/context";
 import { APP_NAME } from "@/lib/constants";
 
@@ -43,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }`}
     >
       <ExpiryNotifier />
+      <BuyMeAutoSync />
       {!isPresent && (
       <header className="mb-5 flex items-center justify-between gap-3">
         <Link

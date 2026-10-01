@@ -194,16 +194,44 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          שאיבה מ־API סגור של BuyMe (Bearer JWT אחרי התחברות) — סימנייה ב־«המתנות
-          שלי» מעבירה את הסשן לכאן ושולפת יתרה, קוד וברקוד. לחלופין צילום מסך אחד
-          של הרשימה. המימוש עצמו נשאר ב־BuyMe.
+          אחרי חיבור חד־פעמי הסנכרון רץ לבד (בכניסה לאפליקציה, כל 6 שעות, או
+          «סנכרן עכשיו») מול ה־API של BuyMe — בלי לצלם את הארנק בכל פעם. אם
+          הסשן פג תופיע בקשה להתחבר מחדש.
         </p>
-        <Link
-          href="/vouchers/new"
-          className="btn-primary inline-flex px-4 py-2 text-sm"
-        >
-          ייבוא מ־BuyMe
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/vouchers/import/buyme"
+            className="btn-primary inline-flex px-4 py-2 text-sm"
+          >
+            חבר / חבר מחדש את BuyMe
+          </Link>
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2 text-sm"
+            onClick={() => {
+              void (async () => {
+                setMessage(null);
+                const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+                const json = (await res.json()) as {
+                  status?: string;
+                  upserted?: number;
+                };
+                if (json.status === "login_required") {
+                  setMessage("BuyMe דורש חיבור מחדש");
+                  return;
+                }
+                if (!res.ok) {
+                  setMessage("הסנכרון נכשל");
+                  return;
+                }
+                setMessage(`סונכרנו ${json.upserted ?? 0} מתנות מ־BuyMe`);
+                window.setTimeout(() => window.location.reload(), 600);
+              })();
+            }}
+          >
+            סנכרן עכשיו
+          </button>
+        </div>
       </section>
 
       {app.mode === "demo" ? (
