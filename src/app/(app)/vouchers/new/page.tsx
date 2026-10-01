@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BuyMeBookmarkCard } from "@/components/vouchers/buyme-bookmark-card";
+import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { BuyMeGiftImportPanel } from "@/components/vouchers/buyme-gift-import";
 import {
   valuesFromExtraction,
@@ -251,7 +251,7 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <BuyMeBookmarkCard />
+          <BuyMeConnectCard />
 
           <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
             <span className="h-px flex-1 bg-white/10" />

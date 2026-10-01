@@ -6,6 +6,12 @@ import type { ExtractedFields, Voucher } from "./types";
 
 export const BUYME_IMPORT_PATH = "/vouchers/import/buyme";
 
+/** BuyMe web app — opened as the temporary connect window. */
+export const BUYME_SITE_URL = "https://buyme.co.il/";
+
+/** postMessage type when the connect popup finished saving the session. */
+export const BUYME_CONNECTED_MESSAGE = "buyme-connected" as const;
+
 /** Wallet card shape returned by `/api/buyme/wallet` (client-safe). */
 export type BuyMeApiCard = {
   id: number | string;
@@ -143,14 +149,17 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 }
 
 /**
- * Bookmarklet that runs ON buyme.co.il after Google login.
- * Reads Ember Simple Auth JWT (private API credential) and hands it to us —
- * same auth model as buyme-mcp / maccabi-style authenticated transport.
+ * One-tap “connect button” that must run ON buyme.co.il after login.
+ * Reads the user's own Ember Simple Auth JWT and navigates back to us with
+ * `#token=…` (popup window becomes our import page, then can close).
+ *
+ * Why not a pure OAuth popup? BuyMe does not redirect to us with a code, and
+ * browsers block reading another site's localStorage from our opener.
  */
 export function buyMeBookmarkletHref(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את BuyMe (buyme.co.il) והתחברו");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("לא נמצא סשן — התחברו ל־BuyMe ואז לחצו שוב");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא טוקן התחברות ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליפת הסשן מ־BuyMe נכשלה");}})();`;
+  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את החלון של BuyMe והתחברו");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe בחלון ואז לחצו שוב על כפתור החיבור");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
   return `javascript:${encodeURIComponent(code)}`;
 }
 
