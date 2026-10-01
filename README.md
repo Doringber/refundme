@@ -84,7 +84,7 @@ npx supabase db push
 | `NEXT_PUBLIC_SUPABASE_URL` | לקוח+שרת | כתובת הפרויקט |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | לקוח+שרת | מפתח publishable (`sb_publishable_…`, כפוף ל־RLS) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | alias ישן ל־anon JWT |
-| `SUPABASE_SECRET_KEY` | שרת בלבד | מחיקת חשבון ומסמכים (`sb_secret_…`) |
+| `SUPABASE_SECRET_KEY` | שרת בלבד (לא `NEXT_PUBLIC_`) | מחיקת חשבון ומסמכים (`sb_secret_…`) דרך `src/lib/supabase/secret.ts` |
 | `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | alias ישן ל־service_role |
 | `DOCUMENT_OCR_API_KEY` | שרת בלבד | אופציונלי ל־`/api/extract` |
 
