@@ -156,8 +156,9 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">תזכורות תוקף</h2>
         <p className="text-sm text-eggplant">
-          תזכורות מבוססות על תאריך מאומת בלבד. אם התוקף חסר או לא ודאי —
-          תוצג ההודעה ״תוקף לא אומת״ ולא תומצא ספירה לאחור.
+          תזכורות מבוססות על תאריך מאומת בלבד. בעמוד הזיכוי אפשר להוסיף ליומן
+          iPhone / Apple (קובץ .ics) או ליומן Google — עם תזכורות{" "}
+          {app.profile.reminderDays.join(", ")} ימים לפני הפקיעה.
         </p>
         <p className="text-sm font-medium">
           ימים לפני פקיעה: {app.profile.reminderDays.join(", ")}
