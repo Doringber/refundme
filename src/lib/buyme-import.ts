@@ -1,6 +1,7 @@
 import type { BuyMeGiftCandidate } from "./extract-buyme";
 import { extractBuyMeGifts } from "./extract-buyme";
 import { DEMO_USER_ID } from "./demo/data";
+import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
 import { shekelsToAgorot } from "./calculations";
 import type { ExtractedFields, Voucher } from "./types";
 
@@ -11,6 +12,15 @@ export const BUYME_SITE_URL = "https://buyme.co.il/";
 
 /** postMessage type when the connect popup finished saving the session. */
 export const BUYME_CONNECTED_MESSAGE = "buyme-connected" as const;
+
+/** localStorage key — fires `storage` in other same-origin tabs/windows. */
+export const BUYME_CONNECTED_STORAGE_KEY = "zikuy:buyme-connected";
+
+/** sessionStorage: user went to BuyMe and we should prompt capture on return. */
+export const BUYME_AWAIT_CAPTURE_KEY = "zikuy:buyme-await-capture";
+
+/** Keep page-text hashes under common mobile URL limits. */
+const PAGE_TEXT_HASH_MAX = 120_000;
 
 /** Wallet card shape returned by `/api/buyme/wallet` (client-safe). */
 export type BuyMeApiCard = {
@@ -148,19 +158,49 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
   );
 }
 
+/** Fixture «המתנות שלי» — demo the import UX without opening BuyMe. */
+export function demoBuyMeGiftsFromFixture(): BuyMeGiftCandidate[] {
+  return parseBuyMePageText(BUYME_GIFTS_LIST_TEXT);
+}
+
 /**
- * Connect bridge pasted into BuyMe’s address bar after login.
- * Reads the user's own Ember Simple Auth JWT and navigates back to us with
- * `#token=…` (popup becomes our import page, then can close).
- *
- * Why not a pure OAuth popup? BuyMe does not redirect to us with a code, and
- * browsers block reading another site's localStorage from our opener.
+ * Runs ON buyme.co.il (iOS Shortcut / Android bookmark / desktop console).
+ * Grabs the visible gifts list text in one shot and returns to our import page.
+ * No JWT, no server→BuyMe call — works when API connect is blocked on phones.
  */
-export function buyMeBookmarkletHref(appOrigin: string): string {
+export function buyMePageTextBridgeScript(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("הדביקו את זה בשורת הכתובת של החלון של BuyMe (אחרי התחברות)");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז הדביקו שוב בשורת הכתובת");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
-  return `javascript:${encodeURIComponent(code)}`;
+  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את «המתנות שלי» ב־BuyMe");return;}var text=(document.body&&document.body.innerText)||"";text=text.replace(/\\s+/g," ").trim();if(text.length<20){alert("לא נמצא טקסט ברשימה — גללו את «המתנות שלי» ונסו שוב");return;}if(text.length>${PAGE_TEXT_HASH_MAX})text=text.slice(0,${PAGE_TEXT_HASH_MAX});location.href=${JSON.stringify(target)}+"#text="+encodeURIComponent(text);}catch(e){alert("שליפת הרשימה מ־BuyMe נכשלה");}})();`;
+}
+
+/** javascript: wrapper — useful on some Android browsers as a bookmark. */
+export function buyMePageTextBookmarkletHref(appOrigin: string): string {
+  return `javascript:${encodeURIComponent(buyMePageTextBridgeScript(appOrigin))}`;
+}
+
+/**
+ * Raw JS for the BuyMe tab console (desktop). Reads Ember JWT and returns
+ * to our import route for full wallet API (codes/barcodes).
+ */
+export function buyMeBridgeConsoleScript(appOrigin: string): string {
+  const origin = appOrigin.replace(/\/$/, "");
+  const target = `${origin}${BUYME_IMPORT_PATH}`;
+  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את BuyMe, התחברו, ואז לחצו על הסימנייה / הריצו בקונסול");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז נסו שוב");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
+}
+
+/** @deprecated JWT bookmark — desktop experimental. Prefer page-text bridge on phones. */
+export function buyMeBookmarkletHref(appOrigin: string): string {
+  return `javascript:${encodeURIComponent(buyMeBridgeConsoleScript(appOrigin))}`;
+}
+
+/** Notify other same-origin windows that BuyMe session is ready. */
+export function signalBuyMeConnected(): void {
+  try {
+    localStorage.setItem(BUYME_CONNECTED_STORAGE_KEY, String(Date.now()));
+  } catch {
+    /* private mode / blocked storage */
+  }
 }
 
 export function readBuyMeImportHash(hash: string): {
@@ -173,9 +213,30 @@ export function readBuyMeImportHash(hash: string): {
     if (raw.startsWith("token=")) {
       return { token: decodeURIComponent(raw.slice("token=".length)), pageText: null };
     }
-    // Legacy: whole-page text dump
+    if (raw.startsWith("text=")) {
+      return { token: null, pageText: decodeURIComponent(raw.slice("text=".length)) };
+    }
+    // Legacy: whole-page text dump without prefix
     return { token: null, pageText: decodeURIComponent(raw) };
   } catch {
     return { token: null, pageText: null };
+  }
+}
+
+export function markAwaitingBuyMeCapture(): void {
+  try {
+    sessionStorage.setItem(BUYME_AWAIT_CAPTURE_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeAwaitingBuyMeCapture(): boolean {
+  try {
+    if (sessionStorage.getItem(BUYME_AWAIT_CAPTURE_KEY) !== "1") return false;
+    sessionStorage.removeItem(BUYME_AWAIT_CAPTURE_KEY);
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buyMeBookmarkletHref,
+  buyMeBridgeConsoleScript,
+  buyMePageTextBridgeScript,
+  demoBuyMeGiftsFromFixture,
   parseBuyMePageText,
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
 } from "./buyme-import";
+import { detectBuyMeClientPlatform } from "./buyme-platform";
 import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
 
 describe("buyme bulk import", () => {
@@ -53,21 +57,58 @@ describe("buyme bulk import", () => {
     assert.equal(saved[0].expiryConfidence, "confirmed");
   });
 
-  it("builds connect bridge script that extracts Ember session on BuyMe", () => {
+  it("builds console bridge script that extracts Ember session on BuyMe", () => {
+    const script = buyMeBridgeConsoleScript("https://example.com");
+    assert.doesNotMatch(script, /^javascript:/);
+    assert.match(script, /vouchers\/import\/buyme/);
+    assert.match(script, /ember_simple_auth-session/);
+    assert.match(script, /#token=/);
     const href = buyMeBookmarkletHref("https://example.com");
     assert.match(href, /^javascript:/);
-    const decoded = decodeURIComponent(href);
-    assert.match(decoded, /vouchers\/import\/buyme/);
-    assert.match(decoded, /ember_simple_auth-session/);
-    assert.match(decoded, /#token=/);
-    assert.match(decoded, /שורת הכתובת|התחברו ל־BuyMe/);
   });
 
-  it("reads token hash payload", () => {
-    const { token, pageText } = readBuyMeImportHash(
-      `#token=${encodeURIComponent("aaa.bbb.ccc")}`,
+  it("builds page-text bridge that dumps המתנות שלי in one shot", () => {
+    const script = buyMePageTextBridgeScript("https://example.com");
+    assert.match(script, /innerText/);
+    assert.match(script, /#text=/);
+    assert.match(script, /vouchers\/import\/buyme/);
+  });
+
+  it("reads token and text hash payloads", () => {
+    const tok = readBuyMeImportHash(`#token=${encodeURIComponent("aaa.bbb.ccc")}`);
+    assert.equal(tok.token, "aaa.bbb.ccc");
+    assert.equal(tok.pageText, null);
+    const text = readBuyMeImportHash(
+      `#text=${encodeURIComponent("BUYME ALL\nיתרה: ₪10")}`,
     );
-    assert.equal(token, "aaa.bbb.ccc");
-    assert.equal(pageText, null);
+    assert.equal(text.token, null);
+    assert.match(text.pageText ?? "", /BUYME ALL/);
+  });
+
+  it("loads demo gifts from fixture for walkthrough", () => {
+    const gifts = demoBuyMeGiftsFromFixture();
+    assert.ok(gifts.length >= 2);
+    assert.ok(gifts.some((g) => g.title.includes("BUYME")));
+  });
+
+  it("detects android / ios / desktop clients", () => {
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+      ),
+      "android",
+    );
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+      ),
+      "ios",
+    );
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0",
+      ),
+      "desktop",
+    );
   });
 });

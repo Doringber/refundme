@@ -194,9 +194,8 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          שאיבה מ־API סגור של BuyMe (Bearer JWT אחרי התחברות) — סימנייה ב־«המתנות
-          שלי» מעבירה את הסשן לכאן ושולפת יתרה, קוד וברקוד. לחלופין צילום מסך אחד
-          של הרשימה. המימוש עצמו נשאר ב־BuyMe.
+          כפתור «ייבוא מ־BuyMe» — בוחרים צילום של «המתנות שלי» (Chrome /
+          אייפון / אנדרואיד). המימוש נשאר ב־BuyMe.
         </p>
         <Link
           href="/vouchers/new"

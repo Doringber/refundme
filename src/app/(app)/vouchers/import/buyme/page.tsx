@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   valuesFromExtraction,
@@ -12,8 +11,10 @@ import {
 import { useAppData } from "@/lib/app-data/context";
 import {
   BUYME_CONNECTED_MESSAGE,
+  BUYME_CONNECTED_STORAGE_KEY,
   parseBuyMePageText,
   readBuyMeImportHash,
+  signalBuyMeConnected,
   vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
   type BuyMeApiCard,
@@ -24,7 +25,8 @@ import type { Voucher } from "@/lib/types";
 
 type Step = "loading" | "connect" | "waiting" | "pick" | "review" | "success";
 
-function notifyOpenerAndClose() {
+function notifyOtherWindows() {
+  signalBuyMeConnected();
   try {
     if (window.opener && !window.opener.closed) {
       window.opener.postMessage(
@@ -35,14 +37,6 @@ function notifyOpenerAndClose() {
   } catch {
     /* ignore cross-window issues */
   }
-  // Close the temporary connect window when we were opened as a popup.
-  window.setTimeout(() => {
-    try {
-      window.close();
-    } catch {
-      /* ignore */
-    }
-  }, 120);
 }
 
 export default function BuyMeImportPage() {
@@ -71,8 +65,13 @@ export default function BuyMeImportPage() {
       return;
     }
     if (!res.ok || json.status !== "OK") {
-      setError("שליפת הארנק מ־BuyMe נכשלה");
-      setStep("connect");
+      setError(
+        json.error === "wallet_fetch_failed"
+          ? "החיבור נשמר, אבל BuyMe לא החזיר ארנק (נסו שוב או התחברו מחדש)"
+          : "שליפת הארנק מ־BuyMe נכשלה",
+      );
+      setStep("pick");
+      setCards([]);
       return;
     }
     setCards(json.cards ?? []);
@@ -96,20 +95,16 @@ export default function BuyMeImportPage() {
         });
         if (!res.ok) {
           if (!cancelled) {
-            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
+            setError(
+              "החיבור מ־BuyMe לא תקף — התחברו מחדש והדביקו את הקוד שוב ב־Console",
+            );
             setStep("connect");
           }
           return;
         }
-        // Temporary BuyMe window landed here with the token — hand off to opener.
-        if (window.opener && !window.opener.closed) {
-          notifyOpenerAndClose();
-          if (!cancelled) {
-            setStep("success");
-            setImportedCount(0);
-          }
-          return;
-        }
+        // Always pull the wallet in THIS window (previous bug: with opener we
+        // only flashed “connected” and never called /api/buyme/wallet).
+        notifyOtherWindows();
         if (!cancelled) await loadWallet();
         return;
       }
@@ -139,7 +134,7 @@ export default function BuyMeImportPage() {
     };
   }, []);
 
-  // Parent tab: wait until the popup finishes connecting.
+  // Parent tab: wait until another window finishes connecting.
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
@@ -148,8 +143,19 @@ export default function BuyMeImportPage() {
       setStep("loading");
       void loadWallet();
     }
+    function onStorage(event: StorageEvent) {
+      if (event.key !== BUYME_CONNECTED_STORAGE_KEY || event.newValue == null) {
+        return;
+      }
+      setStep("loading");
+      void loadWallet();
+    }
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -234,7 +240,7 @@ export default function BuyMeImportPage() {
         </Link>
         <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
         <p className="text-sm text-eggplant">
-          חלון חיבור זמני → שמירת חיבור → שליפת הארנק ב־API
+          כפתור אחד — צילום «המתנות שלי» (Chrome / אייפון)
         </p>
       </div>
 
@@ -248,23 +254,14 @@ export default function BuyMeImportPage() {
               {error}
             </p>
           )}
-          {step === "waiting" && (
-            <p
-              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
-              role="status"
-            >
-              ממתינים לחיבור מהחלון… אחרי התחברות ב־BuyMe: הדביקו בשורת
-              הכתובת שם ולחצו Enter.
+          <div className="card-surface space-y-3 p-5 text-center">
+            <p className="text-sm font-semibold text-eggplant">
+              הייבוא הפשוט נמצא במסך ההוספה — כפתור אחד שעובד בכל דפדפן.
             </p>
-          )}
-          <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />
-          <p className="text-center text-xs text-eggplant">
-            או{" "}
-            <Link href="/vouchers/new" className="font-bold text-forest">
-              צילום מסך אחד של הרשימה
-            </Link>{" "}
-            כגיבוי
-          </p>
+            <Link href="/vouchers/new" className="btn-primary inline-flex px-6 py-3 text-sm">
+              לייבוא מ־BuyMe
+            </Link>
+          </div>
         </div>
       )}
 
