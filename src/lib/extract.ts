@@ -1,5 +1,9 @@
 import type { DocumentType, ExtractedFields } from "./types";
 import { shekelsToAgorot } from "./calculations";
+import { looksLikeBuyMe, suggestBuyMeFields } from "./extract-buyme";
+
+export { extractBuyMeGifts, looksLikeBuyMe } from "./extract-buyme";
+export type { BuyMeGiftCandidate } from "./extract-buyme";
 
 /**
  * Heuristic extraction for Israeli store-credit vouchers and receipts.
@@ -227,6 +231,12 @@ function extractUsageTerms(text: string): string | null {
 export function suggestFieldsFromText(text: string): ExtractedFields {
   const normalized = text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim();
   if (!normalized) return emptyExtraction("none");
+
+  // BuyMe gifts list / card screenshots — dedicated parser first
+  if (looksLikeBuyMe(normalized)) {
+    const buyMe = suggestBuyMeFields(normalized);
+    if (buyMe && buyMe.confidence !== "none") return buyMe;
+  }
 
   const merchantName = detectMerchant(normalized);
   const documentType = detectDocumentType(normalized);

@@ -194,20 +194,16 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          האפליקציה לא מחליפה את BuyMe — היא עוזרת לעקוב אחרי יתרות. צלמו או
-          צלמו־מסך את השובר מ־buyme.co.il / האפליקציה, שמרו עם חנות{" "}
-          <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
-          המימוש עצמו נעשה בקופה או באתר של בית העסק עם הקוד של BuyMe; אחר כך
-          רשמו כאן מימוש כדי לעדכן את היתרה.
+          אין חיבור ישיר לחשבון BuyMe (אין API ציבורי). בייבוא: כפתור אחד במסך
+          הוספה → צלמו־מסך מ־«המתנות שלי» → נזהה שם מתנה ויתרה. המימוש עצמו נשאר
+          ב־BuyMe / בבית העסק; כאן רק מעקב אחרי היתרה.
         </p>
-        <a
-          href="https://buyme.co.il"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-secondary inline-flex px-4 py-2 text-sm"
+        <Link
+          href="/vouchers/new"
+          className="btn-primary inline-flex px-4 py-2 text-sm"
         >
-          פתיחת buyme.co.il
-        </a>
+          ייבוא מ־BuyMe
+        </Link>
       </section>
 
       {app.mode === "demo" ? (

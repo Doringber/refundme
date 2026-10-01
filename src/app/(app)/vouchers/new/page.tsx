@@ -1,44 +1,59 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
+import { formatIls } from "@/lib/calculations";
+import {
+  extractBuyMeGifts,
+  looksLikeBuyMe,
+  suggestFieldsFromText,
+  type BuyMeGiftCandidate,
+} from "@/lib/extract";
 import { clientOcrImage } from "@/lib/images/client-ocr";
 import { prepareUploadFile } from "@/lib/images/prepare-upload";
-import { suggestFieldsFromText } from "@/lib/extract";
 import type { ExtractedFields, Voucher } from "@/lib/types";
 import { validateUpload } from "@/lib/validation";
 
-type Step = "upload" | "review" | "success";
+type Step = "upload" | "pick-buyme" | "review" | "success";
 
 export default function NewVoucherPage() {
   const app = useAppData();
   const router = useRouter();
+  const buyMeInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [extractionNote, setExtractionNote] = useState<string | null>(null);
   const [fields, setFields] = useState<ExtractedFields | null>(null);
+  const [buyMeGifts, setBuyMeGifts] = useState<BuyMeGiftCandidate[]>([]);
   const [documentMeta, setDocumentMeta] = useState<{
     fileName: string | null;
     mimeType: string | null;
     dataUrl: string | null;
   }>({ fileName: null, mimeType: null, dataUrl: null });
-  const [pasteText, setPasteText] = useState("");
-  const [showPaste, setShowPaste] = useState(false);
 
-  async function processPrepared(prepared: {
-    file: File;
-    dataUrl: string;
-    mimeType: string;
-    fileName: string;
-    convertedFromHeic: boolean;
-  }) {
+  function goReview(next: ExtractedFields, note: string | null) {
+    setFields(next);
+    setExtractionNote(note);
+    setStep("review");
+  }
+
+  async function processPrepared(
+    prepared: {
+      file: File;
+      dataUrl: string;
+      mimeType: string;
+      fileName: string;
+      convertedFromHeic: boolean;
+    },
+    opts: { buyMeMode?: boolean } = {},
+  ) {
     setDocumentMeta({
       fileName: prepared.fileName,
       mimeType: prepared.mimeType,
@@ -64,13 +79,47 @@ export default function NewVoucherPage() {
       source?: string;
     };
 
-    // Prefer server merge; if empty but we have OCR text, parse locally
+    const textForBuyMe = ocrText ?? "";
+    if (opts.buyMeMode || looksLikeBuyMe(textForBuyMe)) {
+      const gifts = extractBuyMeGifts(textForBuyMe).filter(
+        (g) => g.title !== "BuyMe" || g.amountAgorot != null,
+      );
+      if (gifts.length > 1) {
+        setBuyMeGifts(gifts);
+        setExtractionNote(
+          "מצאנו כמה מתנות בצילום — בחרו איזו לייבא. אפשר לחזור ולצלם מתנה בודדת.",
+        );
+        setStep("pick-buyme");
+        return;
+      }
+      if (gifts.length === 1) {
+        goReview(
+          gifts[0].fields,
+          "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה. המימוש ב־BuyMe / בבית העסק.",
+        );
+        return;
+      }
+      if (opts.buyMeMode) {
+        // Forced BuyMe button but OCR didn't parse cards — still try heuristics
+        const fallback = suggestFieldsFromText(textForBuyMe || "BuyMe");
+        goReview(
+          {
+            ...fallback,
+            merchantName: fallback.merchantName ?? "BuyMe",
+            documentType: "shopping_voucher",
+          },
+          "לא זיהינו כרטיס מתנה ברור — מלאו ידנית לפי הצילום מ־BuyMe.",
+        );
+        return;
+      }
+    }
+
     let nextFields = json.fields ?? null;
     if ((!nextFields || nextFields.confidence === "none") && ocrText) {
       nextFields = suggestFieldsFromText(ocrText);
     }
 
-    setFields(
+    goReview(
       nextFields ?? {
         merchantName: null,
         documentType: null,
@@ -83,20 +132,20 @@ export default function NewVoucherPage() {
         confidence: "none",
         notes: "מלאו ידנית לפי המסמך",
       },
+      [
+        json.message ?? nextFields?.notes,
+        prepared.convertedFromHeic ? "הקובץ הומר מ־HEIC ל־JPEG לתצוגה." : null,
+        json.source ? `מקור חילוץ: ${json.source}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
     );
-
-    const notes = [
-      json.message ?? nextFields?.notes,
-      prepared.convertedFromHeic ? "הקובץ הומר מ־HEIC ל־JPEG לתצוגה." : null,
-      json.source ? `מקור חילוץ: ${json.source}` : null,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    setExtractionNote(notes || null);
-    setStep("review");
   }
 
-  async function handleFile(file: File | null) {
+  async function handleFile(
+    file: File | null,
+    opts: { buyMeMode?: boolean } = {},
+  ) {
     if (!file) return;
     setError(null);
     setStatus(null);
@@ -109,7 +158,7 @@ export default function NewVoucherPage() {
     try {
       setStatus("מכין את התמונה…");
       const prepared = await prepareUploadFile(file);
-      await processPrepared(prepared);
+      await processPrepared(prepared, opts);
     } catch (err) {
       setError(
         err instanceof Error
@@ -123,37 +172,21 @@ export default function NewVoucherPage() {
   }
 
   function continueManual() {
-    setFields({
-      merchantName: null,
-      documentType: null,
-      amountAgorot: null,
-      issueDate: null,
-      expiryDate: null,
-      voucherCode: null,
-      barcodeValue: null,
-      usageTerms: null,
-      confidence: "none",
-      notes: "מילוי ידני ללא חילוץ",
-    });
-    setExtractionNote("ממשיכים למילוי ידני מלא.");
-    setStep("review");
-  }
-
-  function handlePasteImport() {
-    const text = pasteText.trim();
-    if (!text) {
-      setError("הדביקו טקסט מהשובר (למשל מ־BuyMe) לפני הייבוא");
-      return;
-    }
-    setError(null);
-    const next = suggestFieldsFromText(text);
-    setFields(next);
-    setExtractionNote(
-      next.merchantName === "BuyMe" || /buyme/i.test(text)
-        ? "ייבוא מטקסט BuyMe — אשרו את השדות לפני השמירה. המימוש עצמו בבית העסק."
-        : next.notes ?? "הוצעו שדות מהטקסט — אשרו ותקנו לפני השמירה.",
+    goReview(
+      {
+        merchantName: null,
+        documentType: null,
+        amountAgorot: null,
+        issueDate: null,
+        expiryDate: null,
+        voucherCode: null,
+        barcodeValue: null,
+        usageTerms: null,
+        confidence: "none",
+        notes: "מילוי ידני ללא חילוץ",
+      },
+      "ממשיכים למילוי ידני מלא.",
     );
-    setStep("review");
   }
 
   async function handleSave(voucher: Voucher) {
@@ -180,7 +213,7 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          צלמו תעודת זיכוי / שובר — התמונה נשמרת והשדות מוצעים לאישור
+          צלמו תעודת זיכוי / שובר — או ייבוא בלחיצה מ־BuyMe
         </p>
       </div>
 
@@ -195,12 +228,39 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-10 text-center">
-            <span className="font-display text-xl text-forest">צלמו או העלו מסמך</span>
+          <button
+            type="button"
+            className="btn-primary flex w-full flex-col items-center gap-1 py-4 text-base"
+            disabled={busy}
+            onClick={() => buyMeInputRef.current?.click()}
+            data-testid="buyme-import-button"
+          >
+            <span>ייבוא מ־BuyMe</span>
+            <span className="text-xs font-semibold opacity-80">
+              צלמו־מסך של המתנה ב־«המתנות שלי»
+            </span>
+          </button>
+          <input
+            ref={buyMeInputRef}
+            type="file"
+            accept="image/*,image/heic,image/heif"
+            capture="environment"
+            className="sr-only"
+            aria-label="צילום מסך מ־BuyMe"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              e.target.value = "";
+              void handleFile(file, { buyMeMode: true });
+            }}
+            disabled={busy}
+          />
+
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-8 text-center">
+            <span className="font-display text-xl text-forest">
+              צלמו תעודת זיכוי / שובר
+            </span>
             <span className="text-sm text-eggplant">
               JPEG, PNG, WebP או PDF · עד 10MB
-              <br />
-              (HEIC מאייפון יומר אוטומטית אם אפשר)
             </span>
             <input
               type="file"
@@ -211,41 +271,6 @@ export default function NewVoucherPage() {
               disabled={busy}
             />
           </label>
-
-          <div className="space-y-3 rounded-2xl bg-white/5 px-4 py-4">
-            <p className="text-xs font-semibold leading-relaxed text-eggplant">
-              שובר BuyMe? צלמו־מסך, או הדביקו את פרטי השובר למטה — נזהה את{" "}
-              <span className="font-extrabold text-foreground">BuyMe</span>,
-              הקוד והיתרה אוטומטית. המימוש עצמו בבית העסק / באתר עם הקוד.
-            </p>
-            <button
-              type="button"
-              className="btn-secondary w-full py-2.5 text-sm"
-              onClick={() => setShowPaste((v) => !v)}
-              disabled={busy}
-            >
-              {showPaste ? "הסתרת הדבקת טקסט" : "הדבקת טקסט מ־BuyMe / שובר"}
-            </button>
-            {showPaste && (
-              <div className="space-y-2">
-                <textarea
-                  className="input-field min-h-[120px] resize-y px-4 py-3 text-sm"
-                  placeholder="הדביקו כאן: BuyMe, קוד מימוש, יתרה, תוקף…"
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  aria-label="טקסט שובר להדבקה"
-                />
-                <button
-                  type="button"
-                  className="btn-primary w-full py-3"
-                  onClick={handlePasteImport}
-                  disabled={busy}
-                >
-                  ייבוא מהטקסט
-                </button>
-              </div>
-            )}
-          </div>
 
           <button
             type="button"
@@ -266,6 +291,59 @@ export default function NewVoucherPage() {
               {error}
             </p>
           )}
+        </div>
+      )}
+
+      {step === "pick-buyme" && (
+        <div className="card-surface space-y-4 p-5">
+          <div>
+            <h2 className="font-display text-lg text-forest">בחירת מתנה מ־BuyMe</h2>
+            <p className="mt-1 text-sm text-eggplant">
+              {extractionNote ?? "בחרו מתנה אחת לייבוא"}
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {buyMeGifts.map((gift) => (
+              <li key={`${gift.title}-${gift.amountAgorot ?? "x"}`}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-start transition hover:bg-white/16"
+                  onClick={() =>
+                    goReview(
+                      gift.fields,
+                      "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה.",
+                    )
+                  }
+                >
+                  <span>
+                    <span className="block font-display text-base">
+                      {gift.title}
+                    </span>
+                    {gift.fromLabel && (
+                      <span className="text-xs text-eggplant">
+                        מאת {gift.fromLabel}
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-display text-lg">
+                    {gift.amountAgorot != null
+                      ? formatIls(gift.amountAgorot)
+                      : "בלי יתרה"}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn-secondary w-full py-3"
+            onClick={() => {
+              setBuyMeGifts([]);
+              setStep("upload");
+            }}
+          >
+            חזרה
+          </button>
         </div>
       )}
 
@@ -293,7 +371,9 @@ export default function NewVoucherPage() {
       {step === "success" && (
         <div className="card-surface px-6 py-12 text-center" role="status">
           <p className="font-display text-2xl text-forest">נשמר בהצלחה</p>
-          <p className="mt-2 text-sm text-eggplant">חוזרים ללוח הבקרה עם אנימציית הכדור…</p>
+          <p className="mt-2 text-sm text-eggplant">
+            חוזרים ללוח הבקרה עם אנימציית הכדור…
+          </p>
         </div>
       )}
     </div>
