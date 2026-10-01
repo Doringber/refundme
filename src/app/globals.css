@@ -428,35 +428,59 @@ textarea.input-field {
   box-shadow: var(--well), 0 0 0 3px rgba(45, 212, 191, 0.35);
 }
 
-.theme-neon .sheet-light {
-  background: #f7f8f6;
-  color: #12141a;
-  border-radius: 2rem 2rem 0 0;
-  box-shadow: 0 -20px 50px -30px rgba(0, 0, 0, 0.65);
-}
-
-.theme-neon .sheet-light .text-forest,
-.theme-neon .sheet-light .text-night {
-  color: #12141a !important;
-}
-
-.theme-neon .sheet-light .text-eggplant {
-  color: #5d6670 !important;
-}
-
-.theme-neon .sheet-light .btn-primary {
-  background: #12141a;
+.theme-neon .sheet-panel {
+  background:
+    linear-gradient(180deg, rgba(45, 212, 191, 0.08), transparent 42%),
+    rgba(18, 20, 26, 0.96);
   color: #f5f7f4;
-  box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.45);
+  border-radius: 2rem 2rem 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 0;
+  box-shadow: 0 -18px 40px -28px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(14px);
 }
 
-.theme-neon .sheet-light .btn-primary:hover {
-  background: #000000;
+.theme-neon .sheet-panel .sheet-title {
+  color: #f5f7f4;
+}
+
+.theme-neon .sheet-panel .sheet-muted {
+  color: rgba(167, 174, 168, 0.95);
+}
+
+.theme-neon .sheet-panel .sheet-link {
+  color: rgba(45, 212, 191, 0.95);
+}
+
+.theme-neon .sheet-panel .sheet-row {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-neon .sheet-panel .sheet-row:hover {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.22);
+}
+
+.theme-neon .sheet-panel .sheet-chip {
+  background: linear-gradient(135deg, #2dd4bf, #38bdf8);
+  color: #0a0a0c;
+}
+
+.theme-neon .sheet-panel .btn-primary {
+  background: #ffffff;
+  color: #0a0a0c;
+  box-shadow: 0 12px 28px -14px rgba(255, 255, 255, 0.35);
+}
+
+.theme-neon .sheet-panel .btn-primary:hover {
+  background: #ececec;
 }
 
 .theme-neon .badge {
   box-shadow: none;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .neon-card-stack {
