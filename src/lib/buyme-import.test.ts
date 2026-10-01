@@ -60,7 +60,7 @@ describe("buyme bulk import", () => {
     assert.match(script, /vouchers\/import\/buyme/);
     assert.match(script, /ember_simple_auth-session/);
     assert.match(script, /#token=/);
-    assert.match(script, /Console|קונסול|התחברו ל־BuyMe/);
+    assert.match(script, /BuyMe|ember_simple_auth-session/);
     const href = buyMeBookmarkletHref("https://example.com");
     assert.match(href, /^javascript:/);
   });

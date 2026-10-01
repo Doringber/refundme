@@ -260,8 +260,8 @@ export default function BuyMeImportPage() {
               className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
               role="status"
             >
-              ממתינים לחיבור… בחלון BuyMe: F12 → Console → הדביקו → Enter. הארנק
-              אמור להופיע מיד אחרי המעבר חזרה.
+              ממתינים לחיבור… אחרי התחברות ב־BuyMe לחצו על הסימנייה «חיבור
+              BuyMe» (בטלפון) — הארנק יופיע אחרי החזרה לכאן.
             </p>
           )}
           <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />

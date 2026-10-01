@@ -158,7 +158,7 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 export function buyMeBridgeConsoleScript(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("הריצו את זה בקונסול של החלון של BuyMe (אחרי התחברות)");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז הדביקו שוב בקונסול");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
+  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את BuyMe, התחברו, ואז לחצו על הסימנייה / הריצו בקונסול");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז נסו שוב");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
 }
 
 /** @deprecated Prefer buyMeBridgeConsoleScript — address-bar javascript: is blocked in Chrome. */
