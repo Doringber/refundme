@@ -38,6 +38,11 @@ yarn-error.log*
 .env*
 !.env.example
 
+# BuyMe Playwright session (cookies + JWT) — never commit
+.buyme/
+buyme_state.json
+__pycache__/
+
 # vercel
 .vercel
 

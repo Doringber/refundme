@@ -5,6 +5,8 @@ import {
   writeBuyMeSessionCookie,
 } from "@/lib/buyme/cookie";
 import { createBuyMeSession, isSessionExpired } from "@/lib/buyme/session";
+import { createClient } from "@/lib/supabase/server";
+import { saveBuyMeConnection } from "@/lib/wallet/connection-store";
 
 export const runtime = "nodejs";
 
@@ -21,12 +23,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "token_expired" }, { status: 400 });
     }
     await writeBuyMeSessionCookie(session);
-    return NextResponse.json({
-      ok: true,
-      expiresAt: session.expiresAtMs
-        ? new Date(session.expiresAtMs).toISOString()
-        : null,
-    });
+    const expiresAt = session.expiresAtMs
+      ? new Date(session.expiresAtMs).toISOString()
+      : null;
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await saveBuyMeConnection({
+          userId: user.id,
+          token: session.token,
+          expiresAt,
+        });
+      }
+    } catch {
+      // Cookie session still works if Supabase persistence is unavailable.
+    }
+    return NextResponse.json({ ok: true, expiresAt });
   } catch {
     return NextResponse.json({ error: "invalid_token" }, { status: 400 });
   }
