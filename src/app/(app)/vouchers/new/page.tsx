@@ -63,13 +63,19 @@ export default function NewVoucherPage() {
       dataUrl: prepared.dataUrl,
     });
 
-    setStatus("קורא את הטקסט מהתמונה…");
+    setStatus(
+      opts.buyMeMode
+        ? "שואב טקסט מצילום «המתנות שלי»…"
+        : "קורא את הטקסט מהתמונה…",
+    );
     let ocrText: string | null = null;
     if (prepared.mimeType.startsWith("image/")) {
       ocrText = await clientOcrImage(prepared.file);
     }
 
-    setStatus("מחלץ שדות מהמסמך…");
+    setStatus(
+      opts.buyMeMode ? "מזהה מתנות מהמסך…" : "מחלץ שדות מהמסמך…",
+    );
     const form = new FormData();
     form.append("file", prepared.file);
     if (ocrText) form.append("ocrText", ocrText);
@@ -258,8 +264,8 @@ export default function NewVoucherPage() {
               setBuyMeGifts(gifts);
               setExtractionNote(
                 gifts.length > 1
-                  ? "ייבוא מהטקסט שהודבק — אפשר לייבא את כל המתנות עם יתרה."
-                  : "ייבוא מ־BuyMe מהטקסט שהודבק.",
+                  ? "נשאבו כמה מתנות מ־BuyMe — אפשר לייבא הכל עם יתרה."
+                  : "נשאב מ־BuyMe — אשרו ושמרו.",
               );
               setDocumentMeta({
                 fileName: null,
