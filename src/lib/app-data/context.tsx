@@ -186,18 +186,35 @@ function SupabaseAppProvider({ children }: { children: React.ReactNode }) {
         if (user) void loadAll(user.id);
       },
       saveVoucher: async (v) => {
-        if (!user) throw new Error("יש להתחבר כדי לשמור");
+        if (!user) throw new Error("יש להתחבר כדי לשמור. חזרו להתחברות עם Google.");
         const supabase = createClient();
-        const withUser = { ...v, userId: user.id };
-        const saved = await createVoucher(supabase, withUser);
-        if (
-          saved.documentType !== "receipt" &&
-          saved.fieldsConfirmed &&
-          saved.remainingAmountAgorot > 0
-        ) {
-          setLastGainAgorot(saved.remainingAmountAgorot);
+        const {
+          data: { user: fresh },
+          error: authError,
+        } = await supabase.auth.getUser();
+        if (authError || !fresh) {
+          throw new Error("הסשן פג — התחברו מחדש ואז שמרו שוב");
         }
-        await loadAll(user.id);
+        const withUser = { ...v, userId: fresh.id };
+        try {
+          const saved = await createVoucher(supabase, withUser);
+          if (
+            saved.documentType !== "receipt" &&
+            saved.fieldsConfirmed &&
+            saved.remainingAmountAgorot > 0
+          ) {
+            setLastGainAgorot(saved.remainingAmountAgorot);
+          }
+          await loadAll(fresh.id);
+        } catch (err) {
+          const message =
+            err && typeof err === "object" && "message" in err
+              ? String((err as { message: string }).message)
+              : err instanceof Error
+                ? err.message
+                : "השמירה נכשלה";
+          throw new Error(message);
+        }
       },
       removeVoucher: async (id) => {
         if (!user) return;
