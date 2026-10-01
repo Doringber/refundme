@@ -194,8 +194,8 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          בטלפון: צילום מסך או הדבקת טקסט מ־«המתנות שלי». במחשב יש גם חיבור API
-          ניסיוני (סימנייה/קונסול) לקודים וברקודים. המימוש עצמו נשאר ב־BuyMe.
+          בטלפון: קיצור «שאיבת מתנות» מתוך עמוד המתנות ב־BuyMe (שולף את כל
+          הטקסט), או צילום מסך מלא. במחשב אפשר גם חיבור API לקודים/ברקודים.
         </p>
         <Link
           href="/vouchers/new"

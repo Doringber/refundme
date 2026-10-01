@@ -15,6 +15,12 @@ export const BUYME_CONNECTED_MESSAGE = "buyme-connected" as const;
 /** localStorage key — fires `storage` in other same-origin tabs/windows. */
 export const BUYME_CONNECTED_STORAGE_KEY = "zikuy:buyme-connected";
 
+/** sessionStorage: user went to BuyMe and we should prompt capture on return. */
+export const BUYME_AWAIT_CAPTURE_KEY = "zikuy:buyme-await-capture";
+
+/** Keep page-text hashes under common mobile URL limits. */
+const PAGE_TEXT_HASH_MAX = 120_000;
+
 /** Wallet card shape returned by `/api/buyme/wallet` (client-safe). */
 export type BuyMeApiCard = {
   id: number | string;
@@ -152,8 +158,24 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 }
 
 /**
- * Raw JS for the BuyMe tab console (Chrome blocks pasting `javascript:`
- * into the address bar). Reads Ember JWT and returns to our import route.
+ * Runs ON buyme.co.il (iOS Shortcut / Android bookmark / desktop console).
+ * Grabs the visible gifts list text in one shot and returns to our import page.
+ * No JWT, no server→BuyMe call — works when API connect is blocked on phones.
+ */
+export function buyMePageTextBridgeScript(appOrigin: string): string {
+  const origin = appOrigin.replace(/\/$/, "");
+  const target = `${origin}${BUYME_IMPORT_PATH}`;
+  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את «המתנות שלי» ב־BuyMe");return;}var text=(document.body&&document.body.innerText)||"";text=text.replace(/\\s+/g," ").trim();if(text.length<20){alert("לא נמצא טקסט ברשימה — גללו את «המתנות שלי» ונסו שוב");return;}if(text.length>${PAGE_TEXT_HASH_MAX})text=text.slice(0,${PAGE_TEXT_HASH_MAX});location.href=${JSON.stringify(target)}+"#text="+encodeURIComponent(text);}catch(e){alert("שליפת הרשימה מ־BuyMe נכשלה");}})();`;
+}
+
+/** javascript: wrapper — useful on some Android browsers as a bookmark. */
+export function buyMePageTextBookmarkletHref(appOrigin: string): string {
+  return `javascript:${encodeURIComponent(buyMePageTextBridgeScript(appOrigin))}`;
+}
+
+/**
+ * Raw JS for the BuyMe tab console (desktop). Reads Ember JWT and returns
+ * to our import route for full wallet API (codes/barcodes).
  */
 export function buyMeBridgeConsoleScript(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
@@ -161,7 +183,7 @@ export function buyMeBridgeConsoleScript(appOrigin: string): string {
   return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את BuyMe, התחברו, ואז לחצו על הסימנייה / הריצו בקונסול");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז נסו שוב");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
 }
 
-/** @deprecated Prefer buyMeBridgeConsoleScript — address-bar javascript: is blocked in Chrome. */
+/** @deprecated JWT bookmark — desktop experimental. Prefer page-text bridge on phones. */
 export function buyMeBookmarkletHref(appOrigin: string): string {
   return `javascript:${encodeURIComponent(buyMeBridgeConsoleScript(appOrigin))}`;
 }
@@ -185,9 +207,30 @@ export function readBuyMeImportHash(hash: string): {
     if (raw.startsWith("token=")) {
       return { token: decodeURIComponent(raw.slice("token=".length)), pageText: null };
     }
-    // Legacy: whole-page text dump
+    if (raw.startsWith("text=")) {
+      return { token: null, pageText: decodeURIComponent(raw.slice("text=".length)) };
+    }
+    // Legacy: whole-page text dump without prefix
     return { token: null, pageText: decodeURIComponent(raw) };
   } catch {
     return { token: null, pageText: null };
+  }
+}
+
+export function markAwaitingBuyMeCapture(): void {
+  try {
+    sessionStorage.setItem(BUYME_AWAIT_CAPTURE_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeAwaitingBuyMeCapture(): boolean {
+  try {
+    if (sessionStorage.getItem(BUYME_AWAIT_CAPTURE_KEY) !== "1") return false;
+    sessionStorage.removeItem(BUYME_AWAIT_CAPTURE_KEY);
+    return true;
+  } catch {
+    return false;
   }
 }

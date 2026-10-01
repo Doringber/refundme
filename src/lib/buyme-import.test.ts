@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   buyMeBookmarkletHref,
   buyMeBridgeConsoleScript,
+  buyMePageTextBridgeScript,
   parseBuyMePageText,
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
@@ -60,16 +61,25 @@ describe("buyme bulk import", () => {
     assert.match(script, /vouchers\/import\/buyme/);
     assert.match(script, /ember_simple_auth-session/);
     assert.match(script, /#token=/);
-    assert.match(script, /BuyMe|ember_simple_auth-session/);
     const href = buyMeBookmarkletHref("https://example.com");
     assert.match(href, /^javascript:/);
   });
 
-  it("reads token hash payload", () => {
-    const { token, pageText } = readBuyMeImportHash(
-      `#token=${encodeURIComponent("aaa.bbb.ccc")}`,
+  it("builds page-text bridge that dumps המתנות שלי in one shot", () => {
+    const script = buyMePageTextBridgeScript("https://example.com");
+    assert.match(script, /innerText/);
+    assert.match(script, /#text=/);
+    assert.match(script, /vouchers\/import\/buyme/);
+  });
+
+  it("reads token and text hash payloads", () => {
+    const tok = readBuyMeImportHash(`#token=${encodeURIComponent("aaa.bbb.ccc")}`);
+    assert.equal(tok.token, "aaa.bbb.ccc");
+    assert.equal(tok.pageText, null);
+    const text = readBuyMeImportHash(
+      `#text=${encodeURIComponent("BUYME ALL\nיתרה: ₪10")}`,
     );
-    assert.equal(token, "aaa.bbb.ccc");
-    assert.equal(pageText, null);
+    assert.equal(text.token, null);
+    assert.match(text.pageText ?? "", /BUYME ALL/);
   });
 });
