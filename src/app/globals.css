@@ -171,6 +171,9 @@ body {
 .app-theme {
   color: var(--foreground);
   background: var(--theme-bg, var(--warm-bg));
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center top;
   min-height: 100dvh;
 }
 
@@ -245,6 +248,23 @@ body {
 .theme-option.is-selected {
   border-color: color-mix(in srgb, var(--pool) 70%, var(--forest));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pool) 35%, transparent);
+}
+.theme-option-scenic {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.75rem;
+  align-items: stretch;
+  padding: 0.55rem;
+}
+.theme-option-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 4.5rem;
+  object-fit: cover;
+  border-radius: 0.95rem;
+}
+.theme-option-copy {
+  padding: 0.35rem 0.35rem 0.35rem 0;
 }
 .theme-swatch {
   display: inline-block;
@@ -813,6 +833,312 @@ textarea.input-field {
   background: #c0392b;
   color: #fffaf2;
   box-shadow: none;
+}
+
+/* Nimbus — glass cards over bright sky photo */
+.theme-nimbus {
+  --warm-bg: #8ec4ef;
+  --paper: rgba(255, 255, 255, 0.62);
+  --forest: #16324f;
+  --forest-deep: #0f243a;
+  --forest-soft: #2d4f73;
+  --sage: #6ea8d6;
+  --sage-l: rgba(255, 255, 255, 0.55);
+  --sage-ll: rgba(255, 255, 255, 0.45);
+  --clay: #f4a261;
+  --clay-d: #e76f51;
+  --sun: #ffd166;
+  --ink: #16324f;
+  --ink-2: #4a6785;
+  --ink-3: #7a93ab;
+  --line: rgba(255, 255, 255, 0.55);
+  --blush: #ffb4c8;
+  --blush-deep: #ef7a9a;
+  --butter: #ffe5a5;
+  --mint: #b8f2e6;
+  --peri: #a8c4ff;
+  --peach: #ffcfb0;
+  --cream: #f4f8ff;
+  --pool: #2d7dd2;
+  --blue-skies: #7eb6e8;
+  --baby-lavender: #c4b5fd;
+  --daffodil: #ffd166;
+  --peaches: #f4a261;
+  --poppy: #e76f51;
+  --fuchsia: #f472b6;
+  --cotton-candy: #f9a8d4;
+  --hay: #c9a227;
+  --night: #16324f;
+  --eggplant: #4a6785;
+  --bone: rgba(255, 255, 255, 0.7);
+  --cream-ink: #eaf3ff;
+  --sh: 30 70 110;
+  --background: #8ec4ef;
+  --foreground: #16324f;
+  --card: rgba(255, 255, 255, 0.62);
+  --muted: #4a6785;
+  --ring-track: rgba(22, 50, 79, 0.16);
+  --clay-shadow: 0 18px 40px -24px rgba(22, 50, 79, 0.35);
+  --well: inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  --chrome-ink: #0f243a;
+  --chrome-muted: rgba(15, 36, 58, 0.62);
+  --chrome-faint: rgba(15, 36, 58, 0.45);
+  --chrome-ring: rgba(255, 255, 255, 0.55);
+  --chrome-hover-bg: rgba(255, 255, 255, 0.28);
+  --chrome-avatar-bg: #16324f;
+  --chrome-avatar-ink: #ffffff;
+  --nav-idle: rgba(15, 36, 58, 0.55);
+  --nav-idle-hover-bg: rgba(255, 255, 255, 0.35);
+  --nav-idle-hover-ink: #0f243a;
+  --nav-active-bg: #16324f;
+  --nav-active-ink: #ffffff;
+  --sheet-bg: rgba(255, 255, 255, 0.72);
+  --sheet-ink: #16324f;
+  --sheet-muted: #4a6785;
+  --sheet-link: #2d7dd2;
+  --sheet-row-bg: rgba(255, 255, 255, 0.45);
+  --sheet-row-border: rgba(255, 255, 255, 0.55);
+  --sheet-chip-bg: linear-gradient(135deg, #2d7dd2, #7eb6e8);
+  --sheet-chip-ink: #ffffff;
+  --theme-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(160, 205, 240, 0.42)),
+    url("/themes/nimbus-sky.jpg") center top / cover no-repeat;
+}
+.theme-nimbus .card-surface,
+.theme-nimbus .pill-nav {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 16px 40px -28px rgba(22, 50, 79, 0.45);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+.theme-nimbus .btn-primary {
+  background: #16324f;
+  color: #ffffff;
+}
+.theme-nimbus .btn-secondary {
+  background: rgba(255, 255, 255, 0.55);
+  color: #16324f;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+}
+.theme-nimbus .input-field {
+  background: rgba(255, 255, 255, 0.65);
+  color: #16324f;
+}
+
+/* Keepers — lighthouse night illustration */
+.theme-keepers {
+  --warm-bg: #0b1c3a;
+  --paper: rgba(15, 28, 52, 0.72);
+  --forest: #f7f1e7;
+  --forest-deep: #ffffff;
+  --forest-soft: #d9cfc0;
+  --sage: #8a93a8;
+  --sage-l: rgba(20, 33, 61, 0.55);
+  --sage-ll: rgba(12, 24, 48, 0.65);
+  --clay: #c0392b;
+  --clay-d: #a93226;
+  --sun: #f6c39a;
+  --ink: #f7f1e7;
+  --ink-2: #c9c0b2;
+  --ink-3: #8a93a8;
+  --line: rgba(247, 241, 231, 0.16);
+  --blush: #f5b7b1;
+  --blush-deep: #c0392b;
+  --butter: #f6c39a;
+  --mint: #d5e8e2;
+  --peri: #a3b1d0;
+  --peach: #f5c6aa;
+  --cream: #10182c;
+  --pool: #f6c39a;
+  --blue-skies: #6f89b4;
+  --baby-lavender: #c5b6e0;
+  --daffodil: #f6c39a;
+  --peaches: #e59866;
+  --poppy: #c0392b;
+  --fuchsia: #a569bd;
+  --cotton-candy: #f5b7b1;
+  --hay: #b99a65;
+  --night: #f7f1e7;
+  --eggplant: #c9c0b2;
+  --bone: #0d1830;
+  --cream-ink: #0b1c3a;
+  --sh: 0 0 0;
+  --background: #0b1c3a;
+  --foreground: #f7f1e7;
+  --card: rgba(15, 28, 52, 0.72);
+  --muted: #c9c0b2;
+  --ring-track: rgba(247, 241, 231, 0.2);
+  --clay-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.7);
+  --well: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --orb-surface: rgba(12, 24, 48, 0.88);
+  --orb-rim: rgba(246, 195, 154, 0.35);
+  --orb-liquid-1: #c0392b;
+  --orb-liquid-2: #f6c39a;
+  --orb-liquid-3: #6f89b4;
+  --orb-highlight: #f6c39a;
+  --orb-ink: #f7f1e7;
+  --orb-ink-muted: rgba(247, 241, 231, 0.72);
+  --orb-ink-soft: rgba(201, 192, 178, 0.95);
+  --orb-ink-faint: rgba(247, 241, 231, 0.45);
+  --orb-chip-ink: #f7f1e7;
+  --chrome-ink: #f7f1e7;
+  --chrome-muted: rgba(247, 241, 231, 0.62);
+  --chrome-faint: rgba(247, 241, 231, 0.42);
+  --chrome-ring: rgba(246, 195, 154, 0.35);
+  --chrome-hover-bg: rgba(255, 255, 255, 0.06);
+  --chrome-avatar-bg: #c0392b;
+  --chrome-avatar-ink: #f7f1e7;
+  --nav-idle: rgba(247, 241, 231, 0.55);
+  --nav-idle-hover-bg: rgba(255, 255, 255, 0.08);
+  --nav-idle-hover-ink: #ffffff;
+  --nav-active-bg: #f7f1e7;
+  --nav-active-ink: #0b1c3a;
+  --sheet-bg:
+    linear-gradient(180deg, rgba(192, 57, 43, 0.16), transparent 45%),
+    rgba(12, 22, 42, 0.88);
+  --sheet-ink: #f7f1e7;
+  --sheet-muted: #c9c0b2;
+  --sheet-link: #f6c39a;
+  --sheet-row-bg: rgba(255, 255, 255, 0.06);
+  --sheet-row-border: rgba(255, 255, 255, 0.1);
+  --sheet-chip-bg: linear-gradient(135deg, #c0392b, #f6c39a);
+  --sheet-chip-ink: #0b1c3a;
+  --theme-bg:
+    linear-gradient(180deg, rgba(11, 28, 58, 0.45), rgba(11, 28, 58, 0.78)),
+    url("/themes/keepers-lighthouse.jpg") center top / cover no-repeat;
+}
+.theme-keepers .card-surface,
+.theme-keepers .pill-nav {
+  background: rgba(12, 24, 48, 0.62);
+  border: 1px solid rgba(247, 241, 231, 0.16);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(14px);
+}
+.theme-keepers .btn-primary {
+  background: #f7f1e7;
+  color: #0b1c3a;
+}
+.theme-keepers .btn-secondary {
+  background: rgba(192, 57, 43, 0.9);
+  color: #f7f1e7;
+  box-shadow: none;
+}
+.theme-keepers .input-field {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f1e7;
+}
+
+/* Neon Rain — cyberpunk night market */
+.theme-rain {
+  --warm-bg: #05010f;
+  --paper: rgba(10, 4, 24, 0.78);
+  --forest: #f5f7ff;
+  --forest-deep: #ffffff;
+  --forest-soft: #d0d4ff;
+  --sage: #05d9e8;
+  --sage-l: #1a0433;
+  --sage-ll: #120226;
+  --clay: #ff2a6d;
+  --clay-d: #e01257;
+  --sun: #f9f002;
+  --ink: #f5f7ff;
+  --ink-2: #b7b3d9;
+  --ink-3: #7a7599;
+  --line: rgba(5, 217, 232, 0.28);
+  --blush: #ff2a6d;
+  --blush-deep: #ff5c8d;
+  --butter: #f9f002;
+  --mint: #05d9e8;
+  --peri: #7b5cff;
+  --peach: #ff8fab;
+  --cream: #0a0418;
+  --pool: #05d9e8;
+  --blue-skies: #05d9e8;
+  --baby-lavender: #7b5cff;
+  --daffodil: #f9f002;
+  --peaches: #ff8fab;
+  --poppy: #ff2a6d;
+  --fuchsia: #ff2a6d;
+  --cotton-candy: #ff8fab;
+  --hay: #f9f002;
+  --night: #ffffff;
+  --eggplant: #b7b3d9;
+  --bone: #05010f;
+  --cream-ink: #05010f;
+  --sh: 0 0 0;
+  --background: #05010f;
+  --foreground: #f5f7ff;
+  --card: rgba(10, 4, 24, 0.78);
+  --muted: #b7b3d9;
+  --ring-track: rgba(5, 217, 232, 0.28);
+  --clay-shadow: 0 0 24px rgba(5, 217, 232, 0.18);
+  --well: inset 0 0 0 1px rgba(5, 217, 232, 0.25);
+  --orb-surface: rgba(8, 2, 22, 0.92);
+  --orb-rim: rgba(5, 217, 232, 0.45);
+  --orb-liquid-1: #05d9e8;
+  --orb-liquid-2: #ff2a6d;
+  --orb-liquid-3: #f9f002;
+  --orb-highlight: #7b5cff;
+  --orb-ink: #f5f7ff;
+  --orb-ink-muted: rgba(245, 247, 255, 0.72);
+  --orb-ink-soft: rgba(183, 179, 217, 0.95);
+  --orb-ink-faint: rgba(245, 247, 255, 0.45);
+  --orb-chip-ink: #f5f7ff;
+  --chrome-ink: #ffffff;
+  --chrome-muted: rgba(5, 217, 232, 0.85);
+  --chrome-faint: rgba(255, 255, 255, 0.45);
+  --chrome-ring: rgba(255, 42, 109, 0.45);
+  --chrome-hover-bg: rgba(5, 217, 232, 0.1);
+  --chrome-avatar-bg: #ff2a6d;
+  --chrome-avatar-ink: #05010f;
+  --nav-idle: rgba(245, 247, 255, 0.55);
+  --nav-idle-hover-bg: rgba(5, 217, 232, 0.12);
+  --nav-idle-hover-ink: #05d9e8;
+  --nav-active-bg: #05d9e8;
+  --nav-active-ink: #05010f;
+  --sheet-bg:
+    linear-gradient(180deg, rgba(255, 42, 109, 0.16), transparent 42%),
+    rgba(8, 2, 20, 0.9);
+  --sheet-ink: #f5f7ff;
+  --sheet-muted: #b7b3d9;
+  --sheet-link: #05d9e8;
+  --sheet-row-bg: rgba(5, 217, 232, 0.08);
+  --sheet-row-border: rgba(5, 217, 232, 0.2);
+  --sheet-chip-bg: linear-gradient(135deg, #ff2a6d, #f9f002);
+  --sheet-chip-ink: #05010f;
+  --theme-bg:
+    linear-gradient(180deg, rgba(5, 1, 15, 0.4), rgba(5, 1, 15, 0.82)),
+    url("/themes/neon-rain.jpg") center top / cover no-repeat;
+}
+.theme-rain .card-surface,
+.theme-rain .pill-nav {
+  background: rgba(8, 2, 22, 0.72);
+  border: 1px solid rgba(5, 217, 232, 0.28);
+  box-shadow: 0 0 28px rgba(255, 42, 109, 0.12);
+  backdrop-filter: blur(12px);
+}
+.theme-rain .btn-primary {
+  background: #05d9e8;
+  color: #05010f;
+  box-shadow: 0 0 22px rgba(5, 217, 232, 0.45);
+}
+.theme-rain .btn-secondary {
+  background: transparent;
+  color: #ff2a6d;
+  border: 1px solid rgba(255, 42, 109, 0.65);
+  box-shadow: 0 0 16px rgba(255, 42, 109, 0.2);
+}
+.theme-rain .input-field {
+  background: rgba(5, 217, 232, 0.08);
+  color: #f5f7ff;
+  box-shadow: var(--well);
+}
+.theme-rain .nav-link-active {
+  box-shadow: 0 0 18px rgba(5, 217, 232, 0.45);
 }
 
 .neon-card-stack {
