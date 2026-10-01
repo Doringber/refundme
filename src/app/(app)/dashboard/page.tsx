@@ -1,14 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { CreditOrb } from "@/components/orb/credit-orb";
-import { NeonCardStack } from "@/components/ui/neon-card-stack";
+import {
+  NeonCardStack,
+  readDemoStackExample,
+} from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
 import { formatIls, isSpendable } from "@/lib/calculations";
 import { useAppData } from "@/lib/app-data/context";
 
+function subscribeDemoStackFlag(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("zikuy-demo-stack-example", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("zikuy-demo-stack-example", onStoreChange);
+  };
+}
+
 export default function DashboardPage() {
   const app = useAppData();
+  const showDemoExample = useSyncExternalStore(
+    subscribeDemoStackFlag,
+    readDemoStackExample,
+    () => false,
+  );
 
   if (!app.ready) return <LoadingBlock label="טוען את הזיכויים…" />;
 
@@ -19,6 +37,8 @@ export default function DashboardPage() {
   const recent = [
     ...summary.recentActivity.slice(0, 6),
   ];
+  const showStack =
+    merchants.length > 0 || (app.mode === "demo" && showDemoExample);
 
   return (
     <div className="space-y-5">
@@ -41,7 +61,13 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="mt-6 grid items-center gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div
+          className={`mt-6 grid items-center gap-4 ${
+            showStack
+              ? "md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+              : ""
+          }`}
+        >
           <CreditOrb
             totalAgorot={summary.totalActiveCreditAgorot}
             nearestExpiring={summary.nearestExpiring}
@@ -53,7 +79,12 @@ export default function DashboardPage() {
             className="!mx-0"
           />
 
-          <NeonCardStack merchants={merchants} />
+          {showStack && (
+            <NeonCardStack
+              merchants={merchants}
+              showDemoExample={app.mode === "demo" && showDemoExample}
+            />
+          )}
         </div>
       </section>
 

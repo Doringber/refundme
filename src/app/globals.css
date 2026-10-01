@@ -466,25 +466,26 @@ textarea.input-field {
 }
 
 .neon-stack-card {
+  --stack-ease: cubic-bezier(0.22, 1, 0.36, 1);
   border-radius: 1.25rem;
   color: #0a0a0c;
   font-weight: 800;
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   transition:
-    transform 0.28s var(--boing),
-    box-shadow 0.25s ease,
-    flex-grow 0.35s var(--boing);
+    transform 0.16s var(--stack-ease),
+    box-shadow 0.16s ease,
+    opacity 0.14s ease;
 }
 
 .neon-stack-card.is-open {
-  transform: translateX(-3px) scale(1.02);
-  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.65);
+  transform: translateX(-2px) scale(1.015);
+  box-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.65);
 }
 
 .neon-stack-card.is-closed {
-  transform: scale(0.985);
-  opacity: 0.92;
+  transform: none;
+  opacity: 0.9;
 }
 
 .neon-stack-tone-1 {
@@ -528,7 +529,7 @@ textarea.input-field {
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.1);
   font-size: 0.85rem;
-  transition: transform 0.28s var(--boing);
+  transition: transform 0.14s var(--stack-ease, ease);
 }
 
 .neon-stack-chevron.is-open {
@@ -538,7 +539,7 @@ textarea.input-field {
 .neon-stack-panel {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.38s var(--boing);
+  transition: grid-template-rows 0.18s var(--stack-ease, ease);
 }
 
 .neon-stack-card.is-open .neon-stack-panel {
@@ -553,15 +554,15 @@ textarea.input-field {
 .neon-stack-panel-inner {
   padding: 0 1rem;
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-4px);
   transition:
-    opacity 0.28s ease,
-    transform 0.32s var(--boing),
-    padding 0.32s ease;
+    opacity 0.12s ease,
+    transform 0.16s var(--stack-ease, ease),
+    padding 0.16s ease;
 }
 
 .neon-stack-card.is-open .neon-stack-panel-inner {
-  padding: 0 1rem 1rem;
+  padding: 0 1rem 0.9rem;
   opacity: 1;
   transform: translateY(0);
 }
@@ -597,7 +598,7 @@ textarea.input-field {
 }
 
 .neon-sheet-enter {
-  animation: neon-sheet-in 0.45s var(--boing) both;
+  animation: neon-sheet-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes neon-stack-in {
@@ -612,19 +613,19 @@ textarea.input-field {
 }
 
 .neon-stack-enter > * {
-  animation: neon-stack-in 0.4s var(--boing) both;
+  animation: neon-stack-in 0.22s var(--stack-ease, ease) both;
 }
 .neon-stack-enter > *:nth-child(1) {
-  animation-delay: 0.05s;
+  animation-delay: 0.02s;
 }
 .neon-stack-enter > *:nth-child(2) {
-  animation-delay: 0.12s;
+  animation-delay: 0.05s;
 }
 .neon-stack-enter > *:nth-child(3) {
-  animation-delay: 0.19s;
+  animation-delay: 0.08s;
 }
 .neon-stack-enter > *:nth-child(4) {
-  animation-delay: 0.26s;
+  animation-delay: 0.11s;
 }
 
 @media (prefers-reduced-motion: reduce) {
