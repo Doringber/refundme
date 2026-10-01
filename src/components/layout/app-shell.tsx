@@ -33,6 +33,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         : null);
 
   const isPresent = pathname.includes("/present");
+  const isHome = pathname === "/dashboard";
+  const shortName = displayName?.trim().split(/[\s@._-]+/)[0] || null;
 
   return (
     <div
@@ -45,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="mb-5 flex items-center justify-between gap-3">
         <Link
           href="/settings"
-          className="chrome-hover flex items-center gap-2 rounded-full py-1 pe-2 ps-1 transition"
+          className="chrome-hover flex min-w-0 items-center gap-2 rounded-full py-1 pe-2 ps-1 transition"
           aria-label={displayName ? `הגדרות — ${displayName}` : "הגדרות"}
         >
           {avatarUrl ? (
@@ -53,22 +55,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <img
               src={avatarUrl}
               alt=""
-              className="h-10 w-10 rounded-full object-cover ring-2 ring-[color:var(--chrome-ring)]"
+              className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-[color:var(--chrome-ring)]"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <span className="chrome-avatar flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold">
-              {(displayName ?? "?").slice(0, 1)}
+            <span className="chrome-avatar flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold">
+              {(shortName ?? displayName ?? "?").slice(0, 1)}
             </span>
           )}
           <span className="min-w-0">
-            <span className="chrome-ink block font-display text-lg leading-none md:text-xl">
-              {APP_NAME}
-            </span>
-            {displayName && (
-              <span className="chrome-muted mt-1 block truncate text-xs font-bold">
-                {displayName}
+            {isHome ? (
+              <span className="chrome-ink block truncate font-display text-lg leading-none md:text-xl">
+                {shortName ? `היי ${shortName}` : "היי"}
               </span>
+            ) : (
+              <>
+                <span className="chrome-ink block font-display text-lg leading-none md:text-xl">
+                  {APP_NAME}
+                </span>
+                {displayName && (
+                  <span className="chrome-muted mt-1 block truncate text-xs font-bold">
+                    {displayName}
+                  </span>
+                )}
+              </>
             )}
           </span>
         </Link>

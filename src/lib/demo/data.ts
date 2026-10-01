@@ -416,7 +416,7 @@ export function createDemoSeed(): {
 
   const profile: UserProfile = {
     id: DEMO_USER_ID,
-    displayName: "דמו",
+    displayName: "דור",
     email: null,
     avatarUrl: null,
     orbScaleAgorot: 100000,

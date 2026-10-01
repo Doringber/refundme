@@ -6,6 +6,7 @@ import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
 import { formatIls, isSpendable } from "@/lib/calculations";
 import { useAppData } from "@/lib/app-data/context";
+import { headlineFromApp } from "@/lib/home-headline";
 
 export default function DashboardPage() {
   const app = useAppData();
@@ -20,12 +21,26 @@ export default function DashboardPage() {
     ...summary.recentActivity.slice(0, 6),
   ];
   const showStack = merchants.length > 0;
+  const displayNameFallback =
+    app.user?.user_metadata?.full_name ||
+    app.user?.user_metadata?.name ||
+    app.user?.email?.split("@")[0] ||
+    null;
+  const title = headlineFromApp({
+    profile,
+    summary,
+    displayNameFallback:
+      typeof displayNameFallback === "string" ? displayNameFallback : null,
+  });
 
   return (
     <div className="space-y-5">
       {/* Hero balance + orb */}
       <section className="relative overflow-hidden rounded-[2rem] px-1 pt-2">
-        <p className="chrome-muted text-sm font-bold">יתרה כוללת</p>
+        <h1 className="chrome-ink font-display text-2xl leading-snug tracking-tight md:text-3xl">
+          {title}
+        </h1>
+        <p className="chrome-muted mt-4 text-sm font-bold">יתרה כוללת</p>
         <p className="chrome-ink font-display mt-1 text-5xl tracking-tight md:text-6xl">
           {formatIls(summary.totalActiveCreditAgorot)}
         </p>
