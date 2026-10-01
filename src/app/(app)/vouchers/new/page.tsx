@@ -1,42 +1,62 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { BuyMeBookmarkCard } from "@/components/vouchers/buyme-bookmark-card";
+import { BuyMeGiftImportPanel } from "@/components/vouchers/buyme-gift-import";
 import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
+import { vouchersFromBuyMeGifts } from "@/lib/buyme-import";
+import {
+  extractBuyMeGifts,
+  looksLikeBuyMe,
+  suggestFieldsFromText,
+  type BuyMeGiftCandidate,
+} from "@/lib/extract";
 import { clientOcrImage } from "@/lib/images/client-ocr";
 import { prepareUploadFile } from "@/lib/images/prepare-upload";
-import { suggestFieldsFromText } from "@/lib/extract";
 import type { ExtractedFields, Voucher } from "@/lib/types";
 import { validateUpload } from "@/lib/validation";
 
-type Step = "upload" | "review" | "success";
+type Step = "upload" | "pick-buyme" | "review" | "success";
 
 export default function NewVoucherPage() {
   const app = useAppData();
   const router = useRouter();
+  const buyMeInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [extractionNote, setExtractionNote] = useState<string | null>(null);
   const [fields, setFields] = useState<ExtractedFields | null>(null);
+  const [buyMeGifts, setBuyMeGifts] = useState<BuyMeGiftCandidate[]>([]);
+  const [importedCount, setImportedCount] = useState(0);
   const [documentMeta, setDocumentMeta] = useState<{
     fileName: string | null;
     mimeType: string | null;
     dataUrl: string | null;
   }>({ fileName: null, mimeType: null, dataUrl: null });
 
-  async function processPrepared(prepared: {
-    file: File;
-    dataUrl: string;
-    mimeType: string;
-    fileName: string;
-    convertedFromHeic: boolean;
-  }) {
+  function goReview(next: ExtractedFields, note: string | null) {
+    setFields(next);
+    setExtractionNote(note);
+    setStep("review");
+  }
+
+  async function processPrepared(
+    prepared: {
+      file: File;
+      dataUrl: string;
+      mimeType: string;
+      fileName: string;
+      convertedFromHeic: boolean;
+    },
+    opts: { buyMeMode?: boolean } = {},
+  ) {
     setDocumentMeta({
       fileName: prepared.fileName,
       mimeType: prepared.mimeType,
@@ -62,13 +82,41 @@ export default function NewVoucherPage() {
       source?: string;
     };
 
-    // Prefer server merge; if empty but we have OCR text, parse locally
+    const textForBuyMe = ocrText ?? "";
+    if (opts.buyMeMode || looksLikeBuyMe(textForBuyMe)) {
+      const gifts = extractBuyMeGifts(textForBuyMe).filter(
+        (g) => g.title !== "BuyMe" || g.amountAgorot != null,
+      );
+      if (gifts.length >= 1) {
+        setBuyMeGifts(gifts);
+        setExtractionNote(
+          gifts.length > 1
+            ? "צילום אחד של הרשימה — אפשר לייבא את כל המתנות עם יתרה בלחיצה. הקוד נשאר ב־BuyMe למימוש."
+            : "ייבוא מ־BuyMe — אשרו או שמרו.",
+        );
+        setStep("pick-buyme");
+        return;
+      }
+      if (opts.buyMeMode) {
+        const fallback = suggestFieldsFromText(textForBuyMe || "BuyMe");
+        goReview(
+          {
+            ...fallback,
+            merchantName: fallback.merchantName ?? "BuyMe",
+            documentType: "shopping_voucher",
+          },
+          "לא זיהינו כרטיסי מתנה ברורים — נסו סימנייה מתוך BuyMe, או צלמו שוב את «המתנות שלי».",
+        );
+        return;
+      }
+    }
+
     let nextFields = json.fields ?? null;
     if ((!nextFields || nextFields.confidence === "none") && ocrText) {
       nextFields = suggestFieldsFromText(ocrText);
     }
 
-    setFields(
+    goReview(
       nextFields ?? {
         merchantName: null,
         documentType: null,
@@ -81,20 +129,20 @@ export default function NewVoucherPage() {
         confidence: "none",
         notes: "מלאו ידנית לפי המסמך",
       },
+      [
+        json.message ?? nextFields?.notes,
+        prepared.convertedFromHeic ? "הקובץ הומר מ־HEIC ל־JPEG לתצוגה." : null,
+        json.source ? `מקור חילוץ: ${json.source}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
     );
-
-    const notes = [
-      json.message ?? nextFields?.notes,
-      prepared.convertedFromHeic ? "הקובץ הומר מ־HEIC ל־JPEG לתצוגה." : null,
-      json.source ? `מקור חילוץ: ${json.source}` : null,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    setExtractionNote(notes || null);
-    setStep("review");
   }
 
-  async function handleFile(file: File | null) {
+  async function handleFile(
+    file: File | null,
+    opts: { buyMeMode?: boolean } = {},
+  ) {
     if (!file) return;
     setError(null);
     setStatus(null);
@@ -107,7 +155,7 @@ export default function NewVoucherPage() {
     try {
       setStatus("מכין את התמונה…");
       const prepared = await prepareUploadFile(file);
-      await processPrepared(prepared);
+      await processPrepared(prepared, opts);
     } catch (err) {
       setError(
         err instanceof Error
@@ -121,20 +169,46 @@ export default function NewVoucherPage() {
   }
 
   function continueManual() {
-    setFields({
-      merchantName: null,
-      documentType: null,
-      amountAgorot: null,
-      issueDate: null,
-      expiryDate: null,
-      voucherCode: null,
-      barcodeValue: null,
-      usageTerms: null,
-      confidence: "none",
-      notes: "מילוי ידני ללא חילוץ",
-    });
-    setExtractionNote("ממשיכים למילוי ידני מלא.");
-    setStep("review");
+    goReview(
+      {
+        merchantName: null,
+        documentType: null,
+        amountAgorot: null,
+        issueDate: null,
+        expiryDate: null,
+        voucherCode: null,
+        barcodeValue: null,
+        usageTerms: null,
+        confidence: "none",
+        notes: "מילוי ידני ללא חילוץ",
+      },
+      "ממשיכים למילוי ידני מלא.",
+    );
+  }
+
+  async function importAllBuyMe() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (app.mode === "supabase" && !app.user) {
+        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
+      const { saved } = vouchersFromBuyMeGifts(buyMeGifts, {
+        userId: app.user?.id,
+        documentMeta,
+      });
+      if (!saved.length) throw new Error("אין מתנות עם יתרה לייבוא");
+      for (const v of saved) {
+        await app.saveVoucher(v);
+      }
+      setImportedCount(saved.length);
+      setStep("success");
+      window.setTimeout(() => router.push("/dashboard"), 1100);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "הייבוא נכשל");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleSave(voucher: Voucher) {
@@ -145,6 +219,7 @@ export default function NewVoucherPage() {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
       }
       await app.saveVoucher(voucher);
+      setImportedCount(1);
       setStep("success");
       window.setTimeout(() => {
         router.push("/dashboard");
@@ -161,7 +236,7 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          צלמו תעודת זיכוי / שובר — התמונה נשמרת והשדות מוצעים לאישור
+          חיבור ל־BuyMe (API) — או צילום תעודת זיכוי רגילה
         </p>
       </div>
 
@@ -176,12 +251,47 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-10 text-center">
-            <span className="font-display text-xl text-forest">צלמו או העלו מסמך</span>
+          <BuyMeBookmarkCard />
+
+          <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
+            <span className="h-px flex-1 bg-white/10" />
+            או צילום מסך אחד של כל הרשימה
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
+          <button
+            type="button"
+            className="btn-secondary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
+            disabled={busy}
+            onClick={() => buyMeInputRef.current?.click()}
+            data-testid="buyme-import-button"
+          >
+            <span className="font-extrabold">צילום «המתנות שלי»</span>
+            <span className="text-xs opacity-80">
+              ייבוא כל המתנות עם יתרה — בלי כרטיס־כרטיס
+            </span>
+          </button>
+          <input
+            ref={buyMeInputRef}
+            type="file"
+            accept="image/*,image/heic,image/heif"
+            capture="environment"
+            className="sr-only"
+            aria-label="צילום מסך מ־BuyMe"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              e.target.value = "";
+              void handleFile(file, { buyMeMode: true });
+            }}
+            disabled={busy}
+          />
+
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-8 text-center">
+            <span className="font-display text-xl text-forest">
+              צלמו תעודת זיכוי / שובר
+            </span>
             <span className="text-sm text-eggplant">
               JPEG, PNG, WebP או PDF · עד 10MB
-              <br />
-              (HEIC מאייפון יומר אוטומטית אם אפשר)
             </span>
             <input
               type="file"
@@ -192,12 +302,6 @@ export default function NewVoucherPage() {
               disabled={busy}
             />
           </label>
-
-          <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs font-semibold leading-relaxed text-eggplant">
-            שובר BuyMe? צלמו־מסך מ־buyme.co.il או מהאפליקציה, שמרו עם חנות{" "}
-            <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
-            המימוש עצמו נעשה בבית העסק / באתר עם הקוד — ואז רשמו מימוש כאן.
-          </p>
 
           <button
             type="button"
@@ -219,6 +323,32 @@ export default function NewVoucherPage() {
             </p>
           )}
         </div>
+      )}
+
+      {step === "pick-buyme" && (
+        <>
+          <BuyMeGiftImportPanel
+            gifts={buyMeGifts}
+            note={extractionNote}
+            busy={busy}
+            onImportAll={() => void importAllBuyMe()}
+            onPickOne={(gift) =>
+              goReview(
+                gift.fields,
+                "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה.",
+              )
+            }
+            onBack={() => {
+              setBuyMeGifts([]);
+              setStep("upload");
+            }}
+          />
+          {error && (
+            <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+              {error}
+            </p>
+          )}
+        </>
       )}
 
       {step === "review" && fields && (
@@ -244,8 +374,12 @@ export default function NewVoucherPage() {
 
       {step === "success" && (
         <div className="card-surface px-6 py-12 text-center" role="status">
-          <p className="font-display text-2xl text-forest">נשמר בהצלחה</p>
-          <p className="mt-2 text-sm text-eggplant">חוזרים ללוח הבקרה עם אנימציית הכדור…</p>
+          <p className="font-display text-2xl text-forest">
+            {importedCount > 1 ? `יובאו ${importedCount} מתנות` : "נשמר בהצלחה"}
+          </p>
+          <p className="mt-2 text-sm text-eggplant">
+            חוזרים ללוח הבקרה עם אנימציית הכדור…
+          </p>
         </div>
       )}
     </div>

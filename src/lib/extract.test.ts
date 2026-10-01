@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { suggestFieldsFromText } from "./extract";
 import {
+  BUYME_VOUCHER_TEXT,
   SHUFERSAL_CREDIT_TEXT,
   SUPERPHARM_CREDIT_TEXT,
   YOCHANANOF_RECEIPT_TEXT,
@@ -37,6 +38,17 @@ describe("Israeli live voucher extraction", () => {
     assert.equal(fields.merchantName, "יוחננוף");
     assert.equal(fields.documentType, "receipt");
     assert.equal(fields.amountAgorot, 2170);
+    assert.notEqual(fields.confidence, "none");
+  });
+
+  it("parses BuyMe digital voucher (merchant, code, balance, expiry)", () => {
+    const fields = suggestFieldsFromText(BUYME_VOUCHER_TEXT);
+    assert.equal(fields.merchantName, "BuyMe");
+    assert.equal(fields.documentType, "shopping_voucher");
+    assert.equal(fields.amountAgorot, 15000);
+    assert.equal(fields.voucherCode, "BM7K9X2Q4P");
+    assert.equal(fields.expiryDate, "2026-12-31");
+    assert.match(fields.notes ?? "", /BuyMe/);
     assert.notEqual(fields.confidence, "none");
   });
 });

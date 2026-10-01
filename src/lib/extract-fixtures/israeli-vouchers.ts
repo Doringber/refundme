@@ -56,3 +56,32 @@ yochananof.co.il
 שוקולד פרה במיל 7290107951593 3.90
 סה"כ לתשלום 21.70 ש"ח
 `;
+
+export const BUYME_VOUCHER_TEXT = `
+BuyMe
+buyme.co.il
+שובר דיגיטלי
+קוד מימוש: BM7K9X2Q4P
+יתרה: ₪150
+תוקף: 31/12/2026
+למימוש בבתי עסק משתתפים
+`;
+
+/** OCR-style dump of BuyMe «המתנות שלי» list (multi-card) */
+export const BUYME_GIFTS_LIST_TEXT = `
+BUYME
+היי Dor טוב שבאת
+5 מתנות שאפשר לממש
+סינון מתנות
+לדור אינגבר מ-Pango
+סינמה סיטי
+כניסה זוגית לסרט בכל מתחמי סינמה סיטי - בכל ימות השבוע
+לדור אינגבר מ-Pango
+BUYME FOODY - מתנות קולינריות שוות
+יתרה: ₪200
+לדור אינגבר מ-Pango
+BUYME ALL - מגוון אדיר במתנה אחת
+יתרה: ₪881
+המתנות שלי
+buyme.co.il
+`;

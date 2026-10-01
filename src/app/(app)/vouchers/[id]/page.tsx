@@ -126,6 +126,18 @@ export default function VoucherDetailPage() {
         />
       </section>
 
+      {!isReceipt &&
+        (voucher.status === "active" ||
+          voucher.status === "partially_redeemed") && (
+          <Link
+            href={`/vouchers/${voucher.id}/present`}
+            className="btn-primary flex w-full items-center justify-center py-3.5 text-base"
+            data-testid="open-present"
+          >
+            הצגה בקופה — קוד וברקוד
+          </Link>
+        )}
+
       {(voucher.voucherCode || voucher.barcodeValue) && (
         <section className="card-surface space-y-3 p-5 text-center">
           {voucher.voucherCode && (

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
@@ -168,6 +169,10 @@ export default function SettingsPage() {
         <p className="text-sm font-medium">
           ימים לפני פקיעה: {app.profile.reminderDays.join(", ")}
         </p>
+        <BrowserNotifyToggle
+          reminderDays={app.profile.reminderDays}
+          onMessage={setMessage}
+        />
       </section>
 
       <section className="card-surface space-y-3 p-5">
@@ -189,20 +194,16 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          האפליקציה לא מחליפה את BuyMe — היא עוזרת לעקוב אחרי יתרות. צלמו או
-          צלמו־מסך את השובר מ־buyme.co.il / האפליקציה, שמרו עם חנות{" "}
-          <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
-          המימוש עצמו נעשה בקופה או באתר של בית העסק עם הקוד של BuyMe; אחר כך
-          רשמו כאן מימוש כדי לעדכן את היתרה.
+          שאיבה מ־API סגור של BuyMe (Bearer JWT אחרי התחברות) — סימנייה ב־«המתנות
+          שלי» מעבירה את הסשן לכאן ושולפת יתרה, קוד וברקוד. לחלופין צילום מסך אחד
+          של הרשימה. המימוש עצמו נשאר ב־BuyMe.
         </p>
-        <a
-          href="https://buyme.co.il"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-secondary inline-flex px-4 py-2 text-sm"
+        <Link
+          href="/vouchers/new"
+          className="btn-primary inline-flex px-4 py-2 text-sm"
         >
-          פתיחת buyme.co.il
-        </a>
+          ייבוא מ־BuyMe
+        </Link>
       </section>
 
       {app.mode === "demo" ? (

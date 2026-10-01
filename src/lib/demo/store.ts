@@ -26,7 +26,7 @@ let cachedSerialized: string | null = null;
 export const SERVER_DEMO_SNAPSHOT: DemoState = {
   profile: {
     id: "demo-user",
-    displayName: "דמו",
+    displayName: "דור",
     email: null,
     avatarUrl: null,
     orbScaleAgorot: 100000,
