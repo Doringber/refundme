@@ -194,9 +194,9 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          אין API ל־BuyMe. הפתרון: סימנייה («כפתור») שרצה מתוך «המתנות שלי», או
-          צילום מסך אחד של כל הרשימה וייבוא הכל — בלי לצלם כל כרטיס. כאן עוקבים
-          אחרי יתרות; המימוש נשאר ב־BuyMe.
+          שאיבה מ־API סגור של BuyMe (Bearer JWT אחרי התחברות) — סימנייה ב־«המתנות
+          שלי» מעבירה את הסשן לכאן ושולפת יתרה, קוד וברקוד. לחלופין צילום מסך אחד
+          של הרשימה. המימוש עצמו נשאר ב־BuyMe.
         </p>
         <Link
           href="/vouchers/new"

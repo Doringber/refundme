@@ -4,6 +4,7 @@ import {
   buyMeBookmarkletHref,
   parseBuyMePageText,
   readBuyMeImportHash,
+  vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
 } from "./buyme-import";
 import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
@@ -16,19 +17,56 @@ describe("buyme bulk import", () => {
     assert.ok(saved.every((v) => v.remainingAmountAgorot > 0));
     assert.ok(saved.some((v) => v.merchantName === "BUYME FOODY"));
     assert.ok(saved.some((v) => v.merchantName === "BUYME ALL"));
-    // Cinema City has no יתרה in the fixture
     assert.ok(skipped.some((g) => g.title === "סינמה סיטי") || skipped.length >= 0);
   });
 
-  it("builds bookmarklet pointing at import route", () => {
-    const href = buyMeBookmarkletHref("https://example.com");
-    assert.match(href, /^javascript:/);
-    assert.match(decodeURIComponent(href), /vouchers\/import\/buyme/);
-    assert.match(decodeURIComponent(href), /buyme\\.co\\.il/);
+  it("builds vouchers from siteapi wallet cards with codes", () => {
+    const { saved } = vouchersFromBuyMeApiCards([
+      {
+        id: 1,
+        title: "BUYME ALL",
+        balanceShekels: 881,
+        originalValueShekels: 1000,
+        code: "ABC123XYZ",
+        barcode: "729000111",
+        expiresAt: "2027-01-15T00:00:00.000Z",
+        used: false,
+        supplierName: "BuyMe",
+        url: "https://buyme.co.il/x",
+        fields: {
+          merchantName: "BUYME ALL",
+          documentType: "shopping_voucher",
+          amountAgorot: 88100,
+          issueDate: null,
+          expiryDate: "2027-01-15",
+          voucherCode: "ABC123XYZ",
+          barcodeValue: "729000111",
+          usageTerms: null,
+          confidence: "high",
+          notes: null,
+        },
+      },
+    ]);
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0].voucherCode, "ABC123XYZ");
+    assert.equal(saved[0].remainingAmountAgorot, 88100);
+    assert.equal(saved[0].expiryConfidence, "confirmed");
   });
 
-  it("reads import hash payload", () => {
-    const text = readBuyMeImportHash(`#${encodeURIComponent("BUYME ALL\nיתרה: ₪10")}`);
-    assert.match(text, /BUYME ALL/);
+  it("builds bookmarklet that extracts Ember JWT", () => {
+    const href = buyMeBookmarkletHref("https://example.com");
+    assert.match(href, /^javascript:/);
+    const decoded = decodeURIComponent(href);
+    assert.match(decoded, /vouchers\/import\/buyme/);
+    assert.match(decoded, /ember_simple_auth-session/);
+    assert.match(decoded, /#token=/);
+  });
+
+  it("reads token hash payload", () => {
+    const { token, pageText } = readBuyMeImportHash(
+      `#token=${encodeURIComponent("aaa.bbb.ccc")}`,
+    );
+    assert.equal(token, "aaa.bbb.ccc");
+    assert.equal(pageText, null);
   });
 });

@@ -236,7 +236,7 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          BuyMe בלחיצה אחת — או צילום תעודת זיכוי רגילה
+          חיבור ל־BuyMe (API) — או צילום תעודת זיכוי רגילה
         </p>
       </div>
 

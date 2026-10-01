@@ -1,9 +1,25 @@
 import type { BuyMeGiftCandidate } from "./extract-buyme";
 import { extractBuyMeGifts } from "./extract-buyme";
 import { DEMO_USER_ID } from "./demo/data";
-import type { Voucher } from "./types";
+import { shekelsToAgorot } from "./calculations";
+import type { ExtractedFields, Voucher } from "./types";
 
 export const BUYME_IMPORT_PATH = "/vouchers/import/buyme";
+
+/** Wallet card shape returned by `/api/buyme/wallet` (client-safe). */
+export type BuyMeApiCard = {
+  id: number | string;
+  title: string;
+  balanceShekels: number;
+  originalValueShekels: number | null;
+  code: string | null;
+  barcode: string | null;
+  expiresAt: string | null;
+  used: boolean;
+  supplierName: string | null;
+  url: string | null;
+  fields: ExtractedFields;
+};
 
 /** Build a voucher draft from a parsed BuyMe gift card (no redemption code required). */
 export function voucherFromBuyMeGift(
@@ -34,7 +50,7 @@ export function voucherFromBuyMeGift(
     expiryDate: f.expiryDate,
     expiryConfidence: f.expiryDate ? "uncertain" : "missing",
     voucherCode: f.voucherCode,
-    barcodeValue: null,
+    barcodeValue: f.barcodeValue,
     usageTerms: f.usageTerms,
     notes: f.notes,
     documentPath: null,
@@ -42,6 +58,50 @@ export function voucherFromBuyMeGift(
     documentFileName: opts.documentMeta?.fileName ?? null,
     documentDataUrl: opts.documentMeta?.dataUrl ?? null,
     extractionRaw: { source: "buyme-import", title: gift.title },
+    fieldsConfirmed: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function voucherFromBuyMeApiCard(
+  card: BuyMeApiCard,
+  opts: { userId?: string } = {},
+): Voucher | null {
+  const amountAgorot = shekelsToAgorot(card.balanceShekels);
+  if (amountAgorot <= 0) return null;
+  const now = new Date().toISOString();
+  const expiryDate = card.expiresAt ? card.expiresAt.slice(0, 10) : null;
+  return {
+    id: crypto.randomUUID(),
+    userId: opts.userId ?? DEMO_USER_ID,
+    merchantId: null,
+    merchantName: card.title,
+    documentType: "shopping_voucher",
+    status: "active",
+    originalAmountAgorot: card.originalValueShekels
+      ? shekelsToAgorot(card.originalValueShekels)
+      : amountAgorot,
+    remainingAmountAgorot: amountAgorot,
+    currency: "ILS",
+    issueDate: null,
+    expiryDate,
+    expiryConfidence: expiryDate ? "confirmed" : "missing",
+    voucherCode: card.code,
+    barcodeValue: card.barcode,
+    usageTerms: card.supplierName
+      ? `BuyMe · ${card.supplierName}`
+      : "מימוש דרך BuyMe",
+    notes: "יובא מארנק BuyMe המחובר",
+    documentPath: null,
+    documentMimeType: null,
+    documentFileName: null,
+    documentDataUrl: null,
+    extractionRaw: {
+      source: "buyme-siteapi",
+      buymeId: card.id,
+      url: card.url,
+    },
     fieldsConfirmed: true,
     createdAt: now,
     updatedAt: now,
@@ -62,6 +122,20 @@ export function vouchersFromBuyMeGifts(
   return { saved, skipped };
 }
 
+export function vouchersFromBuyMeApiCards(
+  cards: BuyMeApiCard[],
+  opts?: { userId?: string },
+): { saved: Voucher[]; skipped: BuyMeApiCard[] } {
+  const saved: Voucher[] = [];
+  const skipped: BuyMeApiCard[] = [];
+  for (const card of cards) {
+    const v = voucherFromBuyMeApiCard(card, opts);
+    if (v) saved.push(v);
+    else skipped.push(card);
+  }
+  return { saved, skipped };
+}
+
 export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
   return extractBuyMeGifts(text).filter(
     (g) => g.title !== "BuyMe" || g.amountAgorot != null,
@@ -69,22 +143,30 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 }
 
 /**
- * Bookmarklet that runs on buyme.co.il — acts as a "button on BuyMe":
- * copies page text and jumps into our import screen.
+ * Bookmarklet that runs ON buyme.co.il after Google login.
+ * Reads Ember Simple Auth JWT (private API credential) and hands it to us —
+ * same auth model as buyme-mcp / maccabi-style authenticated transport.
  */
 export function buyMeBookmarkletHref(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את «המתנות שלי» ב־BuyMe (buyme.co.il)");return;}var t=(document.body&&document.body.innerText)||"";if(!t.trim()){alert("לא נמצא טקסט בעמוד");return;}location.href=${JSON.stringify(target)}+"#"+encodeURIComponent(t.slice(0,80000));}catch(e){alert("הייבוא נכשל");}})();`;
+  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את BuyMe (buyme.co.il) והתחברו");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("לא נמצא סשן — התחברו ל־BuyMe ואז לחצו שוב");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא טוקן התחברות ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליפת הסשן מ־BuyMe נכשלה");}})();`;
   return `javascript:${encodeURIComponent(code)}`;
 }
 
-export function readBuyMeImportHash(hash: string): string {
+export function readBuyMeImportHash(hash: string): {
+  token: string | null;
+  pageText: string | null;
+} {
   const raw = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!raw) return "";
+  if (!raw) return { token: null, pageText: null };
   try {
-    return decodeURIComponent(raw);
+    if (raw.startsWith("token=")) {
+      return { token: decodeURIComponent(raw.slice("token=".length)), pageText: null };
+    }
+    // Legacy: whole-page text dump
+    return { token: null, pageText: decodeURIComponent(raw) };
   } catch {
-    return "";
+    return { token: null, pageText: null };
   }
 }
