@@ -17,36 +17,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const app = useAppData();
   const demo = app.mode === "demo";
+  const displayName =
+    app.profile.displayName ||
+    app.user?.user_metadata?.full_name ||
+    app.user?.user_metadata?.name ||
+    app.user?.email?.split("@")[0] ||
+    null;
+  const avatarUrl =
+    app.profile.avatarUrl ||
+    (typeof app.user?.user_metadata?.avatar_url === "string"
+      ? app.user.user_metadata.avatar_url
+      : typeof app.user?.user_metadata?.picture === "string"
+        ? app.user.user_metadata.picture
+        : null);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pb-28 pt-4 md:max-w-5xl md:pb-10 md:pt-6">
       <header className="mb-6 flex items-center justify-between gap-3">
-        <Link href="/dashboard" className="group">
+        <Link href="/dashboard" className="group min-w-0">
           <p className="font-display text-2xl leading-none text-forest md:text-3xl">
             {APP_NAME}
           </p>
-          <p className="mt-1 text-xs font-bold tracking-wide text-eggplant">
-            הזיכויים שלכם, במקום אחד
-          </p>
+          {displayName ? (
+            <p className="mt-1 truncate text-xs font-bold text-eggplant">
+              שלום, {displayName}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs font-bold tracking-wide text-eggplant">
+              הזיכויים שלכם, במקום אחד
+            </p>
+          )}
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {demo && (
             <span className="badge bg-blush text-forest" title="נתוני דמו מקומיים">
               מצב דמו
             </span>
           )}
           <Link
-            href="/vouchers/new"
-            className="btn-primary hidden px-5 py-2.5 text-sm md:inline-flex"
+            href="/settings"
+            className="flex items-center gap-2 rounded-full bg-[rgba(47,79,58,0.06)] py-1 pe-3 ps-1 transition hover:bg-[rgba(47,79,58,0.1)]"
+            aria-label={displayName ? `הגדרות — ${displayName}` : "הגדרות"}
           >
-            הוספת זיכוי
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-9 w-9 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest text-sm font-extrabold text-[var(--cream-ink)]">
+                {(displayName ?? "?").slice(0, 1)}
+              </span>
+            )}
+            {displayName && (
+              <span className="hidden max-w-[8rem] truncate text-sm font-bold text-forest sm:inline">
+                {displayName}
+              </span>
+            )}
           </Link>
         </div>
       </header>
 
       <main className="flex-1">{children}</main>
 
-      {/* Sticky pill nav inspired by gallery 048 Squishy */}
       <nav
         className="fixed inset-x-3 bottom-3 z-40 md:static md:inset-auto md:mt-10 md:bottom-auto"
         aria-label="ניווט ראשי"

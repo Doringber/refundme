@@ -63,59 +63,59 @@ export default function SignupPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
       <div>
-        <h1 className="font-display text-3xl text-forest">יצירת חשבון</h1>
-        <p className="text-sm text-eggplant">{APP_NAME}</p>
+        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
+        <p className="text-sm text-eggplant">יצירת חשבון</p>
       </div>
 
-      <div className="card-surface space-y-3 p-5">
+      <div className="card-surface space-y-4 p-5">
         <GoogleSignInButton label="הרשמה עם Google" onError={setError} />
-        <div className="flex items-center gap-3 text-xs font-bold text-eggplant">
-          <span className="h-px flex-1 bg-[rgba(47,79,58,0.14)]" />
-          או עם אימייל
-          <span className="h-px flex-1 bg-[rgba(47,79,58,0.14)]" />
-        </div>
-        <form onSubmit={onSubmit} className="space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">שם תצוגה</span>
-            <input
-              className="input-field"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              autoComplete="name"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">אימייל</span>
-            <input
-              type="email"
-              className="input-field"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">סיסמה</span>
-            <input
-              type="password"
-              className="input-field"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </label>
-          {error && (
-            <p className="text-sm text-[#a33a28]" role="alert">
-              {error}
-            </p>
-          )}
-          <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
-            {busy ? "יוצרים…" : "הרשמה"}
-          </button>
-        </form>
+        {error && (
+          <p className="text-sm text-[#a33a28]" role="alert">
+            {error}
+          </p>
+        )}
+        <details className="text-sm">
+          <summary className="cursor-pointer font-bold text-eggplant">
+            הרשמה עם אימייל
+          </summary>
+          <form onSubmit={onSubmit} className="mt-3 space-y-3">
+            <label className="block">
+              <span className="mb-1 block font-medium">שם תצוגה</span>
+              <input
+                className="input-field"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                autoComplete="name"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block font-medium">אימייל</span>
+              <input
+                type="email"
+                className="input-field"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block font-medium">סיסמה</span>
+              <input
+                type="password"
+                className="input-field"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
+            </label>
+            <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+              {busy ? "יוצרים…" : "הרשמה"}
+            </button>
+          </form>
+        </details>
       </div>
 
       <p className="text-center text-sm">
