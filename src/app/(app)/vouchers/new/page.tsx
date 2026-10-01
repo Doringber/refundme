@@ -194,6 +194,9 @@ export default function NewVoucherPage() {
     setError(null);
     setBusy(true);
     try {
+      if (app.mode === "supabase" && !app.user) {
+        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
       await app.saveVoucher(voucher);
       setStep("success");
       window.setTimeout(() => {

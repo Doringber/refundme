@@ -102,11 +102,12 @@ export function VoucherReviewForm({
       setError("נא למלא סכום תקין");
       return;
     }
-    if (values.expiryDate && values.expiryConfidence === "missing") {
-      setError("בחרו רמת ודאות לתוקף, או מחקו את התאריך");
-      return;
-    }
-    if (!values.expiryDate && values.expiryConfidence === "confirmed") {
+    // "missing" means unverified — drop any leftover OCR date so save can proceed
+    const expiryConfidence = values.expiryConfidence;
+    const expiryDate =
+      expiryConfidence === "missing" ? "" : values.expiryDate;
+
+    if (!expiryDate && expiryConfidence === "confirmed") {
       setError("לא ניתן לאשר תוקף בלי תאריך");
       return;
     }
@@ -123,10 +124,8 @@ export function VoucherReviewForm({
       remainingAmountAgorot: amount,
       currency: "ILS",
       issueDate: values.issueDate || null,
-      expiryDate: values.expiryDate || null,
-      expiryConfidence: values.expiryDate
-        ? values.expiryConfidence
-        : "missing",
+      expiryDate: expiryDate || null,
+      expiryConfidence: expiryDate ? expiryConfidence : "missing",
       voucherCode: values.voucherCode.trim() || null,
       barcodeValue: values.barcodeValue.trim() || null,
       usageTerms: values.usageTerms.trim() || null,
@@ -140,7 +139,9 @@ export function VoucherReviewForm({
       createdAt: now,
       updatedAt: now,
     };
-    onSubmit(voucher);
+    void Promise.resolve(onSubmit(voucher)).catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : "השמירה נכשלה");
+    });
   }
 
   return (
@@ -242,7 +243,12 @@ export function VoucherReviewForm({
               name="expiryConfidence"
               checked={values.expiryConfidence === value}
               onChange={() =>
-                setValues((v) => ({ ...v, expiryConfidence: value }))
+                setValues((v) => ({
+                  ...v,
+                  expiryConfidence: value,
+                  // Unverified expiry must not keep a leftover OCR date
+                  expiryDate: value === "missing" ? "" : v.expiryDate,
+                }))
               }
             />
             {label}
