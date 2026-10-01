@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CreditOrb } from "@/components/orb/credit-orb";
+import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
 import { formatIls, isSpendable } from "@/lib/calculations";
 import { useAppData } from "@/lib/app-data/context";
@@ -52,31 +53,7 @@ export default function DashboardPage() {
             className="!mx-0"
           />
 
-          {merchants.length > 0 ? (
-            <div className="neon-card-stack neon-stack-enter" aria-label="לפי חנות">
-              {merchants.map((m) => (
-                <Link
-                  key={m.merchantName}
-                  href={`/vouchers?merchant=${encodeURIComponent(m.merchantName)}`}
-                  className="neon-stack-card block"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-extrabold">{m.merchantName}</p>
-                      <p className="text-xs font-bold opacity-70">{m.count} מסמכים</p>
-                    </div>
-                    <p className="font-display text-lg">{formatIls(m.totalAgorot)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="neon-card-stack neon-stack-enter" aria-hidden>
-              <div className="neon-stack-card">צילום</div>
-              <div className="neon-stack-card">אישור</div>
-              <div className="neon-stack-card">מעקב</div>
-            </div>
-          )}
+          <NeonCardStack merchants={merchants} />
         </div>
       </section>
 
