@@ -467,32 +467,122 @@ textarea.input-field {
 
 .neon-stack-card {
   border-radius: 1.25rem;
-  min-height: 4.25rem;
-  padding: 0.85rem 1rem;
   color: #0a0a0c;
   font-weight: 800;
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.55);
-  transition: transform 0.25s var(--boing), box-shadow 0.2s ease;
+  overflow: hidden;
+  transition:
+    transform 0.28s var(--boing),
+    box-shadow 0.25s ease,
+    flex-grow 0.35s var(--boing);
 }
 
-.neon-stack-card:hover {
-  transform: translateX(-4px) scale(1.02);
+.neon-stack-card.is-open {
+  transform: translateX(-3px) scale(1.02);
+  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.65);
 }
 
-.neon-stack-card:nth-child(1) {
+.neon-stack-card.is-closed {
+  transform: scale(0.985);
+  opacity: 0.92;
+}
+
+.neon-stack-tone-1 {
   background: linear-gradient(135deg, #f4d03f, #f7e289);
 }
-.neon-stack-card:nth-child(2) {
+.neon-stack-tone-2 {
   background: linear-gradient(135deg, #2dd4bf, #5eead4);
 }
-.neon-stack-card:nth-child(3) {
+.neon-stack-tone-3 {
   background: linear-gradient(135deg, #38bdf8, #7dd3fc);
 }
-.neon-stack-card:nth-child(4) {
+.neon-stack-tone-4 {
   background: linear-gradient(135deg, #f472b6, #fda4af);
 }
-.neon-stack-card:nth-child(5) {
+.neon-stack-tone-5 {
   background: linear-gradient(135deg, #a78bfa, #c4b5fd);
+}
+
+.neon-stack-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 4.25rem;
+  padding: 0.85rem 1rem;
+  text-align: right;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.neon-stack-chevron {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 0.85rem;
+  transition: transform 0.28s var(--boing);
+}
+
+.neon-stack-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.neon-stack-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s var(--boing);
+}
+
+.neon-stack-card.is-open .neon-stack-panel {
+  grid-template-rows: 1fr;
+}
+
+.neon-stack-panel > .neon-stack-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.neon-stack-panel-inner {
+  padding: 0 1rem;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s var(--boing),
+    padding 0.32s ease;
+}
+
+.neon-stack-card.is-open .neon-stack-panel-inner {
+  padding: 0 1rem 1rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.neon-stack-cta {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(10, 10, 12, 0.9);
+  color: #f5f7f4;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.55rem 1.1rem;
+  transition: transform 0.18s var(--boing), background-color 0.18s ease;
+}
+
+.neon-stack-cta:hover {
+  background: #000;
+  transform: translateY(-1px);
 }
 
 @keyframes neon-sheet-in {
