@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buyMeBookmarkletHref,
+  buyMeBridgeConsoleScript,
   parseBuyMePageText,
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
@@ -53,14 +54,15 @@ describe("buyme bulk import", () => {
     assert.equal(saved[0].expiryConfidence, "confirmed");
   });
 
-  it("builds connect bridge script that extracts Ember session on BuyMe", () => {
+  it("builds console bridge script that extracts Ember session on BuyMe", () => {
+    const script = buyMeBridgeConsoleScript("https://example.com");
+    assert.doesNotMatch(script, /^javascript:/);
+    assert.match(script, /vouchers\/import\/buyme/);
+    assert.match(script, /ember_simple_auth-session/);
+    assert.match(script, /#token=/);
+    assert.match(script, /Console|קונסול|התחברו ל־BuyMe/);
     const href = buyMeBookmarkletHref("https://example.com");
     assert.match(href, /^javascript:/);
-    const decoded = decodeURIComponent(href);
-    assert.match(decoded, /vouchers\/import\/buyme/);
-    assert.match(decoded, /ember_simple_auth-session/);
-    assert.match(decoded, /#token=/);
-    assert.match(decoded, /שורת הכתובת|התחברו ל־BuyMe/);
   });
 
   it("reads token hash payload", () => {
