@@ -105,7 +105,7 @@ export default function NewVoucherPage() {
             merchantName: fallback.merchantName ?? "BuyMe",
             documentType: "shopping_voucher",
           },
-          "לא זיהינו כרטיסי מתנה ברורים — נסו סימנייה מתוך BuyMe, או צלמו שוב את «המתנות שלי».",
+          "לא זיהינו כרטיסי מתנה ברורים — צלמו שוב את כל רשימת «המתנות שלי», או הדביקו את הטקסט מהמסך.",
         );
         return;
       }
@@ -236,7 +236,7 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          חיבור ל־BuyMe (API) — או צילום תעודת זיכוי רגילה
+          ייבוא מ־BuyMe בצילום / הדבקה — או צילום תעודת זיכוי רגילה
         </p>
       </div>
 
@@ -251,26 +251,24 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <BuyMeConnectCard />
-
-          <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
-            <span className="h-px flex-1 bg-white/10" />
-            או צילום מסך אחד של כל הרשימה
-            <span className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <button
-            type="button"
-            className="btn-secondary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
-            disabled={busy}
-            onClick={() => buyMeInputRef.current?.click()}
-            data-testid="buyme-import-button"
-          >
-            <span className="font-extrabold">צילום «המתנות שלי»</span>
-            <span className="text-xs opacity-80">
-              ייבוא כל המתנות עם יתרה — בלי כרטיס־כרטיס
-            </span>
-          </button>
+          <BuyMeConnectCard
+            screenshotBusy={busy}
+            onPickScreenshot={() => buyMeInputRef.current?.click()}
+            onParsedText={(gifts) => {
+              setBuyMeGifts(gifts);
+              setExtractionNote(
+                gifts.length > 1
+                  ? "ייבוא מהטקסט שהודבק — אפשר לייבא את כל המתנות עם יתרה."
+                  : "ייבוא מ־BuyMe מהטקסט שהודבק.",
+              );
+              setDocumentMeta({
+                fileName: null,
+                mimeType: null,
+                dataUrl: null,
+              });
+              setStep("pick-buyme");
+            }}
+          />
           <input
             ref={buyMeInputRef}
             type="file"
@@ -285,6 +283,12 @@ export default function NewVoucherPage() {
             }}
             disabled={busy}
           />
+
+          <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
+            <span className="h-px flex-1 bg-white/10" />
+            או זיכוי בודד
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
 
           <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-8 text-center">
             <span className="font-display text-xl text-forest">

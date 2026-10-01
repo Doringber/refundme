@@ -241,7 +241,7 @@ export default function BuyMeImportPage() {
         </Link>
         <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
         <p className="text-sm text-eggplant">
-          חלון חיבור זמני → שמירת חיבור → שליפת הארנק ב־API
+          בטלפון: צילום או הדבקת טקסט. במחשב אפשר גם חיבור API ניסיוני.
         </p>
       </div>
 
@@ -255,22 +255,21 @@ export default function BuyMeImportPage() {
               {error}
             </p>
           )}
-          {step === "waiting" && (
-            <p
-              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
-              role="status"
-            >
-              ממתינים לחיבור… אחרי התחברות ב־BuyMe לחצו על הסימנייה «חיבור
-              BuyMe» (בטלפון) — הארנק יופיע אחרי החזרה לכאן.
-            </p>
-          )}
-          <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />
+          <BuyMeConnectCard
+            onParsedText={(gifts) => {
+              setOcrGifts(gifts);
+              setCards([]);
+              setStep(gifts.length ? "pick" : "connect");
+              if (!gifts.length) {
+                setError("לא מצאנו מתנות עם יתרה בטקסט שהודבק");
+              }
+            }}
+          />
           <p className="text-center text-xs text-eggplant">
-            או{" "}
+            לצילום מסך מהגלריה:{" "}
             <Link href="/vouchers/new" className="font-bold text-forest">
-              צילום מסך אחד של הרשימה
-            </Link>{" "}
-            כגיבוי
+              מסך ההוספה
+            </Link>
           </p>
         </div>
       )}

@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import {
   BUYME_SITE_URL,
   buyMeBookmarkletHref,
   buyMeBridgeConsoleScript,
+  parseBuyMePageText,
 } from "@/lib/buyme-import";
+import type { BuyMeGiftCandidate } from "@/lib/extract-buyme";
 
 function subscribe() {
   return () => {};
@@ -28,17 +31,131 @@ function useIsCoarsePointer(): boolean {
 }
 
 export type BuyMeConnectCardProps = {
-  /** Called after we open BuyMe — parent can show “waiting”. */
-  onPopupOpened?: () => void;
+  /** Open the device camera/gallery for a «המתנות שלי» screenshot. */
+  onPickScreenshot?: () => void;
+  /** Parsed gifts from pasted list text. */
+  onParsedText?: (gifts: BuyMeGiftCandidate[]) => void;
+  screenshotBusy?: boolean;
 };
 
 /**
- * Mobile: save a one-tap connect bookmark, open BuyMe, tap the bookmark.
- * Desktop: same bookmark, or paste bridge script in the BuyMe console
- * (Chrome blocks `javascript:` in the address bar).
+ * Mobile-first BuyMe import. Screenshot + paste work on phones.
+ * API/bookmark connect is desktop-only — iOS/Android block javascript: bookmarks.
  */
-export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
+export function BuyMeConnectCard({
+  onPickScreenshot,
+  onParsedText,
+  screenshotBusy = false,
+}: BuyMeConnectCardProps) {
   const isPhone = useIsCoarsePointer();
+  const [paste, setPaste] = useState("");
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [showDesktopApi, setShowDesktopApi] = useState(false);
+
+  function openBuyMe() {
+    const win = window.open(BUYME_SITE_URL, "_blank");
+    if (!win) window.location.assign(BUYME_SITE_URL);
+  }
+
+  function submitPaste() {
+    setPasteError(null);
+    const gifts = parseBuyMePageText(paste);
+    if (!gifts.length) {
+      setPasteError(
+        "לא מצאנו מתנות עם יתרה בטקסט. העתיקו מ־BuyMe את רשימת «המתנות שלי» (כולל המילים יתרה / ₪).",
+      );
+      return;
+    }
+    onParsedText?.(gifts);
+  }
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-[rgba(71,181,168,0.35)] bg-[rgba(71,181,168,0.08)] px-4 py-4">
+      <div>
+        <p className="font-display text-base text-forest">ייבוא מ־BuyMe</p>
+        <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
+          בטלפון הכי פשוט: צילום מסך אחד של «המתנות שלי», או הדבקת הטקסט מהרשימה.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="btn-secondary w-full py-2.5 text-xs"
+        onClick={openBuyMe}
+        data-testid="buyme-open-site"
+      >
+        פתח את BuyMe (להתחברות / צילום)
+      </button>
+
+      {onPickScreenshot && (
+        <button
+          type="button"
+          className="btn-primary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
+          disabled={screenshotBusy}
+          onClick={onPickScreenshot}
+          data-testid="buyme-import-button"
+        >
+          <span className="font-extrabold">צילום «המתנות שלי»</span>
+          <span className="text-xs opacity-90">
+            ייבוא כל המתנות עם יתרה — עובד בטלפון
+          </span>
+        </button>
+      )}
+
+      {onParsedText && (
+        <div className="space-y-2">
+          <label className="block text-xs font-bold text-forest" htmlFor="buyme-paste">
+            או הדביקו טקסט מהרשימה
+          </label>
+          <textarea
+            id="buyme-paste"
+            className="min-h-28 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm text-forest placeholder:text-eggplant/70"
+            placeholder={"לדוגמה:\nBUYME ALL\nיתרה: ₪881\n..."}
+            value={paste}
+            onChange={(e) => setPaste(e.target.value)}
+            data-testid="buyme-paste-text"
+          />
+          <button
+            type="button"
+            className="btn-secondary w-full py-2.5 text-xs"
+            disabled={!paste.trim()}
+            onClick={submitPaste}
+            data-testid="buyme-parse-paste"
+          >
+            ייבוא מהטקסט שהודבק
+          </button>
+          {pasteError && (
+            <p className="text-xs font-semibold text-[rgb(180,60,40)]" role="alert">
+              {pasteError}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!isPhone && (
+        <details
+          className="rounded-xl bg-white/10 px-3 py-2"
+          open={showDesktopApi}
+          onToggle={(e) => setShowDesktopApi((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="cursor-pointer text-xs font-bold text-forest">
+            במחשב בלבד: חיבור API (ניסיוני)
+          </summary>
+          <DesktopApiConnect />
+        </details>
+      )}
+
+      {isPhone && (
+        <p className="text-[10px] leading-relaxed text-eggplant">
+          חיבור API עם סימנייה לא יציב באייפון/אנדרואיד (הדפדפן חוסם). לכן בטלפון
+          משתמשים בצילום או בהדבקת טקסט.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DesktopApiConnect() {
   const bookmarkHref = useSyncExternalStore(
     subscribe,
     () => buyMeBookmarkletHref(window.location.origin),
@@ -49,7 +166,6 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
     () => buyMeBridgeConsoleScript(window.location.origin),
     () => "",
   );
-  const [opened, setOpened] = useState(false);
   const [copied, setCopied] = useState<"idle" | "bookmark" | "console" | "fail">(
     "idle",
   );
@@ -59,112 +175,47 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
       await navigator.clipboard.writeText(text);
       setCopied(kind);
       window.setTimeout(() => setCopied("idle"), 2500);
-      return true;
     } catch {
       setCopied("fail");
-      return false;
     }
-  }
-
-  function openBuyMe() {
-    const win = window.open(BUYME_SITE_URL, "buyme_connect");
-    if (!win) {
-      // Mobile often blocks window.open — navigate this tab.
-      window.location.assign(BUYME_SITE_URL);
-      return;
-    }
-    try {
-      win.focus();
-    } catch {
-      /* ignore */
-    }
-    setOpened(true);
-    onPopupOpened?.();
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-[rgba(71,181,168,0.35)] bg-[rgba(71,181,168,0.08)] px-4 py-4">
-      <div>
-        <p className="font-display text-base text-forest">חיבור ל־BuyMe</p>
-        <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          {isPhone
-            ? "בטלפון: שומרים כפתור חיבור לסימניות → נכנסים ל־BuyMe → לוחצים על הכפתור → הארנק מגיע."
-            : "נפתח BuyMe להתחברות, ואז לחיצה אחת מחזירה את החיבור לכאן והארנק נטען."}
-        </p>
-      </div>
-
-      {/* Step 1 — save connect control (required on phone; no DevTools) */}
-      <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
-        <p className="text-xs font-bold text-forest">1. שמירת כפתור החיבור</p>
-        <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
-          {isPhone
-            ? "לחצו «העתק כפתור» → בSafari/Chrome: סימניות ← סימנייה חדשה ← הדביקו בכתובת ← שמרו בשם «חיבור BuyMe»."
-            : "גררו את הכפתור לשורת הסימניות, או העתיקו והדביקו כסימנייה חדשה."}
-        </p>
-        <a
-          href={bookmarkHref}
-          className="btn-secondary flex w-full items-center justify-center py-2.5 text-xs"
-          onClick={(e) => {
-            e.preventDefault();
-            void copyText(bookmarkHref, "bookmark");
-          }}
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("text/uri-list", bookmarkHref);
-            e.dataTransfer.setData("text/plain", bookmarkHref);
-          }}
-          data-testid="buyme-bookmarklet"
-        >
-          {copied === "bookmark"
-            ? "הועתק — הדביקו כסימנייה בשם «חיבור BuyMe»"
-            : copied === "fail"
-              ? "ההעתקה נכשלה — נסו שוב"
-              : isPhone
-                ? "העתק כפתור חיבור"
-                : "גררו לסימניות · או העתיקו"}
-        </a>
-      </div>
-
-      {/* Step 2 — open BuyMe */}
+    <div className="mt-2 space-y-2 text-[11px] font-semibold leading-relaxed text-eggplant">
+      <p>
+        אחרי התחברות ב־BuyMe: סימנייה «חיבור BuyMe», או F12 → Console → הדבקה.
+        אחר כך נטען הארנק (כולל קודים) דרך ה־API.
+      </p>
+      <a
+        href={bookmarkHref}
+        className="btn-secondary flex w-full items-center justify-center py-2 text-xs"
+        onClick={(e) => {
+          e.preventDefault();
+          void copyText(bookmarkHref, "bookmark");
+        }}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/uri-list", bookmarkHref);
+          e.dataTransfer.setData("text/plain", bookmarkHref);
+        }}
+        data-testid="buyme-bookmarklet"
+      >
+        {copied === "bookmark" ? "הועתק לסימנייה" : "העתק / גרור סימניית חיבור"}
+      </a>
       <button
         type="button"
-        className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
-        onClick={openBuyMe}
-        data-testid="buyme-open-popup"
+        className="btn-secondary w-full py-2 text-xs"
+        onClick={() => void copyText(consoleScript, "console")}
+        data-testid="buyme-copy-bridge"
       >
-        {opened ? "2. BuyMe פתוח — התחברו שם" : "2. פתח את BuyMe והתחברו"}
+        {copied === "console" ? "קוד Console הועתק" : "העתק קוד ל־Console"}
       </button>
-
-      {opened && (
-        <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
-          <p className="text-xs font-bold text-forest">3. שליחת החיבור</p>
-          {isPhone ? (
-            <ol className="list-decimal space-y-1.5 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
-              <li>התחברו ב־BuyMe ופתחו «המתנות שלי»</li>
-              <li>פתחו סימניות ולחצו על «חיבור BuyMe»</li>
-              <li>תחזרו לכאן עם הארנק מלא</li>
-            </ol>
-          ) : (
-            <>
-              <ol className="list-decimal space-y-1.5 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
-                <li>התחברו ופתחו «המתנות שלי»</li>
-                <li>לחצו על הסימנייה «חיבור BuyMe»</li>
-                <li>או: F12 → Console → הדביקו את קוד החיבור → Enter</li>
-              </ol>
-              <button
-                type="button"
-                className="btn-secondary w-full py-2.5 text-xs"
-                onClick={() => void copyText(consoleScript, "console")}
-                data-testid="buyme-copy-bridge"
-              >
-                {copied === "console"
-                  ? "קוד הקונסול הועתק"
-                  : "העתק קוד ל־Console (דסקטופ)"}
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <Link
+        href="/vouchers/import/buyme"
+        className="block text-center text-xs font-bold text-forest underline"
+      >
+        המשך למסך חיבור API
+      </Link>
     </div>
   );
 }
