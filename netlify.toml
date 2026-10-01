@@ -4,10 +4,13 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Keep secrets scanning on; SUPABASE_SECRET_KEY must stay server-only
+  # (see src/lib/supabase/secret.ts — never import it from client/middleware).
 
 # Set these in Netlify UI → Site configuration → Environment variables
 # (never commit real values):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-#   SUPABASE_SECRET_KEY
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY          # optional legacy alias
+#   SUPABASE_SECRET_KEY                   # server only — NOT NEXT_PUBLIC_
 # Enable Netlify AI Gateway in the site UI so /api/extract can read voucher photos.
