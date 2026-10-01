@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BuyMeBookmarkCard } from "@/components/vouchers/buyme-bookmark-card";
+import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   valuesFromExtraction,
@@ -11,6 +11,7 @@ import {
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
 import {
+  BUYME_CONNECTED_MESSAGE,
   parseBuyMePageText,
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
@@ -21,7 +22,28 @@ import { formatIls, shekelsToAgorot } from "@/lib/calculations";
 import type { BuyMeGiftCandidate } from "@/lib/extract";
 import type { Voucher } from "@/lib/types";
 
-type Step = "loading" | "connect" | "pick" | "review" | "success";
+type Step = "loading" | "connect" | "waiting" | "pick" | "review" | "success";
+
+function notifyOpenerAndClose() {
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        { type: BUYME_CONNECTED_MESSAGE },
+        window.location.origin,
+      );
+    }
+  } catch {
+    /* ignore cross-window issues */
+  }
+  // Close the temporary connect window when we were opened as a popup.
+  window.setTimeout(() => {
+    try {
+      window.close();
+    } catch {
+      /* ignore */
+    }
+  }, 120);
+}
 
 export default function BuyMeImportPage() {
   const app = useAppData();
@@ -66,7 +88,6 @@ export default function BuyMeImportPage() {
       const { token, pageText } = readBuyMeImportHash(window.location.hash);
 
       if (token) {
-        // Strip secret from the address bar immediately
         history.replaceState(null, "", window.location.pathname);
         const res = await fetch("/api/buyme/session", {
           method: "POST",
@@ -75,8 +96,17 @@ export default function BuyMeImportPage() {
         });
         if (!res.ok) {
           if (!cancelled) {
-            setError("הטוקן מ־BuyMe לא תקף — התחברו מחדש ולחצו על הסימנייה");
+            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון ולחצו על כפתור החיבור");
             setStep("connect");
+          }
+          return;
+        }
+        // Temporary BuyMe window landed here with the token — hand off to opener.
+        if (window.opener && !window.opener.closed) {
+          notifyOpenerAndClose();
+          if (!cancelled) {
+            setStep("success");
+            setImportedCount(0);
           }
           return;
         }
@@ -108,6 +138,34 @@ export default function BuyMeImportPage() {
       cancelled = true;
     };
   }, []);
+
+  // Parent tab: wait until the popup finishes connecting.
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string } | null;
+      if (data?.type !== BUYME_CONNECTED_MESSAGE) return;
+      setStep("loading");
+      void loadWallet();
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (step !== "waiting") return;
+    const id = window.setInterval(() => {
+      void (async () => {
+        const status = await fetch("/api/buyme/session");
+        const st = (await status.json()) as { connected?: boolean };
+        if (st.connected) {
+          setStep("loading");
+          await loadWallet();
+        }
+      })();
+    }, 1600);
+    return () => window.clearInterval(id);
+  }, [step]);
 
   async function disconnect() {
     await fetch("/api/buyme/session", { method: "DELETE" });
@@ -176,18 +234,30 @@ export default function BuyMeImportPage() {
         </Link>
         <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
         <p className="text-sm text-eggplant">
-          שאיבה מ־API פרטי אחרי התחברות — בלי לצלם כל מתנה
+          חלון חיבור זמני → שמירת חיבור → שליפת הארנק ב־API
         </p>
       </div>
 
-      {step === "connect" && (
+      {(step === "connect" || step === "waiting") && (
         <div className="space-y-4">
           {error && (
-            <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+            <p
+              className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm"
+              role="alert"
+            >
               {error}
             </p>
           )}
-          <BuyMeBookmarkCard />
+          {step === "waiting" && (
+            <p
+              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
+              role="status"
+            >
+              ממתינים לחיבור מהחלון של BuyMe… אחרי ההתחברות לחצו שם על כפתור
+              החיבור ששמרתם.
+            </p>
+          )}
+          <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />
           <p className="text-center text-xs text-eggplant">
             או{" "}
             <Link href="/vouchers/new" className="font-bold text-forest">
@@ -204,7 +274,8 @@ export default function BuyMeImportPage() {
             <div>
               <h2 className="font-display text-lg text-forest">הארנק שלכם</h2>
               <p className="mt-1 text-sm text-eggplant">
-                {listCount} מתנות · סה״כ {formatIls(shekelsToAgorot(totalShekels))}
+                {listCount} מתנות · סה״כ{" "}
+                {formatIls(shekelsToAgorot(totalShekels))}
                 {expiresAt
                   ? ` · סשן עד ${new Date(expiresAt).toLocaleDateString("he-IL")}`
                   : ""}
@@ -278,7 +349,10 @@ export default function BuyMeImportPage() {
           </ul>
 
           {error && (
-            <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+            <p
+              className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm"
+              role="alert"
+            >
               {error}
             </p>
           )}
@@ -299,9 +373,13 @@ export default function BuyMeImportPage() {
       {step === "success" && (
         <div className="card-surface px-6 py-12 text-center" role="status">
           <p className="font-display text-2xl text-forest">
-            יובאו {importedCount} מתנות
+            {importedCount > 0
+              ? `יובאו ${importedCount} מתנות`
+              : "החיבור נשמר — אפשר לסגור את החלון"}
           </p>
-          <p className="mt-2 text-sm text-eggplant">חוזרים לבית…</p>
+          <p className="mt-2 text-sm text-eggplant">
+            {importedCount > 0 ? "חוזרים לבית…" : "החלון הראשי ממשיך לייבוא"}
+          </p>
         </div>
       )}
     </div>

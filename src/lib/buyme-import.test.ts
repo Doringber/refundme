@@ -53,13 +53,14 @@ describe("buyme bulk import", () => {
     assert.equal(saved[0].expiryConfidence, "confirmed");
   });
 
-  it("builds bookmarklet that extracts Ember JWT", () => {
+  it("builds connect-button script that extracts Ember session on BuyMe", () => {
     const href = buyMeBookmarkletHref("https://example.com");
     assert.match(href, /^javascript:/);
     const decoded = decodeURIComponent(href);
     assert.match(decoded, /vouchers\/import\/buyme/);
     assert.match(decoded, /ember_simple_auth-session/);
     assert.match(decoded, /#token=/);
+    assert.match(decoded, /כפתור החיבור|התחברו ל־BuyMe/);
   });
 
   it("reads token hash payload", () => {
