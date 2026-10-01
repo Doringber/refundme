@@ -96,7 +96,7 @@ export default function BuyMeImportPage() {
         });
         if (!res.ok) {
           if (!cancelled) {
-            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון ולחצו על כפתור החיבור");
+            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
             setStep("connect");
           }
           return;
@@ -253,8 +253,8 @@ export default function BuyMeImportPage() {
               className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
               role="status"
             >
-              ממתינים לחיבור מהחלון של BuyMe… אחרי ההתחברות לחצו שם על כפתור
-              החיבור ששמרתם.
+              ממתינים לחיבור מהחלון… אחרי התחברות ב־BuyMe: הדביקו בשורת
+              הכתובת שם ולחצו Enter.
             </p>
           )}
           <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />

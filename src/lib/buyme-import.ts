@@ -149,9 +149,9 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 }
 
 /**
- * One-tap “connect button” that must run ON buyme.co.il after login.
+ * Connect bridge pasted into BuyMe’s address bar after login.
  * Reads the user's own Ember Simple Auth JWT and navigates back to us with
- * `#token=…` (popup window becomes our import page, then can close).
+ * `#token=…` (popup becomes our import page, then can close).
  *
  * Why not a pure OAuth popup? BuyMe does not redirect to us with a code, and
  * browsers block reading another site's localStorage from our opener.
@@ -159,7 +159,7 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 export function buyMeBookmarkletHref(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("פתחו קודם את החלון של BuyMe והתחברו");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe בחלון ואז לחצו שוב על כפתור החיבור");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
+  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("הדביקו את זה בשורת הכתובת של החלון של BuyMe (אחרי התחברות)");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז הדביקו שוב בשורת הכתובת");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
   return `javascript:${encodeURIComponent(code)}`;
 }
 
