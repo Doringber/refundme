@@ -2,12 +2,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BuyMeBookmarkCard } from "@/components/vouchers/buyme-bookmark-card";
+import { BuyMeGiftImportPanel } from "@/components/vouchers/buyme-gift-import";
 import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
-import { formatIls } from "@/lib/calculations";
+import { vouchersFromBuyMeGifts } from "@/lib/buyme-import";
 import {
   extractBuyMeGifts,
   looksLikeBuyMe,
@@ -32,6 +34,7 @@ export default function NewVoucherPage() {
   const [extractionNote, setExtractionNote] = useState<string | null>(null);
   const [fields, setFields] = useState<ExtractedFields | null>(null);
   const [buyMeGifts, setBuyMeGifts] = useState<BuyMeGiftCandidate[]>([]);
+  const [importedCount, setImportedCount] = useState(0);
   const [documentMeta, setDocumentMeta] = useState<{
     fileName: string | null;
     mimeType: string | null;
@@ -84,23 +87,17 @@ export default function NewVoucherPage() {
       const gifts = extractBuyMeGifts(textForBuyMe).filter(
         (g) => g.title !== "BuyMe" || g.amountAgorot != null,
       );
-      if (gifts.length > 1) {
+      if (gifts.length >= 1) {
         setBuyMeGifts(gifts);
         setExtractionNote(
-          "מצאנו כמה מתנות בצילום — בחרו איזו לייבא. אפשר לחזור ולצלם מתנה בודדת.",
+          gifts.length > 1
+            ? "צילום אחד של הרשימה — אפשר לייבא את כל המתנות עם יתרה בלחיצה. הקוד נשאר ב־BuyMe למימוש."
+            : "ייבוא מ־BuyMe — אשרו או שמרו.",
         );
         setStep("pick-buyme");
         return;
       }
-      if (gifts.length === 1) {
-        goReview(
-          gifts[0].fields,
-          "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה. המימוש ב־BuyMe / בבית העסק.",
-        );
-        return;
-      }
       if (opts.buyMeMode) {
-        // Forced BuyMe button but OCR didn't parse cards — still try heuristics
         const fallback = suggestFieldsFromText(textForBuyMe || "BuyMe");
         goReview(
           {
@@ -108,7 +105,7 @@ export default function NewVoucherPage() {
             merchantName: fallback.merchantName ?? "BuyMe",
             documentType: "shopping_voucher",
           },
-          "לא זיהינו כרטיס מתנה ברור — מלאו ידנית לפי הצילום מ־BuyMe.",
+          "לא זיהינו כרטיסי מתנה ברורים — נסו סימנייה מתוך BuyMe, או צלמו שוב את «המתנות שלי».",
         );
         return;
       }
@@ -189,6 +186,31 @@ export default function NewVoucherPage() {
     );
   }
 
+  async function importAllBuyMe() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (app.mode === "supabase" && !app.user) {
+        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
+      const { saved } = vouchersFromBuyMeGifts(buyMeGifts, {
+        userId: app.user?.id,
+        documentMeta,
+      });
+      if (!saved.length) throw new Error("אין מתנות עם יתרה לייבוא");
+      for (const v of saved) {
+        await app.saveVoucher(v);
+      }
+      setImportedCount(saved.length);
+      setStep("success");
+      window.setTimeout(() => router.push("/dashboard"), 1100);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "הייבוא נכשל");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSave(voucher: Voucher) {
     setError(null);
     setBusy(true);
@@ -197,6 +219,7 @@ export default function NewVoucherPage() {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
       }
       await app.saveVoucher(voucher);
+      setImportedCount(1);
       setStep("success");
       window.setTimeout(() => {
         router.push("/dashboard");
@@ -213,7 +236,7 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          צלמו תעודת זיכוי / שובר — או ייבוא בלחיצה מ־BuyMe
+          BuyMe בלחיצה אחת — או צילום תעודת זיכוי רגילה
         </p>
       </div>
 
@@ -228,16 +251,24 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
+          <BuyMeBookmarkCard />
+
+          <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
+            <span className="h-px flex-1 bg-white/10" />
+            או צילום מסך אחד של כל הרשימה
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
           <button
             type="button"
-            className="btn-primary flex w-full flex-col items-center gap-1 py-4 text-base"
+            className="btn-secondary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
             disabled={busy}
             onClick={() => buyMeInputRef.current?.click()}
             data-testid="buyme-import-button"
           >
-            <span>ייבוא מ־BuyMe</span>
-            <span className="text-xs font-semibold opacity-80">
-              צלמו־מסך של המתנה ב־«המתנות שלי»
+            <span className="font-extrabold">צילום «המתנות שלי»</span>
+            <span className="text-xs opacity-80">
+              ייבוא כל המתנות עם יתרה — בלי כרטיס־כרטיס
             </span>
           </button>
           <input
@@ -295,56 +326,29 @@ export default function NewVoucherPage() {
       )}
 
       {step === "pick-buyme" && (
-        <div className="card-surface space-y-4 p-5">
-          <div>
-            <h2 className="font-display text-lg text-forest">בחירת מתנה מ־BuyMe</h2>
-            <p className="mt-1 text-sm text-eggplant">
-              {extractionNote ?? "בחרו מתנה אחת לייבוא"}
-            </p>
-          </div>
-          <ul className="space-y-2">
-            {buyMeGifts.map((gift) => (
-              <li key={`${gift.title}-${gift.amountAgorot ?? "x"}`}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-start transition hover:bg-white/16"
-                  onClick={() =>
-                    goReview(
-                      gift.fields,
-                      "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה.",
-                    )
-                  }
-                >
-                  <span>
-                    <span className="block font-display text-base">
-                      {gift.title}
-                    </span>
-                    {gift.fromLabel && (
-                      <span className="text-xs text-eggplant">
-                        מאת {gift.fromLabel}
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-display text-lg">
-                    {gift.amountAgorot != null
-                      ? formatIls(gift.amountAgorot)
-                      : "בלי יתרה"}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="btn-secondary w-full py-3"
-            onClick={() => {
+        <>
+          <BuyMeGiftImportPanel
+            gifts={buyMeGifts}
+            note={extractionNote}
+            busy={busy}
+            onImportAll={() => void importAllBuyMe()}
+            onPickOne={(gift) =>
+              goReview(
+                gift.fields,
+                "ייבוא מ־BuyMe — אשרו את היתרה לפני השמירה.",
+              )
+            }
+            onBack={() => {
               setBuyMeGifts([]);
               setStep("upload");
             }}
-          >
-            חזרה
-          </button>
-        </div>
+          />
+          {error && (
+            <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
+              {error}
+            </p>
+          )}
+        </>
       )}
 
       {step === "review" && fields && (
@@ -370,7 +374,9 @@ export default function NewVoucherPage() {
 
       {step === "success" && (
         <div className="card-surface px-6 py-12 text-center" role="status">
-          <p className="font-display text-2xl text-forest">נשמר בהצלחה</p>
+          <p className="font-display text-2xl text-forest">
+            {importedCount > 1 ? `יובאו ${importedCount} מתנות` : "נשמר בהצלחה"}
+          </p>
           <p className="mt-2 text-sm text-eggplant">
             חוזרים ללוח הבקרה עם אנימציית הכדור…
           </p>

@@ -194,9 +194,9 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          אין חיבור ישיר לחשבון BuyMe (אין API ציבורי). בייבוא: כפתור אחד במסך
-          הוספה → צלמו־מסך מ־«המתנות שלי» → נזהה שם מתנה ויתרה. המימוש עצמו נשאר
-          ב־BuyMe / בבית העסק; כאן רק מעקב אחרי היתרה.
+          אין API ל־BuyMe. הפתרון: סימנייה («כפתור») שרצה מתוך «המתנות שלי», או
+          צילום מסך אחד של כל הרשימה וייבוא הכל — בלי לצלם כל כרטיס. כאן עוקבים
+          אחרי יתרות; המימוש נשאר ב־BuyMe.
         </p>
         <Link
           href="/vouchers/new"
