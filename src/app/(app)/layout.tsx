@@ -12,8 +12,10 @@ export default async function AppLayout({
   const demoCookie = jar.get(DEMO_COOKIE)?.value === "1";
 
   return (
-    <AppDataProvider initialDemoCookie={demoCookie}>
-      <AppShell>{children}</AppShell>
-    </AppDataProvider>
+    <div className="theme-neon">
+      <AppDataProvider initialDemoCookie={demoCookie}>
+        <AppShell>{children}</AppShell>
+      </AppDataProvider>
+    </div>
   );
 }

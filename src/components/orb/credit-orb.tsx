@@ -162,33 +162,7 @@ export function CreditOrb({
   const dashOffset = circumference * (1 - ringProgress);
   const waveY = size * (1 - animatedFill);
 
-  if (totalAgorot === 0 && !nearestExpiring) {
-    return (
-      <section
-        className={`card-surface mx-auto flex w-full max-w-md flex-col items-center gap-5 px-6 py-10 text-center ${className}`}
-        aria-label="אין זיכויים זמינים"
-      >
-        <div
-          className="flex h-40 w-40 items-center justify-center rounded-full"
-          style={{
-            background:
-              "linear-gradient(160deg, rgba(71,181,168,0.25), rgba(163,193,226,0.35), rgba(219,192,232,0.4))",
-          }}
-        >
-          <span className="font-display text-4xl text-forest/35">₪0</span>
-        </div>
-        <div>
-          <h2 className="font-display text-2xl text-forest">התחילו לאסוף זיכויים</h2>
-          <p className="mt-2 text-sm text-eggplant">
-            צלמו שובר נייר, אשרו את הפרטים — ותראו מיד כמה נשאר לכם.
-          </p>
-        </div>
-        <Link href={emptyHref} className="btn-primary px-6 py-3">
-          הוספת זיכוי
-        </Link>
-      </section>
-    );
-  }
+  const isEmpty = totalAgorot === 0 && !nearestExpiring;
 
   const scaleLabel =
     orbScaleAgorot && orbScaleAgorot > 0
@@ -198,12 +172,20 @@ export function CreditOrb({
   return (
     <section
       className={`relative mx-auto flex w-full max-w-md flex-col items-center ${className}`}
-      aria-label={`זיכויים זמינים ${formatIls(totalAgorot)}. ${message}`}
+      aria-label={
+        isEmpty
+          ? "אין זיכויים זמינים"
+          : `זיכויים זמינים ${formatIls(totalAgorot)}. ${message}`
+      }
     >
       <Link
-        href="/vouchers?status=active"
-        className="group relative block rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(71,181,168,0.35)]"
-        aria-label={`פתיחת זיכויים פעילים. סה״כ ${formatIls(totalAgorot)}`}
+        href={isEmpty ? emptyHref : "/vouchers?status=active"}
+        className="group relative block rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color-mix(in_srgb,var(--pool)_35%,transparent)]"
+        aria-label={
+          isEmpty
+            ? "הוספת זיכוי ראשון"
+            : `פתיחת זיכויים פעילים. סה״כ ${formatIls(totalAgorot)}`
+        }
       >
         <svg
           width={size}
@@ -212,19 +194,31 @@ export function CreditOrb({
           className="drop-shadow-lg"
           role="img"
         >
-          <title>{`זיכויים זמינים ${formatIls(totalAgorot)}`}</title>
+          <title>
+            {isEmpty
+              ? "אין זיכויים זמינים"
+              : `זיכויים זמינים ${formatIls(totalAgorot)}`}
+          </title>
           <defs>
             <clipPath id={`${uid}-clip`}>
               <circle cx={size / 2} cy={size / 2} r={radius - 6} />
             </clipPath>
             <linearGradient id={`${uid}-liquid`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#47B5A8" />
-              <stop offset="55%" stopColor="#6EC4BA" />
-              <stop offset="100%" stopColor="#A3C1E2" />
+              <stop offset="0%" stopColor="var(--orb-liquid-1, #47B5A8)" />
+              <stop offset="55%" stopColor="var(--orb-liquid-2, #6EC4BA)" />
+              <stop offset="100%" stopColor="var(--orb-liquid-3, #A3C1E2)" />
             </linearGradient>
             <linearGradient id={`${uid}-highlight`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#DBC0E8" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#47B5A8" stopOpacity="0" />
+              <stop
+                offset="0%"
+                stopColor="var(--orb-highlight, #DBC0E8)"
+                stopOpacity="0.55"
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--orb-liquid-1, #47B5A8)"
+                stopOpacity="0"
+              />
             </linearGradient>
           </defs>
 
@@ -232,12 +226,12 @@ export function CreditOrb({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            fill="white"
+            fill="var(--orb-surface, #ffffff)"
             stroke="var(--ring-track)"
             strokeWidth={stroke}
           />
 
-          {hasConfirmedCountdown && (
+          {!isEmpty && hasConfirmedCountdown && (
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -258,20 +252,21 @@ export function CreditOrb({
           <g clipPath={`url(#${uid}-clip)`}>
             <rect
               x={0}
-              y={waveY}
+              y={isEmpty ? size * 0.72 : waveY}
               width={size}
               height={size}
               fill={`url(#${uid}-liquid)`}
+              opacity={isEmpty ? 0.55 : 1}
             />
             {!reducedMotion && (
               <g style={{ animation: "orb-wave 4s linear infinite" }}>
                 <path
-                  d={`M0 ${waveY + 8} Q ${size / 4} ${waveY - 6}, ${size / 2} ${waveY + 8} T ${size} ${waveY + 8} V ${size} H 0 Z`}
+                  d={`M0 ${(isEmpty ? size * 0.72 : waveY) + 8} Q ${size / 4} ${(isEmpty ? size * 0.72 : waveY) - 6}, ${size / 2} ${(isEmpty ? size * 0.72 : waveY) + 8} T ${size} ${(isEmpty ? size * 0.72 : waveY) + 8} V ${size} H 0 Z`}
                   fill={`url(#${uid}-highlight)`}
                   opacity={0.85}
                 />
                 <path
-                  d={`M${size} ${waveY + 8} Q ${(size * 5) / 4} ${waveY - 6}, ${size * 1.5} ${waveY + 8} T ${size * 2} ${waveY + 8} V ${size} H ${size} Z`}
+                  d={`M${size} ${(isEmpty ? size * 0.72 : waveY) + 8} Q ${(size * 5) / 4} ${(isEmpty ? size * 0.72 : waveY) - 6}, ${size * 1.5} ${(isEmpty ? size * 0.72 : waveY) + 8} T ${size * 2} ${(isEmpty ? size * 0.72 : waveY) + 8} V ${size} H ${size} Z`}
                   fill={`url(#${uid}-highlight)`}
                   opacity={0.85}
                 />
@@ -291,29 +286,35 @@ export function CreditOrb({
             cy={size / 2}
             r={radius - 6}
             fill="none"
-            stroke="rgba(255,255,255,0.55)"
+            stroke="var(--orb-rim, rgba(255,255,255,0.55))"
             strokeWidth={2}
           />
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <p className="text-sm font-semibold text-forest/80">זיכויים זמינים</p>
-          <p className="font-display mt-1 text-5xl tracking-tight text-forest">
+          <p className="text-sm font-semibold text-[color:var(--orb-ink-muted,#2f4f3acc)]">
+            זיכויים זמינים
+          </p>
+          <p className="font-display mt-1 text-5xl tracking-tight text-[color:var(--orb-ink,#2f4f3a)]">
             {formatIls(displayTotal)}
           </p>
-          <p className="mt-1 text-xs font-medium text-eggplant">
+          <p className="mt-1 text-xs font-medium text-[color:var(--orb-ink-soft,#5d7564)]">
             יתרה לפי הדיווח שלך
           </p>
           {scaleLabel ? (
-            <p className="mt-1 text-xs text-forest/55">{scaleLabel}</p>
+            <p className="mt-1 text-xs text-[color:var(--orb-ink-faint,#2f4f3a8c)]">
+              {scaleLabel}
+            </p>
           ) : (
-            <p className="mt-1 text-xs text-forest/40">גלים לנוי — ללא אחוזים</p>
+            <p className="mt-1 text-xs text-[color:var(--orb-ink-faint,#2f4f3a66)]">
+              {isEmpty ? "צלמו שובר להתחלה" : "גלים לנוי — ללא אחוזים"}
+            </p>
           )}
         </div>
 
         {gainFlash != null && gainFlash > 0 && (
           <div
-            className="pointer-events-none absolute left-1/2 top-10 -translate-x-1/2 font-display text-2xl text-forest-soft"
+            className="pointer-events-none absolute left-1/2 top-10 -translate-x-1/2 font-display text-2xl text-[color:var(--orb-ink,#2f4f3a)]"
             style={{
               animation: reducedMotion ? undefined : "count-pop 1s ease forwards",
             }}
@@ -324,7 +325,11 @@ export function CreditOrb({
         )}
       </Link>
 
-      {nearestExpiring && hasConfirmedCountdown ? (
+      {isEmpty ? (
+        <p className="mt-5 text-center text-sm text-eggplant">
+          צלמו שובר — והיתרה תופיע בעיגול
+        </p>
+      ) : nearestExpiring && hasConfirmedCountdown ? (
         <Link
           href={`/vouchers/${nearestExpiring.id}`}
           className="mt-5 max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-semibold transition hover:brightness-95"
@@ -335,7 +340,7 @@ export function CreditOrb({
                 : urgency === "upcoming"
                   ? "rgba(247,226,137,0.55)"
                   : "rgba(71,181,168,0.14)",
-            color: "var(--night)",
+            color: "var(--orb-chip-ink, var(--night))",
           }}
           aria-label={`${message}. תאריך: ${nearestExpiring.expiryDate}`}
         >
@@ -347,7 +352,7 @@ export function CreditOrb({
       ) : nearestExpiring ? (
         <Link
           href={`/vouchers/${nearestExpiring.id}`}
-          className="mt-5 max-w-sm rounded-2xl bg-[rgba(107,81,94,0.1)] px-4 py-3 text-center text-sm font-semibold text-night"
+          className="mt-5 max-w-sm rounded-2xl bg-white/10 px-4 py-3 text-center text-sm font-semibold text-[color:var(--orb-chip-ink,var(--night))]"
         >
           תוקף לא אומת — בדקו את המסמך
         </Link>
