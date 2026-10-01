@@ -2,14 +2,14 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
+import Link from "next/link";
 import { BuyMeGiftImportPanel } from "@/components/vouchers/buyme-gift-import";
 import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { useAppData } from "@/lib/app-data/context";
-import { vouchersFromBuyMeGifts } from "@/lib/buyme-import";
+import { buyMeVoucherKey, vouchersFromBuyMeGifts } from "@/lib/buyme-import";
 import {
   extractBuyMeGifts,
   looksLikeBuyMe,
@@ -197,11 +197,16 @@ export default function NewVoucherPage() {
         userId: app.user?.id,
         documentMeta,
       });
-      if (!saved.length) throw new Error("אין מתנות עם יתרה לייבוא");
-      for (const v of saved) {
+      const existingKeys = new Set(app.vouchers.map((v) => buyMeVoucherKey(v)).filter(Boolean));
+      const newSaved = saved.filter((v) => {
+        const key = buyMeVoucherKey(v);
+        return key ? !existingKeys.has(key) : true;
+      });
+      if (!newSaved.length) throw new Error("המתנות האלה כבר נשמרו — לא נוצרו כפילויות");
+      for (const v of newSaved) {
         await app.saveVoucher(v);
       }
-      setImportedCount(saved.length);
+      setImportedCount(newSaved.length);
       setStep("success");
       window.setTimeout(() => router.push("/dashboard"), 1100);
     } catch (err) {
@@ -217,6 +222,10 @@ export default function NewVoucherPage() {
     try {
       if (app.mode === "supabase" && !app.user) {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
+      const key = buyMeVoucherKey(voucher);
+      if (key && app.vouchers.some((item) => buyMeVoucherKey(item) === key)) {
+        throw new Error("המתנה הזו כבר נשמרה — לא נוצרה כפילות");
       }
       await app.saveVoucher(voucher);
       setImportedCount(1);
@@ -251,7 +260,12 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <BuyMeConnectCard />
+          <Link
+            href="/vouchers/import/buyme"
+            className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
+          >
+            חיבור וסנכרון BuyMe
+          </Link>
 
           <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
             <span className="h-px flex-1 bg-white/10" />

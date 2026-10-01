@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [scaleTouched, setScaleTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
 
   if (!app.ready) return <LoadingBlock />;
 
@@ -194,42 +195,51 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          אחרי חיבור חד־פעמי הסנכרון רץ לבד (בכניסה לאפליקציה, כל 6 שעות, או
-          «סנכרן עכשיו») מול ה־API של BuyMe — בלי לצלם את הארנק בכל פעם. אם
-          הסשן פג תופיע בקשה להתחבר מחדש.
+          החיבור מתבצע במסך הייבוא פעם אחת. מכאן אפשר לסנכרן את הארנק מול
+          BuyMe בכל עת — בלי להוסיף שוב את אותן מתנות. אם הסשן פג תופיע בקשה
+          להתחבר מחדש.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/vouchers/import/buyme"
             className="btn-primary inline-flex px-4 py-2 text-sm"
           >
-            חבר / חבר מחדש את BuyMe
+            פתיחת מסך החיבור
           </Link>
           <button
             type="button"
             className="btn-secondary px-4 py-2 text-sm"
+            disabled={syncBusy}
             onClick={() => {
               void (async () => {
                 setMessage(null);
-                const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
-                const json = (await res.json()) as {
-                  status?: string;
-                  upserted?: number;
-                };
-                if (json.status === "login_required") {
-                  setMessage("BuyMe דורש חיבור מחדש");
-                  return;
+                setSyncBusy(true);
+                try {
+                  const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+                  const json = (await res.json()) as {
+                    status?: string;
+                    upserted?: number;
+                    error?: string;
+                  };
+                  if (json.status === "login_required") {
+                    setMessage("BuyMe דורש חיבור מחדש");
+                    return;
+                  }
+                  if (!res.ok || json.status !== "synced") {
+                    setMessage(json.error || "הסנכרון נכשל");
+                    return;
+                  }
+                  setMessage(`הסנכרון הסתיים — ${json.upserted ?? 0} מתנות עודכנו או נוספו`);
+                  window.setTimeout(() => window.location.reload(), 600);
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : "הסנכרון נכשל");
+                } finally {
+                  setSyncBusy(false);
                 }
-                if (!res.ok) {
-                  setMessage("הסנכרון נכשל");
-                  return;
-                }
-                setMessage(`סונכרנו ${json.upserted ?? 0} מתנות מ־BuyMe`);
-                window.setTimeout(() => window.location.reload(), 600);
               })();
             }}
           >
-            סנכרן עכשיו
+            {syncBusy ? "מסנכרנים…" : "סנכרן עכשיו"}
           </button>
         </div>
       </section>

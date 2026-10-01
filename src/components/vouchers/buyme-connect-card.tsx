@@ -16,8 +16,8 @@ export type BuyMeConnectCardProps = {
 };
 
 /**
- * Temporary BuyMe window → sign in → paste connect step in that window’s
- * address bar → token saved → continue with API.
+ * One-time BuyMe window → sign in → paste the connection step in that
+ * window’s address bar → token saved → continue with API.
  *
  * No bookmarks bar. Browsers block reading BuyMe storage from our origin,
  * so the connect script must run inside the BuyMe window (paste + Enter).
@@ -68,8 +68,8 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
       <div>
         <p className="font-display text-base text-forest">חיבור ל־BuyMe</p>
         <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          נפתח חלון זמני של BuyMe. אחרי ההתחברות שם — מדביקים בשורת הכתובת
-          (כבר מועתק) ולוחצים Enter. החיבור נשמר והחלון חוזר אלינו.
+          חיבור חד־פעמי: מתחברים ב־BuyMe, מריצים את שלב החיבור, ואז הארנק נטען
+          כאן. הסיסמה לא עוברת דרך RefundMe.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
         onClick={() => void openBuyMeWindow()}
         data-testid="buyme-open-popup"
       >
-        {opened ? "החלון פתוח — התחברו ב־BuyMe" : "פתח חלון חיבור ל־BuyMe"}
+        {opened ? "החלון פתוח — התחברו ב־BuyMe" : "התחברות חד־פעמית ל־BuyMe"}
       </button>
 
       {opened && (
@@ -88,9 +88,9 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
           <ol className="list-decimal space-y-1 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
             <li>התחברו (גוגל) ופתחו «המתנות שלי»</li>
             <li>
-              לחצו על שורת הכתובת ← הדביקו (
+              כתבו קודם <code>javascript:</code> בשורת הכתובת ← הדביקו (
               <span className="whitespace-nowrap">Ctrl+V</span> /{" "}
-              <span className="whitespace-nowrap">⌘V</span>) ← Enter
+              <span className="whitespace-nowrap">⌘V</span>) ← Enter / Go
             </li>
             <li>החלון נסגר / חוזר לכאן והארנק נטען</li>
           </ol>
