@@ -4,8 +4,10 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  # Keep secrets scanning on; SUPABASE_SECRET_KEY must stay server-only
-  # (see src/lib/supabase/secret.ts — never import it from client/middleware).
+  # SUPABASE_SECRET_KEY is server-only (src/lib/supabase/secret.ts + "server-only").
+  # Next inlines it into Node server/API chunks (expected). Omit those paths from
+  # scanning so client/static + edge are still scanned for accidental leaks.
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.next/server/**,.next/standalone/**,.netlify/.next/cache/**,.netlify/.next/server/**,.netlify/.next/standalone/**,.netlify/functions-internal/**"
 
 # Set these in Netlify UI → Site configuration → Environment variables
 # (never commit real values):
