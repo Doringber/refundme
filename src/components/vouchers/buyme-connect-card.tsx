@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import {
   BUYME_SITE_URL,
-  buyMeBookmarkletHref,
+  buyMeBridgeConsoleScript,
 } from "@/lib/buyme-import";
 
 function subscribe() {
@@ -16,24 +16,24 @@ export type BuyMeConnectCardProps = {
 };
 
 /**
- * Temporary BuyMe window → sign in → paste connect step in that window’s
- * address bar → token saved → continue with API.
+ * Temporary BuyMe window → sign in → paste bridge in that window’s
+ * DevTools console → land back here with token → load wallet via API.
  *
- * No bookmarks bar. Browsers block reading BuyMe storage from our origin,
- * so the connect script must run inside the BuyMe window (paste + Enter).
+ * Chrome strips `javascript:` from the address bar on paste, so we use the
+ * console (reliable) instead of bookmarks / address-bar bookmarklets.
  */
 export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
-  const href = useSyncExternalStore(
+  const script = useSyncExternalStore(
     subscribe,
-    () => buyMeBookmarkletHref(window.location.origin),
-    () => "#",
+    () => buyMeBridgeConsoleScript(window.location.origin),
+    () => "",
   );
   const [opened, setOpened] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "ok" | "fail">("idle");
 
   async function copyBridge() {
     try {
-      await navigator.clipboard.writeText(href);
+      await navigator.clipboard.writeText(script);
       setCopyState("ok");
       window.setTimeout(() => setCopyState("idle"), 2500);
       return true;
@@ -51,7 +51,9 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
       "popup=yes,width=490,height=780",
     );
     if (!popup) {
-      window.location.assign(BUYME_SITE_URL);
+      window.open(BUYME_SITE_URL, "_blank");
+      setOpened(true);
+      onPopupOpened?.();
       return;
     }
     try {
@@ -68,8 +70,8 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
       <div>
         <p className="font-display text-base text-forest">חיבור ל־BuyMe</p>
         <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          נפתח חלון זמני של BuyMe. אחרי ההתחברות שם — מדביקים בשורת הכתובת
-          (כבר מועתק) ולוחצים Enter. החיבור נשמר והחלון חוזר אלינו.
+          נפתח חלון זמני של BuyMe. אחרי ההתחברות מדביקים שם קוד קצר בקונסול
+          (F12) — ואז הארנק נטען כאן אוטומטית.
         </p>
       </div>
 
@@ -79,20 +81,21 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
         onClick={() => void openBuyMeWindow()}
         data-testid="buyme-open-popup"
       >
-        {opened ? "החלון פתוח — התחברו ב־BuyMe" : "פתח חלון חיבור ל־BuyMe"}
+        {opened ? "החלון פתוח — המשיכו לפי השלבים" : "פתח חלון חיבור ל־BuyMe"}
       </button>
 
       {opened && (
         <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
           <p className="text-xs font-bold text-forest">בחלון של BuyMe</p>
-          <ol className="list-decimal space-y-1 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
+          <ol className="list-decimal space-y-1.5 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
             <li>התחברו (גוגל) ופתחו «המתנות שלי»</li>
             <li>
-              לחצו על שורת הכתובת ← הדביקו (
-              <span className="whitespace-nowrap">Ctrl+V</span> /{" "}
-              <span className="whitespace-nowrap">⌘V</span>) ← Enter
+              לחצו <span className="whitespace-nowrap">F12</span> (במק:{" "}
+              <span className="whitespace-nowrap">⌥⌘I</span>) → לשונית{" "}
+              <span className="text-forest">Console</span>
             </li>
-            <li>החלון נסגר / חוזר לכאן והארנק נטען</li>
+            <li>הדביקו (הקוד כבר מועתק) ולחצו Enter</li>
+            <li>החלון יעבור לייבוא והארנק יופיע</li>
           </ol>
           <button
             type="button"
@@ -101,11 +104,15 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
             data-testid="buyme-copy-bridge"
           >
             {copyState === "ok"
-              ? "הועתק שוב — הדביקו בשורת הכתובת בחלון BuyMe"
+              ? "הקוד הועתק — הדביקו ב־Console בחלון BuyMe"
               : copyState === "fail"
                 ? "ההעתקה נכשלה — נסו שוב"
-                : "העתק שוב את שלב החיבור"}
+                : "העתק שוב את קוד החיבור"}
           </button>
+          <p className="text-[10px] leading-relaxed text-eggplant">
+            למה קונסול? Chrome חוסם הדבקת javascript: בשורת הכתובת. הקונסול רץ
+            בתוך BuyMe ולכן יכול לשלוח אלינו את החיבור בבטחה.
+          </p>
         </div>
       )}
     </div>

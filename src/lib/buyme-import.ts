@@ -12,6 +12,9 @@ export const BUYME_SITE_URL = "https://buyme.co.il/";
 /** postMessage type when the connect popup finished saving the session. */
 export const BUYME_CONNECTED_MESSAGE = "buyme-connected" as const;
 
+/** localStorage key — fires `storage` in other same-origin tabs/windows. */
+export const BUYME_CONNECTED_STORAGE_KEY = "zikuy:buyme-connected";
+
 /** Wallet card shape returned by `/api/buyme/wallet` (client-safe). */
 export type BuyMeApiCard = {
   id: number | string;
@@ -149,18 +152,27 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
 }
 
 /**
- * Connect bridge pasted into BuyMe’s address bar after login.
- * Reads the user's own Ember Simple Auth JWT and navigates back to us with
- * `#token=…` (popup becomes our import page, then can close).
- *
- * Why not a pure OAuth popup? BuyMe does not redirect to us with a code, and
- * browsers block reading another site's localStorage from our opener.
+ * Raw JS for the BuyMe tab console (Chrome blocks pasting `javascript:`
+ * into the address bar). Reads Ember JWT and returns to our import route.
  */
-export function buyMeBookmarkletHref(appOrigin: string): string {
+export function buyMeBridgeConsoleScript(appOrigin: string): string {
   const origin = appOrigin.replace(/\/$/, "");
   const target = `${origin}${BUYME_IMPORT_PATH}`;
-  const code = `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("הדביקו את זה בשורת הכתובת של החלון של BuyMe (אחרי התחברות)");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז הדביקו שוב בשורת הכתובת");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
-  return `javascript:${encodeURIComponent(code)}`;
+  return `(()=>{try{if(!/buyme\\.co\\.il/i.test(location.hostname)){alert("הריצו את זה בקונסול של החלון של BuyMe (אחרי התחברות)");return;}var raw=localStorage.getItem("ember_simple_auth-session");if(!raw){alert("עדיין לא מחוברים — התחברו ל־BuyMe ואז הדביקו שוב בקונסול");return;}var j=JSON.parse(raw);var t=(j&&j.authenticated&&j.authenticated.token)||(j&&j.token);if(!t||typeof t!=="string"){alert("לא נמצא חיבור פעיל ב־BuyMe");return;}location.href=${JSON.stringify(target)}+"#token="+encodeURIComponent(t);}catch(e){alert("שליחת החיבור מ־BuyMe נכשלה");}})();`;
+}
+
+/** @deprecated Prefer buyMeBridgeConsoleScript — address-bar javascript: is blocked in Chrome. */
+export function buyMeBookmarkletHref(appOrigin: string): string {
+  return `javascript:${encodeURIComponent(buyMeBridgeConsoleScript(appOrigin))}`;
+}
+
+/** Notify other same-origin windows that BuyMe session is ready. */
+export function signalBuyMeConnected(): void {
+  try {
+    localStorage.setItem(BUYME_CONNECTED_STORAGE_KEY, String(Date.now()));
+  } catch {
+    /* private mode / blocked storage */
+  }
 }
 
 export function readBuyMeImportHash(hash: string): {
