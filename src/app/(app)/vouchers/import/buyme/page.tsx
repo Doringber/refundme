@@ -96,21 +96,31 @@ export default function BuyMeImportPage() {
         });
         if (!res.ok) {
           if (!cancelled) {
-            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
+            setError("הטוקן מ־BuyMe לא נשמר. פתיחת האתר לבד לא מחברת.");
             setStep("connect");
           }
           return;
         }
-        // Temporary BuyMe window landed here with the token — hand off to opener.
-        if (window.opener && !window.opener.closed) {
-          notifyOpenerAndClose();
-          if (!cancelled) {
+        const sync = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+        const report = (await sync.json()) as {
+          status?: string;
+          upserted?: number;
+          error?: string;
+        };
+        if (!cancelled) {
+          if (report.status === "synced") {
+            notifyOpenerAndClose();
+            setImportedCount(report.upserted ?? 0);
             setStep("success");
-            setImportedCount(0);
+            window.setTimeout(() => router.push("/dashboard"), 900);
+          } else if (report.status === "login_required") {
+            setError("הטוקן נשמר אבל BuyMe דחה אותו. צריך חיבור מחדש מתוך BuyMe, לא רק לפתוח את האתר.");
+            setStep("connect");
+          } else {
+            setError("החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה. לא יובאו מתנות.");
+            setStep("connect");
           }
-          return;
         }
-        if (!cancelled) await loadWallet();
         return;
       }
 
