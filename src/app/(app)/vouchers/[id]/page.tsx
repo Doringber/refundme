@@ -9,6 +9,7 @@ import {
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
@@ -163,6 +164,11 @@ export default function VoucherDetailPage() {
         <Row label="תנאים" value={voucher.usageTerms ?? "—"} />
         <Row label="הערות" value={voucher.notes ?? "—"} />
       </section>
+
+      <CalendarReminders
+        voucher={voucher}
+        reminderDays={app.profile.reminderDays}
+      />
 
       {canRedeem && (
         <section className="card-surface space-y-3 p-5">
