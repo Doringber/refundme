@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="mb-5 flex items-center justify-between gap-3">
         <Link
           href="/settings"
-          className="flex items-center gap-2 rounded-full py-1 pe-2 ps-1 transition hover:bg-white/5"
+          className="chrome-hover flex items-center gap-2 rounded-full py-1 pe-2 ps-1 transition"
           aria-label={displayName ? `הגדרות — ${displayName}` : "הגדרות"}
         >
           {avatarUrl ? (
@@ -44,20 +44,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <img
               src={avatarUrl}
               alt=""
-              className="h-10 w-10 rounded-full object-cover ring-2 ring-white/15"
+              className="h-10 w-10 rounded-full object-cover ring-2 ring-[color:var(--chrome-ring)]"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-extrabold text-black">
+            <span className="chrome-avatar flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold">
               {(displayName ?? "?").slice(0, 1)}
             </span>
           )}
           <span className="min-w-0">
-            <span className="block font-display text-lg leading-none text-white md:text-xl">
+            <span className="chrome-ink block font-display text-lg leading-none md:text-xl">
               {APP_NAME}
             </span>
             {displayName && (
-              <span className="mt-1 block truncate text-xs font-bold text-white/55">
+              <span className="chrome-muted mt-1 block truncate text-xs font-bold">
                 {displayName}
               </span>
             )}
@@ -98,9 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href={item.href}
                   className={`flex flex-col items-center rounded-full px-2 py-2 text-xs font-extrabold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
-                    active
-                      ? "bg-white text-black shadow-sm"
-                      : "text-white/55 hover:bg-white/8 hover:text-white"
+                    active ? "nav-link-active" : "nav-link-idle"
                   }`}
                   aria-current={active ? "page" : undefined}
                 >

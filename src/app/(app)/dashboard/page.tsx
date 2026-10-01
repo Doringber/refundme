@@ -25,11 +25,11 @@ export default function DashboardPage() {
     <div className="space-y-5">
       {/* Hero balance + orb */}
       <section className="relative overflow-hidden rounded-[2rem] px-1 pt-2">
-        <p className="text-sm font-bold text-white/50">יתרה כוללת</p>
-        <p className="font-display mt-1 text-5xl tracking-tight text-white md:text-6xl">
+        <p className="chrome-muted text-sm font-bold">יתרה כוללת</p>
+        <p className="chrome-ink font-display mt-1 text-5xl tracking-tight md:text-6xl">
           {formatIls(summary.totalActiveCreditAgorot)}
         </p>
-        <p className="mt-1 text-xs font-semibold text-white/40">
+        <p className="chrome-faint mt-1 text-xs font-semibold">
           לפי הדיווח שלך
         </p>
 

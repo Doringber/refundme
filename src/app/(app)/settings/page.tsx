@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   exitDemoMode,
@@ -69,6 +70,10 @@ export default function SettingsPage() {
           תזכורות, סולם כדור הזיכוי, ייצוא ומחיקה
         </p>
       </div>
+
+      <ThemePicker
+        onPicked={(_id, nameHe) => setMessage(`העיצוב עודכן ל־${nameHe}`)}
+      />
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">מצב נוכחי</h2>
