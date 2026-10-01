@@ -1,14 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { LoadingBlock } from "@/components/ui/loading";
+import {
+  readDemoStackExample,
+  writeDemoStackExample,
+} from "@/components/ui/neon-card-stack";
 import {
   exitDemoMode,
   useAppData,
 } from "@/lib/app-data/context";
 import { agorotToShekels, parseShekelInput, formatIls } from "@/lib/calculations";
+
+function subscribeDemoStackFlag(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("zikuy-demo-stack-example", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("zikuy-demo-stack-example", onStoreChange);
+  };
+}
 
 export default function SettingsPage() {
   const app = useAppData();
@@ -20,6 +33,11 @@ export default function SettingsPage() {
   const [scaleTouched, setScaleTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const showDemoStack = useSyncExternalStore(
+    subscribeDemoStackFlag,
+    readDemoStackExample,
+    () => false,
+  );
 
   if (!app.ready) return <LoadingBlock />;
 
@@ -183,6 +201,29 @@ export default function SettingsPage() {
       {app.mode === "demo" ? (
         <section className="card-surface space-y-3 p-5">
           <h2 className="font-display text-lg">מצב דמו</h2>
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white/5 px-3 py-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-white"
+              checked={showDemoStack}
+              onChange={(e) => {
+                writeDemoStackExample(e.target.checked);
+                setMessage(
+                  e.target.checked
+                    ? "דוגמת הכרטיסים הצבעוניים תוצג בבית"
+                    : "דוגמת הכרטיסים הוסרה מהבית",
+                );
+              }}
+            />
+            <span>
+              <span className="block text-sm font-extrabold">
+                דוגמת כרטיסי שלבים בבית
+              </span>
+              <span className="mt-0.5 block text-xs font-semibold text-eggplant">
+                מציג את צילום / אישור / מעקב כהדגמה — לא חלק מהחשבון האמיתי.
+              </span>
+            </span>
+          </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
