@@ -10,36 +10,10 @@ import { useAppData } from "@/lib/app-data/context";
 import { clientOcrImage } from "@/lib/images/client-ocr";
 import { prepareUploadFile } from "@/lib/images/prepare-upload";
 import { suggestFieldsFromText } from "@/lib/extract";
-import {
-  SHUFERSAL_CREDIT_TEXT,
-  SUPERPHARM_CREDIT_TEXT,
-  YOCHANANOF_RECEIPT_TEXT,
-} from "@/lib/extract-fixtures/israeli-vouchers";
 import type { ExtractedFields, Voucher } from "@/lib/types";
 import { validateUpload } from "@/lib/validation";
 
 type Step = "upload" | "review" | "success";
-
-const LIVE_SAMPLES = [
-  {
-    id: "shufersal",
-    label: "שופרסל — תעודת זיכוי",
-    src: "/sample-vouchers/shufersal-credit.png",
-    fixtureText: SHUFERSAL_CREDIT_TEXT,
-  },
-  {
-    id: "superpharm",
-    label: "סופר-פארם — שובר זיכוי",
-    src: "/sample-vouchers/superpharm-credit.png",
-    fixtureText: SUPERPHARM_CREDIT_TEXT,
-  },
-  {
-    id: "yochananof",
-    label: "יוחננוף — קבלה",
-    src: "/sample-vouchers/yochananof-receipt.png",
-    fixtureText: YOCHANANOF_RECEIPT_TEXT,
-  },
-] as const;
 
 export default function NewVoucherPage() {
   const app = useAppData();
@@ -56,16 +30,13 @@ export default function NewVoucherPage() {
     dataUrl: string | null;
   }>({ fileName: null, mimeType: null, dataUrl: null });
 
-  async function processPrepared(
-    prepared: {
-      file: File;
-      dataUrl: string;
-      mimeType: string;
-      fileName: string;
-      convertedFromHeic: boolean;
-    },
-    opts?: { fixtureText?: string },
-  ) {
+  async function processPrepared(prepared: {
+    file: File;
+    dataUrl: string;
+    mimeType: string;
+    fileName: string;
+    convertedFromHeic: boolean;
+  }) {
     setDocumentMeta({
       fileName: prepared.fileName,
       mimeType: prepared.mimeType,
@@ -73,8 +44,8 @@ export default function NewVoucherPage() {
     });
 
     setStatus("קורא את הטקסט מהתמונה…");
-    let ocrText: string | null = opts?.fixtureText ?? null;
-    if (!ocrText && prepared.mimeType.startsWith("image/")) {
+    let ocrText: string | null = null;
+    if (prepared.mimeType.startsWith("image/")) {
       ocrText = await clientOcrImage(prepared.file);
     }
 
@@ -91,12 +62,9 @@ export default function NewVoucherPage() {
       source?: string;
     };
 
-    // Prefer server merge; if empty but we have OCR/fixture text, parse locally
+    // Prefer server merge; if empty but we have OCR text, parse locally
     let nextFields = json.fields ?? null;
-    if (
-      (!nextFields || nextFields.confidence === "none") &&
-      ocrText
-    ) {
+    if ((!nextFields || nextFields.confidence === "none") && ocrText) {
       nextFields = suggestFieldsFromText(ocrText);
     }
 
@@ -146,27 +114,6 @@ export default function NewVoucherPage() {
           ? err.message
           : "העלאת הקובץ נכשלה. אפשר להמשיך למילוי ידני.",
       );
-    } finally {
-      setBusy(false);
-      setStatus(null);
-    }
-  }
-
-  async function handleSample(sample: (typeof LIVE_SAMPLES)[number]) {
-    setError(null);
-    setBusy(true);
-    setStatus("טוען דוגמה חיה…");
-    try {
-      const res = await fetch(sample.src);
-      if (!res.ok) throw new Error("טעינת הדוגמה נכשלה");
-      const blob = await res.blob();
-      const file = new File([blob], `${sample.id}.png`, {
-        type: blob.type || "image/png",
-      });
-      const prepared = await prepareUploadFile(file);
-      await processPrepared(prepared, { fixtureText: sample.fixtureText });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "טעינת הדוגמה נכשלה");
     } finally {
       setBusy(false);
       setStatus(null);
@@ -246,22 +193,11 @@ export default function NewVoucherPage() {
             />
           </label>
 
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-eggplant">דוגמאות חיות לבדיקה</p>
-            <div className="flex flex-col gap-2">
-              {LIVE_SAMPLES.map((sample) => (
-                <button
-                  key={sample.id}
-                  type="button"
-                  className="btn-secondary w-full py-2.5 text-sm"
-                  disabled={busy}
-                  onClick={() => void handleSample(sample)}
-                >
-                  {sample.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs font-semibold leading-relaxed text-eggplant">
+            שובר BuyMe? צלמו־מסך מ־buyme.co.il או מהאפליקציה, שמרו עם חנות{" "}
+            <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
+            המימוש עצמו נעשה בבית העסק / באתר עם הקוד — ואז רשמו מימוש כאן.
+          </p>
 
           <button
             type="button"
