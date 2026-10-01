@@ -41,6 +41,7 @@ yarn-error.log*
 # BuyMe Playwright session (cookies + JWT) — never commit
 .buyme/
 buyme_state.json
+__pycache__/
 
 # vercel
 .vercel
