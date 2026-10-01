@@ -1,7 +1,10 @@
 export const THEME_STORAGE_KEY = "zikuy-theme";
 
-/** Visual themes inspired by MiaAI gallery HTML demos. */
+/** Visual themes inspired by MiaAI gallery HTML demos + scenic packs. */
 export const THEME_IDS = [
+  "nimbus",
+  "keepers",
+  "rain",
   "neon",
   "tend",
   "aurora",
@@ -20,9 +23,39 @@ export type ThemeMeta = {
   /** Swatches shown in the picker */
   swatches: [string, string, string];
   className: `theme-${ThemeId}`;
+  /** Optional preview / full-bleed photo */
+  previewSrc?: string;
+  featured?: boolean;
 };
 
 export const THEMES: ThemeMeta[] = [
+  {
+    id: "nimbus",
+    nameHe: "נימבוס שמיים",
+    sourceHe: "זכוכית על שמיים בהירים",
+    swatches: ["#7eb6e8", "#ffffff", "#1e3a5f"],
+    className: "theme-nimbus",
+    previewSrc: "/themes/nimbus-sky.jpg",
+    featured: true,
+  },
+  {
+    id: "keepers",
+    nameHe: "מגדלור",
+    sourceHe: "MiaAI · The Last Keepers",
+    swatches: ["#0b1c3a", "#c0392b", "#f6c39a"],
+    className: "theme-keepers",
+    previewSrc: "/themes/keepers-lighthouse.jpg",
+    featured: true,
+  },
+  {
+    id: "rain",
+    nameHe: "גשם ניאון",
+    sourceHe: "MiaAI · Neon Rain",
+    swatches: ["#05010f", "#ff2a6d", "#05d9e8"],
+    className: "theme-rain",
+    previewSrc: "/themes/neon-rain.jpg",
+    featured: true,
+  },
   {
     id: "neon",
     nameHe: "ניאון כהה",
@@ -54,7 +87,7 @@ export const THEMES: ThemeMeta[] = [
   {
     id: "tide",
     nameHe: "עורכים / קרם",
-    sourceHe: "MiaAI · The Last Keepers",
+    sourceHe: "MiaAI · Tidewater editorial",
     swatches: ["#f6f1e7", "#14213d", "#c0392b"],
     className: "theme-tide",
   },
