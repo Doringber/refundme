@@ -1008,7 +1008,7 @@ textarea.input-field {
   --sheet-chip-bg: linear-gradient(135deg, #c0392b, #f6c39a);
   --sheet-chip-ink: #0b1c3a;
   --theme-bg:
-    linear-gradient(180deg, rgba(11, 28, 58, 0.35), rgba(11, 28, 58, 0.72)),
+    linear-gradient(180deg, rgba(11, 28, 58, 0.45), rgba(11, 28, 58, 0.78)),
     url("/themes/keepers-lighthouse.jpg") center top / cover no-repeat;
 }
 .theme-keepers .card-surface,
@@ -1111,7 +1111,7 @@ textarea.input-field {
   --sheet-chip-bg: linear-gradient(135deg, #ff2a6d, #f9f002);
   --sheet-chip-ink: #05010f;
   --theme-bg:
-    linear-gradient(180deg, rgba(5, 1, 15, 0.28), rgba(5, 1, 15, 0.78)),
+    linear-gradient(180deg, rgba(5, 1, 15, 0.4), rgba(5, 1, 15, 0.82)),
     url("/themes/neon-rain.jpg") center top / cover no-repeat;
 }
 .theme-rain .card-surface,
