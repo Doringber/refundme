@@ -1,27 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { LoadingBlock } from "@/components/ui/loading";
-import {
-  readDemoStackExample,
-  writeDemoStackExample,
-} from "@/components/ui/neon-card-stack";
 import {
   exitDemoMode,
   useAppData,
 } from "@/lib/app-data/context";
 import { agorotToShekels, parseShekelInput, formatIls } from "@/lib/calculations";
-
-function subscribeDemoStackFlag(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  window.addEventListener("zikuy-demo-stack-example", onStoreChange);
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener("zikuy-demo-stack-example", onStoreChange);
-  };
-}
 
 export default function SettingsPage() {
   const app = useAppData();
@@ -33,11 +20,6 @@ export default function SettingsPage() {
   const [scaleTouched, setScaleTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const showDemoStack = useSyncExternalStore(
-    subscribeDemoStackFlag,
-    readDemoStackExample,
-    () => false,
-  );
 
   if (!app.ready) return <LoadingBlock />;
 
@@ -198,42 +180,38 @@ export default function SettingsPage() {
         </button>
       </section>
 
+      <section className="card-surface space-y-3 p-5">
+        <h2 className="font-display text-lg">BuyMe</h2>
+        <p className="text-sm text-eggplant">
+          האפליקציה לא מחליפה את BuyMe — היא עוזרת לעקוב אחרי יתרות. צלמו או
+          צלמו־מסך את השובר מ־buyme.co.il / האפליקציה, שמרו עם חנות{" "}
+          <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
+          המימוש עצמו נעשה בקופה או באתר של בית העסק עם הקוד של BuyMe; אחר כך
+          רשמו כאן מימוש כדי לעדכן את היתרה.
+        </p>
+        <a
+          href="https://buyme.co.il"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-secondary inline-flex px-4 py-2 text-sm"
+        >
+          פתיחת buyme.co.il
+        </a>
+      </section>
+
       {app.mode === "demo" ? (
         <section className="card-surface space-y-3 p-5">
           <h2 className="font-display text-lg">מצב דמו</h2>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white/5 px-3 py-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 accent-white"
-              checked={showDemoStack}
-              onChange={(e) => {
-                writeDemoStackExample(e.target.checked);
-                setMessage(
-                  e.target.checked
-                    ? "דוגמת הכרטיסים הצבעוניים תוצג בבית"
-                    : "דוגמת הכרטיסים הוסרה מהבית",
-                );
-              }}
-            />
-            <span>
-              <span className="block text-sm font-extrabold">
-                דוגמת כרטיסי שלבים בבית
-              </span>
-              <span className="mt-0.5 block text-xs font-semibold text-eggplant">
-                מציג את צילום / אישור / מעקב כהדגמה — לא חלק מהחשבון האמיתי.
-              </span>
-            </span>
-          </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn-secondary px-4 py-2"
               onClick={() => {
                 app.reset();
-                setMessage("נתוני הדמו אופסו לדוגמאות");
+                setMessage("נתוני הדמו אופסו");
               }}
             >
-              איפוס לדמו לדוגמה
+              איפוס נתוני דמו
             </button>
             <button
               type="button"

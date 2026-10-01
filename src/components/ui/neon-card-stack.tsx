@@ -14,55 +14,6 @@ export type NeonStackItem = {
   ctaLabel?: string;
 };
 
-/** Demo-only onboarding example — not shown on the real empty home. */
-export const DEMO_STACK_STEPS: NeonStackItem[] = [
-  {
-    id: "scan",
-    title: "צילום",
-    subtitle: "שלב 1",
-    detail: "צלמו את השובר או בחרו תמונה מהגלריה — נזהה את הסכום והחנות.",
-    href: "/vouchers/new",
-    ctaLabel: "לצילום",
-  },
-  {
-    id: "confirm",
-    title: "אישור",
-    subtitle: "שלב 2",
-    detail: "בדקו את הפרטים שחולצו, תקנו אם צריך, ושמרו את הזיכוי.",
-    href: "/vouchers/new",
-    ctaLabel: "להוספה",
-  },
-  {
-    id: "track",
-    title: "מעקב",
-    subtitle: "שלב 3",
-    detail: "היתרה תופיע בעיגול — ותזכורות לפני שפג התוקף.",
-    href: "/vouchers",
-    ctaLabel: "לזיכויים",
-  },
-];
-
-export const DEMO_STACK_EXAMPLE_KEY = "zikuy-demo-stack-example";
-
-export function readDemoStackExample(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(DEMO_STACK_EXAMPLE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function writeDemoStackExample(on: boolean): void {
-  try {
-    if (on) window.localStorage.setItem(DEMO_STACK_EXAMPLE_KEY, "1");
-    else window.localStorage.removeItem(DEMO_STACK_EXAMPLE_KEY);
-  } catch {
-    /* ignore quota / private mode */
-  }
-  window.dispatchEvent(new Event("zikuy-demo-stack-example"));
-}
-
 function toMerchantItems(
   merchants: {
     merchantName: string;
@@ -81,24 +32,18 @@ function toMerchantItems(
   }));
 }
 
+/** Colorful accordion stack for real merchant breakdown only. */
 export function NeonCardStack({
   merchants = [],
-  showDemoExample = false,
 }: {
   merchants?: {
     merchantName: string;
     count: number;
     totalAgorot: number;
   }[];
-  /** When true and there are no merchants, show the demo onboarding stack. */
-  showDemoExample?: boolean;
 }) {
   const baseId = useId();
-  const items = useMemo(() => {
-    if (merchants.length > 0) return toMerchantItems(merchants);
-    if (showDemoExample) return DEMO_STACK_STEPS;
-    return [];
-  }, [merchants, showDemoExample]);
+  const items = useMemo(() => toMerchantItems(merchants), [merchants]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const activeId =
     selectedId && items.some((item) => item.id === selectedId)
@@ -111,7 +56,7 @@ export function NeonCardStack({
     <div
       className="neon-card-stack neon-stack-enter"
       role="listbox"
-      aria-label={merchants.length > 0 ? "לפי חנות" : "דוגמת שלבים (דמו)"}
+      aria-label="לפי חנות"
       aria-activedescendant={
         activeId ? `${baseId}-${activeId}` : undefined
       }
