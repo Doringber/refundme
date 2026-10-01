@@ -902,7 +902,7 @@ textarea.input-field {
   --sheet-chip-bg: linear-gradient(135deg, #2d7dd2, #7eb6e8);
   --sheet-chip-ink: #ffffff;
   --theme-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(180, 214, 245, 0.35)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(160, 205, 240, 0.42)),
     url("/themes/nimbus-sky.jpg") center top / cover no-repeat;
 }
 .theme-nimbus .card-surface,
