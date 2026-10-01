@@ -7,6 +7,8 @@ import {
 import { createBuyMeSession, isSessionExpired } from "@/lib/buyme/session";
 import { createClient } from "@/lib/supabase/server";
 import { saveBuyMeConnection } from "@/lib/wallet/connection-store";
+import { syncBuyMeWallet } from "@/lib/wallet/buyme-sync";
+import type { WalletSyncReport } from "@/lib/wallet/types";
 
 export const runtime = "nodejs";
 
@@ -26,22 +28,27 @@ export async function POST(request: Request) {
     const expiresAt = session.expiresAtMs
       ? new Date(session.expiresAtMs).toISOString()
       : null;
+    let sync: WalletSyncReport | null = null;
+    let error: string | null = null;
     try {
       const supabase = await createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user) {
+      if (!user) {
+        error = "app_login_required";
+      } else {
         await saveBuyMeConnection({
           userId: user.id,
           token: session.token,
           expiresAt,
         });
+        sync = await syncBuyMeWallet(user.id, session.token);
       }
     } catch {
-      // Cookie session still works if Supabase persistence is unavailable.
+      error = "sync_unavailable";
     }
-    return NextResponse.json({ ok: true, expiresAt });
+    return NextResponse.json({ ok: true, expiresAt, sync, error });
   } catch {
     return NextResponse.json({ error: "invalid_token" }, { status: 400 });
   }

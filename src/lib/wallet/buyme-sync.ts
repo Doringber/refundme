@@ -28,7 +28,13 @@ export async function syncBuyMeWallet(
 ): Promise<WalletSyncReport> {
   const db = await admin();
   if (!db) {
-    return { provider: "buyme", status: "error", upserted: 0, error: "server_unconfigured" };
+    return {
+      provider: "buyme",
+      status: "error",
+      upserted: 0,
+      fetched: 0,
+      error: "server_unconfigured",
+    };
   }
   let items;
   try {
@@ -36,12 +42,13 @@ export async function syncBuyMeWallet(
   } catch (err) {
     if (err instanceof ReauthenticationRequired) {
       await markBuyMeLoginRequired(userId, "session_expired");
-      return { provider: "buyme", status: "login_required", upserted: 0 };
+      return { provider: "buyme", status: "login_required", upserted: 0, fetched: 0 };
     }
     return {
       provider: "buyme",
       status: "error",
       upserted: 0,
+      fetched: 0,
       error: "wallet_fetch_failed",
     };
   }
@@ -52,7 +59,13 @@ export async function syncBuyMeWallet(
     .eq("user_id", userId)
     .eq("extraction_raw->>provider", "buyme");
   if (readError) {
-    return { provider: "buyme", status: "error", upserted: 0, error: "read_failed" };
+    return {
+      provider: "buyme",
+      status: "error",
+      upserted: 0,
+      fetched: items.length,
+      error: "read_failed",
+    };
   }
   const existing: ExistingBuyMeVoucher[] = (existingRows ?? [])
     .map((row) => {
@@ -68,7 +81,13 @@ export async function syncBuyMeWallet(
       plan.inserts.map((row) => ({ ...row, user_id: userId })),
     );
     if (error) {
-      return { provider: "buyme", status: "error", upserted: 0, error: "insert_failed" };
+      return {
+        provider: "buyme",
+        status: "error",
+        upserted: 0,
+        fetched: items.length,
+        error: "insert_failed",
+      };
     }
     upserted += plan.inserts.length;
   }
@@ -80,12 +99,18 @@ export async function syncBuyMeWallet(
       .eq("id", id)
       .eq("user_id", userId);
     if (error) {
-      return { provider: "buyme", status: "error", upserted, error: "update_failed" };
+      return {
+        provider: "buyme",
+        status: "error",
+        upserted,
+        fetched: items.length,
+        error: "update_failed",
+      };
     }
     upserted += 1;
   }
   await touchBuyMeSync(userId);
-  return { provider: "buyme", status: "synced", upserted };
+  return { provider: "buyme", status: "synced", upserted, fetched: items.length };
 }
 
 export async function syncBuyMeForStoredSession(userId: string): Promise<WalletSyncReport> {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
+import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
@@ -193,17 +194,21 @@ export default function SettingsPage() {
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
+        <BuyMeConnectCard
+          onSynced={() => {
+            setMessage("הארנק יובא מ־BuyMe");
+            window.setTimeout(() => window.location.reload(), 600);
+          }}
+        />
         <p className="text-sm text-eggplant">
-          פתיחת BuyMe לא שומרת חיבור ולא מייבאת מתנות. «סנכרן עכשיו» עובד רק
-          אחרי שהטוקן חזר לאפליקציה. בינתיים הייבוא שעובד הוא צילום «המתנות
-          שלי».
+          «סנכרן עכשיו» משתמש בחיבור שכבר נשמר. אם אין חיבור, לא ייובא כלום.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/vouchers/new"
-            className="btn-primary inline-flex px-4 py-2 text-sm"
+            className="btn-secondary inline-flex px-4 py-2 text-sm"
           >
-            ייבוא מצילום «המתנות שלי»
+            ייבוא ידני מטקסט «המתנות שלי»
           </Link>
           <button
             type="button"

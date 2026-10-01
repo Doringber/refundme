@@ -17,6 +17,8 @@ export type WalletSyncReport = {
   provider: WalletProviderId;
   status: "synced" | "login_required" | "error";
   upserted: number;
+  /** Cards returned by the provider. Zero means the wallet call succeeded and was empty. */
+  fetched?: number;
   error?: string;
 };
 
