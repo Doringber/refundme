@@ -29,6 +29,8 @@ export default function NewVoucherPage() {
     mimeType: string | null;
     dataUrl: string | null;
   }>({ fileName: null, mimeType: null, dataUrl: null });
+  const [pasteText, setPasteText] = useState("");
+  const [showPaste, setShowPaste] = useState(false);
 
   async function processPrepared(prepared: {
     file: File;
@@ -137,6 +139,23 @@ export default function NewVoucherPage() {
     setStep("review");
   }
 
+  function handlePasteImport() {
+    const text = pasteText.trim();
+    if (!text) {
+      setError("הדביקו טקסט מהשובר (למשל מ־BuyMe) לפני הייבוא");
+      return;
+    }
+    setError(null);
+    const next = suggestFieldsFromText(text);
+    setFields(next);
+    setExtractionNote(
+      next.merchantName === "BuyMe" || /buyme/i.test(text)
+        ? "ייבוא מטקסט BuyMe — אשרו את השדות לפני השמירה. המימוש עצמו בבית העסק."
+        : next.notes ?? "הוצעו שדות מהטקסט — אשרו ותקנו לפני השמירה.",
+    );
+    setStep("review");
+  }
+
   async function handleSave(voucher: Voucher) {
     setError(null);
     setBusy(true);
@@ -193,11 +212,40 @@ export default function NewVoucherPage() {
             />
           </label>
 
-          <p className="rounded-2xl bg-white/5 px-4 py-3 text-xs font-semibold leading-relaxed text-eggplant">
-            שובר BuyMe? צלמו־מסך מ־buyme.co.il או מהאפליקציה, שמרו עם חנות{" "}
-            <span className="font-extrabold text-foreground">BuyMe</span> והקוד.
-            המימוש עצמו נעשה בבית העסק / באתר עם הקוד — ואז רשמו מימוש כאן.
-          </p>
+          <div className="space-y-3 rounded-2xl bg-white/5 px-4 py-4">
+            <p className="text-xs font-semibold leading-relaxed text-eggplant">
+              שובר BuyMe? צלמו־מסך, או הדביקו את פרטי השובר למטה — נזהה את{" "}
+              <span className="font-extrabold text-foreground">BuyMe</span>,
+              הקוד והיתרה אוטומטית. המימוש עצמו בבית העסק / באתר עם הקוד.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary w-full py-2.5 text-sm"
+              onClick={() => setShowPaste((v) => !v)}
+              disabled={busy}
+            >
+              {showPaste ? "הסתרת הדבקת טקסט" : "הדבקת טקסט מ־BuyMe / שובר"}
+            </button>
+            {showPaste && (
+              <div className="space-y-2">
+                <textarea
+                  className="input-field min-h-[120px] resize-y px-4 py-3 text-sm"
+                  placeholder="הדביקו כאן: BuyMe, קוד מימוש, יתרה, תוקף…"
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  aria-label="טקסט שובר להדבקה"
+                />
+                <button
+                  type="button"
+                  className="btn-primary w-full py-3"
+                  onClick={handlePasteImport}
+                  disabled={busy}
+                >
+                  ייבוא מהטקסט
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"

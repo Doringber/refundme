@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
@@ -168,6 +169,10 @@ export default function SettingsPage() {
         <p className="text-sm font-medium">
           ימים לפני פקיעה: {app.profile.reminderDays.join(", ")}
         </p>
+        <BrowserNotifyToggle
+          reminderDays={app.profile.reminderDays}
+          onMessage={setMessage}
+        />
       </section>
 
       <section className="card-surface space-y-3 p-5">

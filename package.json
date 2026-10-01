@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test src/lib/calculations.test.ts src/lib/extract.test.ts src/lib/calendar/expiry-reminders.test.ts"
+    "test": "tsx --test src/lib/calculations.test.ts src/lib/extract.test.ts src/lib/calendar/expiry-reminders.test.ts src/lib/notifications/expiry-alerts.test.ts src/lib/barcode/code128.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

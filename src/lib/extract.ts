@@ -7,6 +7,7 @@ import { shekelsToAgorot } from "./calculations";
  */
 
 const MERCHANT_ALIASES: Array<{ match: RegExp; name: string }> = [
+  { match: /buy\s*me|buyme\.co\.il|ביי\s*מי/i, name: "BuyMe" },
   { match: /שופרסל/i, name: "שופרסל" },
   { match: /סופר[-\s]?פארם|super[\s-]?pharm/i, name: "סופר-פארם" },
   { match: /יוחננוף|yochananof/i, name: "יוחננוף" },
@@ -16,6 +17,10 @@ const MERCHANT_ALIASES: Array<{ match: RegExp; name: string }> = [
   { match: /איקאה|\bIKEA\b/i, name: "איקאה" },
   { match: /מקס\s*סטוק/i, name: "מקס סטוק" },
 ];
+
+function isBuyMeText(text: string): boolean {
+  return /buy\s*me|buyme\.co\.il|ביי\s*מי/i.test(text);
+}
 
 function emptyExtraction(
   confidence: ExtractedFields["confidence"],
@@ -63,6 +68,9 @@ function detectMerchant(text: string): string | null {
 }
 
 function detectDocumentType(text: string): DocumentType | null {
+  // BuyMe digital gift cards are shopping vouchers (redeemed at partner stores)
+  if (isBuyMeText(text)) return "shopping_voucher";
+
   // Credit vouchers first (more specific than generic "שובר")
   if (
     /תעודת\s*זיכוי|שובר\s*זיכוי|סה["״']?\s*כ\s*זיכוי|סה״כ\s*זיכוי|סה"כ\s*זיכוי/i.test(
@@ -88,6 +96,9 @@ function extractCreditAmount(text: string): number | null {
     /סה"כ\s*זיכוי\s*[-–:]?\s*([\d,]+(?:\.\d{1,2})?)/i,
     /סה["״']?\s*כ\s*זיכוי[^\d]{0,12}([\d,]+(?:\.\d{1,2})?)\s*ש/i,
     /Total\s*Credit\s*[-–:]?\s*([\d,]+(?:\.\d{1,2})?)/i,
+    // BuyMe / gift card balance lines
+    /(?:יתרה|סכום|balance|value)\s*[-–:]?\s*₪?\s*([\d,]+(?:\.\d{1,2})?)/i,
+    /₪\s*([\d,]+(?:\.\d{1,2})?)\s*(?:יתרה|למימוש)/i,
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -134,11 +145,21 @@ function extractVoucherCode(text: string): string | null {
   const patterns = [
     /תעודת\s*זיכוי\s*מס['׳']?\s*([0-9][0-9\-./]{5,})/i,
     /שובר\s*זיכוי\s*[:：]?\s*([0-9]{5,})/i,
+    // BuyMe-style labeled codes (often alphanumeric)
+    /(?:קוד\s*שובר|קוד\s*מימוש|voucher\s*code|gift\s*code)\s*[:：#]?\s*([A-Z0-9-]{6,})/i,
     /(?:קוד|code|מספר שובר)\s*[:：#]?\s*([A-Z0-9-]{4,})/i,
   ];
   for (const re of patterns) {
     const m = text.match(re);
     if (m?.[1]) return m[1].trim();
+  }
+
+  // BuyMe: standalone long alphanumeric token near BuyMe branding
+  if (isBuyMeText(text)) {
+    const buyMeCode = text.match(/\b([A-Z0-9]{8,16})\b/);
+    if (buyMeCode?.[1] && /[A-Z]/i.test(buyMeCode[1]) && /\d/.test(buyMeCode[1])) {
+      return buyMeCode[1];
+    }
   }
   return null;
 }
@@ -229,6 +250,11 @@ export function suggestFieldsFromText(text: string): ExtractedFields {
   let notes: string | null = null;
   if (expiry.relativeYears && !expiry.date) {
     notes = `מצוין תוקף של ${expiry.relativeYears === 2 ? "שנתיים" : "שנה"} מיום המסירה — אין תאריך מודפס. אשרו תוקף ידנית או סמנו כלא מאומת.`;
+  }
+  if (isBuyMeText(normalized) || merchantName === "BuyMe") {
+    const buyMeNote =
+      "זוהה שובר BuyMe — שמרו את הקוד כאן למעקב יתרה. המימוש עצמו בבית העסק / באתר עם הקוד.";
+    notes = notes ? `${buyMeNote} ${notes}` : buyMeNote;
   }
 
   const hits = [
