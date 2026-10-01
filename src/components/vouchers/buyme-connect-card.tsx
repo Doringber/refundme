@@ -8,28 +8,25 @@ import {
   buyMeBridgeConsoleScript,
   buyMePageTextBookmarkletHref,
   buyMePageTextBridgeScript,
+  demoBuyMeGiftsFromFixture,
   markAwaitingBuyMeCapture,
   parseBuyMePageText,
 } from "@/lib/buyme-import";
+import {
+  detectBuyMeClientPlatform,
+  type BuyMeClientPlatform,
+} from "@/lib/buyme-platform";
 import type { BuyMeGiftCandidate } from "@/lib/extract-buyme";
 
 function subscribe() {
   return () => {};
 }
 
-function useIsCoarsePointer(): boolean {
+function usePlatform(): BuyMeClientPlatform {
   return useSyncExternalStore(
-    (onChange) => {
-      if (typeof window === "undefined" || !window.matchMedia) return () => {};
-      const mq = window.matchMedia("(pointer: coarse)");
-      mq.addEventListener("change", onChange);
-      return () => mq.removeEventListener("change", onChange);
-    },
-    () =>
-      typeof window !== "undefined" && window.matchMedia
-        ? window.matchMedia("(pointer: coarse)").matches
-        : false,
-    () => false,
+    subscribe,
+    () => detectBuyMeClientPlatform(),
+    () => "desktop" as const,
   );
 }
 
@@ -40,17 +37,20 @@ export type BuyMeConnectCardProps = {
 };
 
 /**
- * Smart phone import for BuyMe «המתנות שלי»:
- * 1) One-time “button” via iOS Shortcut / Android bookmark (pulls all page text)
- * 2) Open BuyMe → on return, big capture CTA for a full-screen shot + OCR
- * 3) Paste fallback · desktop API stays experimental
+ * BuyMe import for iOS + Android + desktop web.
+ *
+ * We cannot scrape buyme.co.il from our origin (browser same-origin), and we
+ * cannot run Puppeteer on the user’s phone from a website. What works:
+ * - Android: bookmark that runs JS *on* BuyMe and dumps page text to us
+ * - iOS: Shortcuts “Run JavaScript on Webpage” (same idea via Share)
+ * - All: full-screen photo + OCR, paste, or demo fixture
  */
 export function BuyMeConnectCard({
   onPickScreenshot,
   onParsedText,
   screenshotBusy = false,
 }: BuyMeConnectCardProps) {
-  const isPhone = useIsCoarsePointer();
+  const platform = usePlatform();
   const pageScript = useSyncExternalStore(
     subscribe,
     () => buyMePageTextBridgeScript(window.location.origin),
@@ -71,8 +71,7 @@ export function BuyMeConnectCard({
 
   useEffect(() => {
     function onVis() {
-      if (document.visibilityState !== "visible") return;
-      if (!awaitingReturn) return;
+      if (document.visibilityState !== "visible" || !awaitingReturn) return;
       setShowCaptureNow(true);
     }
     document.addEventListener("visibilitychange", onVis);
@@ -94,9 +93,7 @@ export function BuyMeConnectCard({
     setAwaitingReturn(true);
     setShowCaptureNow(false);
     const win = window.open(BUYME_SITE_URL, "_blank");
-    if (!win) {
-      window.location.assign(BUYME_SITE_URL);
-    }
+    if (!win) window.location.assign(BUYME_SITE_URL);
   }
 
   function submitPaste() {
@@ -111,72 +108,121 @@ export function BuyMeConnectCard({
     onParsedText?.(gifts);
   }
 
+  function runDemo() {
+    const gifts = demoBuyMeGiftsFromFixture();
+    if (!gifts.length) {
+      setPasteError("דמו לא נטען");
+      return;
+    }
+    onParsedText?.(gifts);
+  }
+
   return (
     <div className="space-y-4 rounded-2xl border border-[rgba(71,181,168,0.35)] bg-[rgba(71,181,168,0.08)] px-4 py-4">
       <div>
         <p className="font-display text-base text-forest">ייבוא חכם מ־BuyMe</p>
         <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          כפתור ב־«המתנות שלי» ששואב את כל הרשימה במכה — או צילום מסך מלא כשחוזרים.
+          שואבים את «המתנות שלי» במכה — באנדרואיד, באייפון ובדפדפן. בלי להיכנס
+          ידנית לכל כרטיס.
         </p>
       </div>
 
-      {/* One-time “button on BuyMe” via Shortcut / bookmark */}
       <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
         <p className="text-xs font-bold text-forest">
-          1. כפתור ב־BuyMe (פעם אחת)
+          1. כפתור שאיבה ב־BuyMe (פעם אחת)
         </p>
-        <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
-          {isPhone
-            ? "אייפון: קיצור ב־«קיצורים» שרץ מתוך שיתוף ב־Safari על עמוד המתנות — שולף את כל הטקסט בלי לצלם כרטיס־כרטיס."
-            : "שמרו סימנייה / קיצור שרץ על עמוד «המתנות שלי» ושולף את כל הרשימה."}
-        </p>
-        <button
-          type="button"
-          className="btn-secondary w-full py-2.5 text-xs"
-          onClick={() => void copyText(pageScript, "shortcut")}
-          data-testid="buyme-copy-page-bridge"
-        >
-          {copied === "shortcut"
-            ? "הקוד הועתק — הדביקו בקיצור «הפעל JavaScript בדף»"
-            : copied === "fail"
-              ? "ההעתקה נכשלה — נסו שוב"
-              : "העתק קוד לכפתור «שאיבת מתנות»"}
-        </button>
-        {isPhone && (
-          <ol className="list-decimal space-y-1 pe-5 text-[10px] font-semibold leading-relaxed text-eggplant">
-            <li>אפליקציית «קיצורים» → קיצור חדש</li>
-            <li>
-              פעולה: Safari → <span className="text-forest">הפעל JavaScript בדף אינטרנט</span>
-            </li>
-            <li>הדביקו את הקוד · שמרו בשם «שאיבת מתנות לזיכוי»</li>
-            <li>
-              ב־BuyMe «המתנות שלי»: שתף → הקיצור — הרשימה מגיעה לכאן אוטומטית
-            </li>
-          </ol>
+
+        {platform === "android" && (
+          <>
+            <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
+              באנדרואיד (Chrome): שומרים סימנייה שמריצה קוד <span className="text-forest">בתוך</span>{" "}
+              עמוד המתנות — קוראת את הטקסט (כמו jQuery על הדף) ומחזירה אותנו עם
+              כל הרשימה. האתר שלנו לא יכול לקרוא את BuyMe מרחוק (אבטחת דפדפן).
+            </p>
+            <button
+              type="button"
+              className="btn-secondary w-full py-2.5 text-xs"
+              onClick={() => void copyText(pageBookmark, "bookmark")}
+              data-testid="buyme-copy-page-bridge"
+            >
+              {copied === "bookmark"
+                ? "הועתק — הדביקו בכתובת הסימנייה"
+                : copied === "fail"
+                  ? "ההעתקה נכשלה — נסו שוב"
+                  : "העתק סימניית «שאיבת מתנות»"}
+            </button>
+            <ol className="list-decimal space-y-1 pe-5 text-[10px] font-semibold leading-relaxed text-eggplant">
+              <li>Chrome → ☆ / סימניות → הוספת סימנייה</li>
+              <li>שם: «שאיבת מתנות» · בכתובת הדביקו את מה שהועתק</li>
+              <li>ב־BuyMe «המתנות שלי» לחצו על הסימנייה — הרשימה קופצת לכאן</li>
+            </ol>
+            <a
+              href={pageBookmark}
+              className="block text-center text-[10px] font-bold text-forest underline"
+              onClick={(e) => {
+                // Prevent navigating away if JS bookmarks are blocked mid-tap.
+                e.preventDefault();
+                void copyText(pageBookmark, "bookmark");
+              }}
+              data-testid="buyme-page-text-bookmark"
+            >
+              לחצו להעתקה שוב
+            </a>
+          </>
         )}
-        {!isPhone && (
-          <a
-            href={pageBookmark}
-            className="btn-secondary flex w-full items-center justify-center py-2 text-xs"
-            onClick={(e) => {
-              e.preventDefault();
-              void copyText(pageBookmark, "bookmark");
-            }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData("text/uri-list", pageBookmark);
-              e.dataTransfer.setData("text/plain", pageBookmark);
-            }}
-            data-testid="buyme-page-text-bookmark"
-          >
-            {copied === "bookmark"
-              ? "הועתק — שמרו כסימנייה «שאיבת מתנות»"
-              : "או גררו/העתיקו כסימנייה לדפדפן"}
-          </a>
+
+        {platform === "ios" && (
+          <>
+            <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
+              באייפון: קיצור «הפעל JavaScript בדף» = הכפתור על עמוד המתנות (דרך
+              שיתוף). אותו רעיון כמו באנדרואיד — הקוד רץ בתוך BuyMe.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary w-full py-2.5 text-xs"
+              onClick={() => void copyText(pageScript, "shortcut")}
+              data-testid="buyme-copy-page-bridge"
+            >
+              {copied === "shortcut"
+                ? "הקוד הועתק — הדביקו בקיצור"
+                : "העתק קוד לקיצור «שאיבת מתנות»"}
+            </button>
+            <ol className="list-decimal space-y-1 pe-5 text-[10px] font-semibold leading-relaxed text-eggplant">
+              <li>«קיצורים» → קיצור חדש → Safari → הפעל JavaScript בדף</li>
+              <li>הדביקו · שמרו בשם «שאיבת מתנות לזיכוי»</li>
+              <li>ב־BuyMe: שתף → הקיצור</li>
+            </ol>
+          </>
+        )}
+
+        {platform === "desktop" && (
+          <>
+            <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
+              גררו סימנייה לשורת הסימניות, או העתיקו. ב־BuyMe לוחצים עליה —
+              שואבת את כל טקסט הרשימה (לא צריך API).
+            </p>
+            <a
+              href={pageBookmark}
+              className="btn-secondary flex w-full items-center justify-center py-2.5 text-xs"
+              onClick={(e) => {
+                e.preventDefault();
+                void copyText(pageBookmark, "bookmark");
+              }}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/uri-list", pageBookmark);
+                e.dataTransfer.setData("text/plain", pageBookmark);
+              }}
+              data-testid="buyme-page-text-bookmark"
+            >
+              {copied === "bookmark"
+                ? "הועתק / שמור כסימנייה «שאיבת מתנות»"
+                : "גררו לסימניות · או העתיקו"}
+            </a>
+          </>
         )}
       </div>
 
-      {/* Open BuyMe + capture on return */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-forest">2. פתחו את המתנות ושלפו</p>
         <button
@@ -188,8 +234,12 @@ export function BuyMeConnectCard({
           פתח «המתנות שלי» ב־BuyMe
         </button>
         <p className="text-[11px] font-semibold leading-relaxed text-eggplant">
-          שם: התחברו → פתחו את הרשימה → הפעילו את הקיצור/הסימנייה «שאיבת מתנות».
-          בלי קיצור? חזרו לכאן וצלמו את כל המסך.
+          {platform === "android"
+            ? "התחברו → המתנות שלי → לחצו על הסימנייה «שאיבת מתנות»."
+            : platform === "ios"
+              ? "התחברו → המתנות שלי → שתף → קיצור השאיבה."
+              : "התחברו → המתנות שלי → לחצו על סימניית השאיבה."}{" "}
+          בלי זה — חזרו לכאן וצלמו את כל המסך.
         </p>
       </div>
 
@@ -200,7 +250,7 @@ export function BuyMeConnectCard({
         >
           <p className="text-xs font-bold text-forest">חזרתם מ־BuyMe?</p>
           <p className="text-[11px] font-semibold text-eggplant">
-            צלמו עכשיו את כל מסך «המתנות שלי» — נשאב את הטקסט מהתמונה במכה אחת.
+            צלמו עכשיו את כל מסך «המתנות שלי» — נשאב טקסט מהתמונה במכה.
           </p>
           <button
             type="button"
@@ -223,8 +273,27 @@ export function BuyMeConnectCard({
           data-testid="buyme-import-button"
         >
           <span className="font-extrabold">צילום מסך של כל הרשימה</span>
-          <span className="text-xs opacity-90">גיבוי בלי קיצור · OCR</span>
+          <span className="text-xs opacity-90">גיבוי · OCR</span>
         </button>
+      )}
+
+      {onParsedText && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            className="btn-secondary w-full py-2.5 text-xs"
+            onClick={runDemo}
+            data-testid="buyme-demo-import"
+          >
+            הדגמה — ייבוא רשימת דוגמה (בלי BuyMe)
+          </button>
+          <p className="text-[10px] leading-relaxed text-eggplant">
+            למה לא אוטומציה מלאה מהאתר? דפדפן לא נותן לנו להריץ סקריפט על
+            buyme.co.il או לקרוא משם jQuery/DOM. רק קוד שרץ <span className="font-bold">בתוך</span>{" "}
+            BuyMe (סימנייה/קיצור) או צילום. אפליקציית Android עם WebView תוכל
+            להזריק כפתור אוטומטית בעתיד.
+          </p>
+        </div>
       )}
 
       {onParsedText && (
@@ -257,10 +326,10 @@ export function BuyMeConnectCard({
         </details>
       )}
 
-      {!isPhone && (
+      {platform === "desktop" && (
         <details className="rounded-xl bg-white/10 px-3 py-2">
           <summary className="cursor-pointer text-xs font-bold text-forest">
-            במחשב: חיבור API מלא (קודים/ברקודים)
+            חיבור API מלא (קודים/ברקודים)
           </summary>
           <DesktopApiConnect />
         </details>
@@ -294,7 +363,7 @@ function DesktopApiConnect() {
 
   return (
     <div className="mt-2 space-y-2 text-[11px] font-semibold text-eggplant">
-      <p>JWT → עוגייה → /siteapi — לקודים וברקודים אמיתיים.</p>
+      <p>JWT → עוגייה → /siteapi</p>
       <button
         type="button"
         className="btn-secondary w-full py-2 text-xs"

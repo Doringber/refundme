@@ -4,11 +4,13 @@ import {
   buyMeBookmarkletHref,
   buyMeBridgeConsoleScript,
   buyMePageTextBridgeScript,
+  demoBuyMeGiftsFromFixture,
   parseBuyMePageText,
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
 } from "./buyme-import";
+import { detectBuyMeClientPlatform } from "./buyme-platform";
 import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
 
 describe("buyme bulk import", () => {
@@ -81,5 +83,32 @@ describe("buyme bulk import", () => {
     );
     assert.equal(text.token, null);
     assert.match(text.pageText ?? "", /BUYME ALL/);
+  });
+
+  it("loads demo gifts from fixture for walkthrough", () => {
+    const gifts = demoBuyMeGiftsFromFixture();
+    assert.ok(gifts.length >= 2);
+    assert.ok(gifts.some((g) => g.title.includes("BUYME")));
+  });
+
+  it("detects android / ios / desktop clients", () => {
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36",
+      ),
+      "android",
+    );
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+      ),
+      "ios",
+    );
+    assert.equal(
+      detectBuyMeClientPlatform(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0",
+      ),
+      "desktop",
+    );
   });
 });

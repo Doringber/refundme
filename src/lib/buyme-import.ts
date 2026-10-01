@@ -1,6 +1,7 @@
 import type { BuyMeGiftCandidate } from "./extract-buyme";
 import { extractBuyMeGifts } from "./extract-buyme";
 import { DEMO_USER_ID } from "./demo/data";
+import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
 import { shekelsToAgorot } from "./calculations";
 import type { ExtractedFields, Voucher } from "./types";
 
@@ -155,6 +156,11 @@ export function parseBuyMePageText(text: string): BuyMeGiftCandidate[] {
   return extractBuyMeGifts(text).filter(
     (g) => g.title !== "BuyMe" || g.amountAgorot != null,
   );
+}
+
+/** Fixture «המתנות שלי» — demo the import UX without opening BuyMe. */
+export function demoBuyMeGiftsFromFixture(): BuyMeGiftCandidate[] {
+  return parseBuyMePageText(BUYME_GIFTS_LIST_TEXT);
 }
 
 /**
