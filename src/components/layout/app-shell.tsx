@@ -87,8 +87,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ul className="pill-nav mx-auto grid max-w-3xl grid-cols-5 gap-1 px-2 py-2 md:flex md:justify-center md:gap-2 md:px-3">
           {NAV.map((item) => {
             const active =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              item.href === "/vouchers"
+                ? pathname === "/vouchers" ||
+                  (pathname.startsWith("/vouchers/") &&
+                    !pathname.startsWith("/vouchers/new"))
+                : pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <li key={item.href}>
                 <Link
