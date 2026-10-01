@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   valuesFromExtraction,
@@ -241,7 +240,7 @@ export default function BuyMeImportPage() {
         </Link>
         <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
         <p className="text-sm text-eggplant">
-          בטלפון: צילום או הדבקת טקסט. במחשב אפשר גם חיבור API ניסיוני.
+          כפתור אחד — צילום «המתנות שלי» (Chrome / אייפון)
         </p>
       </div>
 
@@ -255,22 +254,14 @@ export default function BuyMeImportPage() {
               {error}
             </p>
           )}
-          <BuyMeConnectCard
-            onParsedText={(gifts) => {
-              setOcrGifts(gifts);
-              setCards([]);
-              setStep(gifts.length ? "pick" : "connect");
-              if (!gifts.length) {
-                setError("לא מצאנו מתנות עם יתרה בטקסט שהודבק");
-              }
-            }}
-          />
-          <p className="text-center text-xs text-eggplant">
-            לצילום מסך מהגלריה:{" "}
-            <Link href="/vouchers/new" className="font-bold text-forest">
-              מסך ההוספה
+          <div className="card-surface space-y-3 p-5 text-center">
+            <p className="text-sm font-semibold text-eggplant">
+              הייבוא הפשוט נמצא במסך ההוספה — כפתור אחד שעובד בכל דפדפן.
+            </p>
+            <Link href="/vouchers/new" className="btn-primary inline-flex px-6 py-3 text-sm">
+              לייבוא מ־BuyMe
             </Link>
-          </p>
+          </div>
         </div>
       )}
 

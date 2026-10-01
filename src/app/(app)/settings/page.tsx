@@ -194,8 +194,8 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          באייפון: התחברות ב־BuyMe → חזרה → שאיבה מצילום המסך (קרולר על המסך).
-          אופציונלי: קיצור/סימנייה שרצים בתוך הדף. במחשב אפשר API לקודים.
+          כפתור «ייבוא מ־BuyMe» — בוחרים צילום של «המתנות שלי» (Chrome /
+          אייפון / אנדרואיד). המימוש נשאר ב־BuyMe.
         </p>
         <Link
           href="/vouchers/new"
