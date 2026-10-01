@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { getSecretKey, isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSecretKey } from "@/lib/supabase/secret";
 import { createClient } from "@/lib/supabase/server";
 
 /**

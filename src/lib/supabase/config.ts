@@ -1,22 +1,16 @@
 /**
+ * Public Supabase helpers — safe to import from client and middleware.
+ * Never put secret/service_role keys in this file (they get inlined into
+ * Edge/client bundles and fail Netlify secrets scanning).
+ *
  * Supports classic anon JWT keys and newer Supabase publishable keys
  * (`sb_publishable_...`). Prefer NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.
  */
+
 export function getPublishableKey(): string | undefined {
   return (
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
-
-/**
- * Server-only secret. Supports classic service_role JWT and newer
- * `sb_secret_...` keys. Never expose to the browser.
- */
-export function getSecretKey(): string | undefined {
-  return (
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 }
 
