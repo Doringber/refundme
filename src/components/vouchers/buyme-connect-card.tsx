@@ -1,169 +1,112 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
-  captureBuyMeFromExtension,
-  detectBuyMeExtension,
-  type BuyMeExtensionCapture,
-} from "@/lib/buyme/extension-client";
+  BUYME_SITE_URL,
+  buyMeBookmarkletHref,
+} from "@/lib/buyme-import";
 
-export type BuyMeConnectCardProps = {
-  onSynced?: (report: { upserted: number; fetched: number }) => void;
-};
-
-type Phase = "checking" | "missing" | "ready" | "working" | "done" | "failed";
-
-function subscribePhone() {
+function subscribe() {
   return () => {};
 }
 
-function isPhoneBrowser(): boolean {
-  const ua = navigator.userAgent;
-  if (/Android|iPhone|iPad|iPod|CriOS|FxiOS/.test(ua)) return true;
-  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-}
+export type BuyMeConnectCardProps = {
+  /** Called after we open the BuyMe window — parent can show “waiting”. */
+  onPopupOpened?: () => void;
+};
 
-function resultMessage(result: BuyMeExtensionCapture): string {
-  if (result.sync?.status === "synced") {
-    const fetched = result.sync.fetched ?? 0;
-    if (fetched <= 0) {
-      return "החיבור הצליח, אבל BuyMe החזיר ארנק ריק. לא יובאו מתנות.";
+/**
+ * One-time BuyMe window → sign in → paste the connection step in that
+ * window’s address bar → token saved → continue with API.
+ *
+ * No bookmarks bar. Browsers block reading BuyMe storage from our origin,
+ * so the connect script must run inside the BuyMe window (paste + Enter).
+ */
+export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
+  const href = useSyncExternalStore(
+    subscribe,
+    () => buyMeBookmarkletHref(window.location.origin),
+    () => "#",
+  );
+  const [opened, setOpened] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "ok" | "fail">("idle");
+
+  async function copyBridge() {
+    try {
+      await navigator.clipboard.writeText(href);
+      setCopyState("ok");
+      window.setTimeout(() => setCopyState("idle"), 2500);
+      return true;
+    } catch {
+      setCopyState("fail");
+      return false;
     }
-    return `נמשכו ${fetched} מתנות מ־BuyMe ועודכנו ${result.sync.upserted}.`;
   }
-  if (result.error === "app_login_required") {
-    return "התחברו לזיכוי שלי באותו דפדפן, ואז לחצו שוב. בלי חשבון אין לאן לשמור.";
-  }
-  if (result.sync?.status === "login_required" || result.error === "login_required") {
-    return "לא נמצא חיבור פעיל ב־BuyMe. התחברו בחלון שנפתח — הסנכרון ממשיך לבד אחרי ההתחברות.";
-  }
-  if (result.error === "timeout") {
-    return "ההמתנה ל־BuyMe הסתיימה בלי חיבור. התחברו שם ולחצו שוב.";
-  }
-  if (result.sync?.error === "wallet_fetch_failed" || result.error === "sync_failed") {
-    return "החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה. לא יובאו מתנות.";
-  }
-  return "הסנכרון לא הושלם. לא יובאו מתנות.";
-}
 
-export function BuyMeConnectCard({ onSynced }: BuyMeConnectCardProps) {
-  const [phase, setPhase] = useState<Phase>("checking");
-  const [message, setMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const phone = useSyncExternalStore(subscribePhone, isPhoneBrowser, () => false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void detectBuyMeExtension().then((installed) => {
-      if (!cancelled) setPhase(installed ? "ready" : "missing");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function syncNow() {
-    setPhase("working");
-    setMessage(
-      "נפתח BuyMe. אם אתם כבר מחוברים שם, המתנות נכנסות לבד. אם לא — התחברו בחלון שנפתח.",
+  async function openBuyMeWindow() {
+    await copyBridge();
+    const popup = window.open(
+      BUYME_SITE_URL,
+      "buyme_connect",
+      "popup=yes,width=490,height=780",
     );
-    const result = await captureBuyMeFromExtension({ interactive: true });
-    const fetched = result.sync?.fetched ?? 0;
-    if (result.sync?.status === "synced" && fetched > 0) {
-      setPhase("done");
-      setMessage(resultMessage(result));
-      onSynced?.({ upserted: result.sync.upserted, fetched });
+    if (!popup) {
+      window.location.assign(BUYME_SITE_URL);
       return;
     }
-    setPhase("failed");
-    setMessage(resultMessage(result));
-  }
-
-  async function copyExtensionsPage() {
     try {
-      await navigator.clipboard.writeText("chrome://extensions");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      popup.focus();
     } catch {
-      setCopied(false);
+      /* ignore */
     }
+    setOpened(true);
+    onPopupOpened?.();
   }
 
   return (
     <div className="space-y-4 rounded-2xl border border-[rgba(71,181,168,0.35)] bg-[rgba(71,181,168,0.08)] px-4 py-4">
       <div>
-        <p className="font-display text-base text-forest">סנכרון אוטומטי מ־BuyMe</p>
+        <p className="font-display text-base text-forest">חיבור ל־BuyMe</p>
         <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          אחרי התחברות ל־BuyMe בכרום, התוסף קורא את החיבור שכבר פתוח אצלכם
-          ומושך את הארנק. פתיחת האתר לבד לא מחברת.
+          חיבור חד־פעמי: מתחברים ב־BuyMe, מריצים את שלב החיבור, ואז הארנק נטען
+          כאן. הסיסמה לא עוברת דרך RefundMe.
         </p>
       </div>
 
-      {phase === "checking" && (
-        <p className="text-xs font-semibold text-eggplant">בודקים אם חיבור הכרום מותקן…</p>
-      )}
+      <button
+        type="button"
+        className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
+        onClick={() => void openBuyMeWindow()}
+        data-testid="buyme-open-popup"
+      >
+        {opened ? "החלון פתוח — התחברו ב־BuyMe" : "התחברות חד־פעמית ל־BuyMe"}
+      </button>
 
-      {phase !== "checking" && phase !== "missing" && (
-        <button
-          type="button"
-          className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
-          onClick={() => void syncNow()}
-          disabled={phase === "working"}
-          data-testid="buyme-auto-sync"
-        >
-          {phase === "working" ? "מושכים את הארנק מ־BuyMe…" : "סנכרון אוטומטי מ־BuyMe"}
-        </button>
-      )}
-
-      {phase === "missing" && phone && (
-        <p className="text-xs font-semibold leading-relaxed text-eggplant" role="status">
-          בדפדפן של הטלפון אי אפשר לקרוא את ההתחברות של BuyMe. הסנכרון האוטומטי
-          רץ בכרום במחשב, אחרי התקנה אחת של חיבור הכרום.
-        </p>
-      )}
-
-      {phase === "missing" && !phone && (
+      {opened && (
         <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
-          <p className="text-xs font-bold text-forest">התקנה אחת בכרום</p>
+          <p className="text-xs font-bold text-forest">בחלון של BuyMe</p>
           <ol className="list-decimal space-y-1 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
-            <li>הורידו את חיבור הכרום וחלצו את התיקייה</li>
-            <li>פתחו chrome://extensions והפעילו מצב מפתח</li>
-            <li>טעינה ללא אריזה — בחרו את התיקייה שחולצה</li>
-            <li>רעננו את הדף הזה ולחצו «סנכרון אוטומטי»</li>
+            <li>התחברו (גוגל) ופתחו «המתנות שלי»</li>
+            <li>
+              כתבו קודם <code>javascript:</code> בשורת הכתובת ← הדביקו (
+              <span className="whitespace-nowrap">Ctrl+V</span> /{" "}
+              <span className="whitespace-nowrap">⌘V</span>) ← Enter / Go
+            </li>
+            <li>החלון נסגר / חוזר לכאן והארנק נטען</li>
           </ol>
-          <a
-            href="/api/buyme/extension"
-            className="btn-primary flex w-full items-center justify-center py-3 text-sm"
-            data-testid="buyme-download-extension"
-          >
-            הורדת חיבור הכרום
-          </a>
           <button
             type="button"
             className="btn-secondary w-full py-2.5 text-xs"
-            onClick={() => void copyExtensionsPage()}
-            data-testid="buyme-copy-extensions"
+            onClick={() => void copyBridge()}
+            data-testid="buyme-copy-bridge"
           >
-            {copied ? "הועתק — הדביקו בשורת הכתובת" : "העתקת chrome://extensions"}
-          </button>
-          <button
-            type="button"
-            className="w-full py-1 text-xs font-bold text-forest underline"
-            onClick={() => window.location.reload()}
-          >
-            כבר התקנתי — רענון ובדיקה
+            {copyState === "ok"
+              ? "הועתק שוב — הדביקו בשורת הכתובת בחלון BuyMe"
+              : copyState === "fail"
+                ? "ההעתקה נכשלה — נסו שוב"
+                : "העתק שוב את שלב החיבור"}
           </button>
         </div>
-      )}
-
-      {message && (
-        <p
-          className="rounded-xl bg-white/10 px-3 py-3 text-xs font-semibold leading-relaxed text-eggplant"
-          role="status"
-          data-testid="buyme-sync-status"
-        >
-          {message}
-        </p>
       )}
     </div>
   );

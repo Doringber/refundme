@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  outputFileTracingIncludes: {
-    "/api/buyme/extension": ["./extensions/buyme-connect/**/*"],
-  },
+  /* config options here */
 };
 
 export default nextConfig;

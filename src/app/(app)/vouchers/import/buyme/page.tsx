@@ -106,25 +106,39 @@ export default function BuyMeImportPage() {
           return;
         }
         const report = saved.sync;
-        const fetched = report?.fetched ?? 0;
         if (!cancelled) {
-          if (report?.status === "synced" && (fetched > 0 || (report.upserted ?? 0) > 0)) {
-            notifyOpenerAndClose();
-            setImportedCount(report.upserted ?? fetched);
-            setStep("success");
-            window.setTimeout(() => router.push("/dashboard"), 900);
-          } else if (saved.error === "app_login_required") {
+          if (saved.error === "app_login_required") {
             setError("התחברו לזיכוי שלי באותו דפדפן. בלי חשבון אין לאן לשמור את המתנות.");
             setStep("connect");
-          } else if (report?.status === "login_required") {
-            setError("הטוקן נשמר אבל BuyMe דחה אותו. צריך חיבור מחדש מתוך BuyMe, לא רק לפתוח את האתר.");
+            return;
+          }
+          if (report?.status === "login_required") {
+            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
             setStep("connect");
-          } else if (report?.status === "synced") {
-            setError("BuyMe ענה, אבל הארנק ריק. לא יובאו מתנות.");
+            return;
+          }
+          if (report?.status === "error") {
+            setError("החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה.");
             setStep("connect");
+            return;
+          }
+          const upserted = report?.upserted ?? 0;
+          if (window.opener && !window.opener.closed) {
+            notifyOpenerAndClose();
+            setImportedCount(upserted);
+            setStep("success");
+            return;
+          }
+          if (report?.status === "synced") {
+            if (upserted > 0) {
+              setImportedCount(upserted);
+              setStep("success");
+              window.setTimeout(() => router.push("/dashboard"), 900);
+            } else {
+              await loadWallet();
+            }
           } else {
-            setError("החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה. לא יובאו מתנות.");
-            setStep("connect");
+            await loadWallet();
           }
         }
         return;
@@ -250,7 +264,7 @@ export default function BuyMeImportPage() {
         </Link>
         <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
         <p className="text-sm text-eggplant">
-          כפתור אחד בכרום: קורא את החיבור שכבר פתוח ב־BuyMe ומושך את הארנק
+          חלון חיבור זמני → שמירת חיבור → שליפת הארנק ב־API
         </p>
       </div>
 
@@ -264,13 +278,16 @@ export default function BuyMeImportPage() {
               {error}
             </p>
           )}
-          <BuyMeConnectCard
-            onSynced={(report) => {
-              setImportedCount(report.upserted);
-              setStep("success");
-              window.setTimeout(() => router.push("/dashboard"), 900);
-            }}
-          />
+          {step === "waiting" && (
+            <p
+              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
+              role="status"
+            >
+              ממתינים לחיבור מהחלון… אחרי התחברות ב־BuyMe: הדביקו בשורת
+              הכתובת שם ולחצו Enter.
+            </p>
+          )}
+          <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />
           <p className="text-center text-xs text-eggplant">
             או{" "}
             <Link href="/vouchers/new" className="font-bold text-forest">
