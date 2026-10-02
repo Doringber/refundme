@@ -6,7 +6,7 @@ import { useAppData } from "@/lib/app-data/context";
 const KEY = "zikuy:buyme-autosync-at";
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
-/** On app open, refresh BuyMe at most once per 6 hours if a session is stored. */
+/** On app open, refresh a stored BuyMe session at most once per 6 hours. */
 export function BuyMeAutoSync() {
   const app = useAppData();
   useEffect(() => {

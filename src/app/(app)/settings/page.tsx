@@ -222,14 +222,16 @@ export default function SettingsPage() {
                     error?: string;
                   };
                   if (json.status === "login_required") {
-                    setMessage("BuyMe דורש חיבור מחדש");
+                    setMessage("BuyMe דורש חיבור מחדש — פתחו «מסך החיבור»");
                     return;
                   }
                   if (!res.ok || json.status !== "synced") {
                     setMessage(json.error || "הסנכרון נכשל");
                     return;
                   }
-                  setMessage(`הסנכרון הסתיים — ${json.upserted ?? 0} מתנות עודכנו או נוספו`);
+                  setMessage(
+                    `הסנכרון הסתיים — ${json.upserted ?? 0} מתנות עודכנו או נוספו`,
+                  );
                   window.setTimeout(() => window.location.reload(), 600);
                 } catch (err) {
                   setMessage(err instanceof Error ? err.message : "הסנכרון נכשל");

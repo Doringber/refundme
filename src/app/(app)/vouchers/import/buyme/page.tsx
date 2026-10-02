@@ -95,23 +95,53 @@ export default function BuyMeImportPage() {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ token }),
         });
+        const saved = (await res.json()) as {
+          error?: string | null;
+          sync?: { status?: string; upserted?: number; fetched?: number } | null;
+        };
         if (!res.ok) {
           if (!cancelled) {
-            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
+            setError("הטוקן מ־BuyMe לא נשמר. פתיחת האתר לבד לא מחברת.");
             setStep("connect");
           }
           return;
         }
-        // Temporary BuyMe window landed here with the token — hand off to opener.
-        if (window.opener && !window.opener.closed) {
-          notifyOpenerAndClose();
-          if (!cancelled) {
-            setStep("success");
-            setImportedCount(0);
+        const report = saved.sync;
+        if (!cancelled) {
+          if (saved.error === "app_login_required") {
+            setError("התחברו לזיכוי שלי באותו דפדפן. בלי חשבון אין לאן לשמור את המתנות.");
+            setStep("connect");
+            return;
           }
-          return;
+          if (report?.status === "login_required") {
+            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
+            setStep("connect");
+            return;
+          }
+          if (report?.status === "error") {
+            setError("החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה.");
+            setStep("connect");
+            return;
+          }
+          const upserted = report?.upserted ?? 0;
+          if (window.opener && !window.opener.closed) {
+            notifyOpenerAndClose();
+            setImportedCount(upserted);
+            setStep("success");
+            return;
+          }
+          if (report?.status === "synced") {
+            if (upserted > 0) {
+              setImportedCount(upserted);
+              setStep("success");
+              window.setTimeout(() => router.push("/dashboard"), 900);
+            } else {
+              await loadWallet();
+            }
+          } else {
+            await loadWallet();
+          }
         }
-        if (!cancelled) await loadWallet();
         return;
       }
 
@@ -138,7 +168,7 @@ export default function BuyMeImportPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   // Parent tab: wait until the popup finishes connecting.
   useEffect(() => {
