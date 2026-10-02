@@ -104,14 +104,29 @@ export function voucherFromBuyMeApiCard(
     documentFileName: null,
     documentDataUrl: null,
     extractionRaw: {
-      source: "buyme-siteapi",
-      buymeId: card.id,
+      provider: "buyme",
+      externalId: String(card.id),
+      source: "buyme-sync",
       url: card.url,
     },
     fieldsConfirmed: true,
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/** Stable key used by both cloud and demo import flows to prevent duplicates. */
+export function buyMeVoucherKey(voucher: Voucher): string | null {
+  const raw = voucher.extractionRaw;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as { provider?: unknown; externalId?: unknown; source?: unknown; title?: unknown };
+  if (value.provider === "buyme" && typeof value.externalId === "string") {
+    return `api:${value.externalId}`;
+  }
+  if (value.source === "buyme-import") {
+    return `ocr:${String(value.title ?? voucher.merchantName)}:${voucher.originalAmountAgorot}:${voucher.expiryDate ?? ""}`;
+  }
+  return null;
 }
 
 export function vouchersFromBuyMeGifts(

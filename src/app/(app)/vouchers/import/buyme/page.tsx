@@ -16,6 +16,7 @@ import {
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
+  buyMeVoucherKey,
   type BuyMeApiCard,
 } from "@/lib/buyme-import";
 import { formatIls, shekelsToAgorot } from "@/lib/calculations";
@@ -210,15 +211,41 @@ export default function BuyMeImportPage() {
       if (app.mode === "supabase" && !app.user) {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
       }
+      // Cloud imports must use the server sync path. It plans updates by the
+      // stable BuyMe id and is protected by the database unique index.
+      if (app.mode === "supabase") {
+        const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+        const json = (await res.json()) as {
+          status?: string;
+          upserted?: number;
+          error?: string;
+        };
+        if (json.status === "login_required") throw new Error("BuyMe דורש חיבור מחדש");
+        if (!res.ok || json.status !== "synced") {
+          throw new Error(json.error || "הסנכרון נכשל");
+        }
+        setImportedCount(json.upserted ?? cards.length);
+        setStep("success");
+        window.setTimeout(() => router.push("/dashboard"), 1100);
+        return;
+      }
+
+      const existingIds = new Set(
+        app.vouchers.map((voucher) => buyMeVoucherKey(voucher)).filter(Boolean),
+      );
       const { saved } =
         cards.length > 0
           ? vouchersFromBuyMeApiCards(cards, { userId: app.user?.id })
           : vouchersFromBuyMeGifts(ocrGifts, { userId: app.user?.id });
-      if (!saved.length) throw new Error("אין מתנות עם יתרה לייבוא");
-      for (const v of saved) {
+      const newSaved = saved.filter((voucher) => {
+        const id = buyMeVoucherKey(voucher);
+        return id ? !existingIds.has(id) : true;
+      });
+      if (!newSaved.length) throw new Error("המתנות האלה כבר נשמרו — לא נוצר כפילויות");
+      for (const v of newSaved) {
         await app.saveVoucher(v);
       }
-      setImportedCount(saved.length);
+      setImportedCount(newSaved.length);
       setStep("success");
       window.setTimeout(() => router.push("/dashboard"), 1100);
     } catch (err) {
@@ -234,6 +261,10 @@ export default function BuyMeImportPage() {
     try {
       if (app.mode === "supabase" && !app.user) {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
+      const key = buyMeVoucherKey(voucher);
+      if (key && app.vouchers.some((item) => buyMeVoucherKey(item) === key)) {
+        throw new Error("המתנה הזו כבר נשמרה — לא נוצר כפילות");
       }
       await app.saveVoucher(voucher);
       setImportedCount(1);

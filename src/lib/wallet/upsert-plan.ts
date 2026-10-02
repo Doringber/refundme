@@ -66,8 +66,11 @@ export function planBuyMeUpserts(
   const byExternal = new Map(existing.map((row) => [row.externalId, row.id]));
   const inserts: VoucherWrite[] = [];
   const updates: Array<VoucherWrite & { id: string }> = [];
+  const seenExternalIds = new Set<string>();
   for (const item of items) {
     if (item.provider !== "buyme") continue;
+    if (seenExternalIds.has(item.externalId)) continue;
+    seenExternalIds.add(item.externalId);
     const row = voucherWriteFromItem(item);
     const id = byExternal.get(item.externalId);
     if (id) updates.push({ ...row, id });

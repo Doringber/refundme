@@ -42,6 +42,13 @@ describe("BuyMe wallet sync", () => {
     assert.equal(fresh.inserts[0].extraction_raw.externalId, "42");
   });
 
+  it("does not plan duplicate inserts from repeated wallet rows", () => {
+    const item = normalizeBuyMeCard(card);
+    const plan = planBuyMeUpserts([], [item, item]);
+    assert.equal(plan.inserts.length, 1);
+    assert.equal(plan.updates.length, 0);
+  });
+
   it("round-trips a session token without storing it in plaintext", () => {
     const secret = "test-session-key";
     const token = ["aaa", "bbb", "ccc"].join(".");
