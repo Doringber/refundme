@@ -51,6 +51,17 @@ export default function VoucherDetailPage() {
   }
 
   const isReceipt = voucher.documentType === "receipt";
+  const buyMeData =
+    voucher.extractionRaw?.provider === "buyme"
+      ? voucher.extractionRaw
+      : null;
+  const buyMeUrl = typeof buyMeData?.url === "string" ? buyMeData.url : null;
+  const buyMeId =
+    typeof buyMeData?.externalId === "string" ? buyMeData.externalId : null;
+  const buyMeSupplier =
+    typeof buyMeData?.supplierName === "string"
+      ? buyMeData.supplierName
+      : null;
   const canRedeem =
     !isReceipt &&
     (voucher.status === "active" || voucher.status === "partially_redeemed") &&
@@ -137,6 +148,34 @@ export default function VoucherDetailPage() {
             הצגה בקופה — קוד וברקוד
           </Link>
         )}
+
+      {buyMeData && (
+        <section className="card-surface space-y-3 p-5">
+          <h2 className="font-display text-lg text-forest">פרטי BuyMe</h2>
+          {buyMeUrl && (
+            <a
+              href={buyMeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-xl bg-[rgba(71,181,168,0.12)] px-3 py-3 text-sm font-bold text-forest underline"
+            >
+              פתיחת השובר המקורי ב־BuyMe ↗
+            </a>
+          )}
+          <Row label="מזהה שובר ב־BuyMe" value={buyMeId ?? "—"} />
+          <Row label="ספק" value={buyMeSupplier ?? voucher.merchantName} />
+          <Row
+            label="סכום מקורי ב־BuyMe"
+            value={formatIls(voucher.originalAmountAgorot)}
+          />
+          {!voucher.voucherCode && !voucher.barcodeValue && (
+            <p className="text-xs leading-relaxed text-eggplant">
+              BuyMe לא שלח קוד או ברקוד לשובר הזה. במקרה כזה יש לפתוח את השובר
+              המקורי בקישור למעלה ולהציג את פרטי המימוש משם.
+            </p>
+          )}
+        </section>
+      )}
 
       {(voucher.voucherCode || voucher.barcodeValue) && (
         <section className="card-surface space-y-3 p-5 text-center">

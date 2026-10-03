@@ -107,6 +107,7 @@ export function voucherFromBuyMeApiCard(
       provider: "buyme",
       externalId: String(card.id),
       source: "buyme-sync",
+      supplierName: card.supplierName,
       url: card.url,
     },
     fieldsConfirmed: true,

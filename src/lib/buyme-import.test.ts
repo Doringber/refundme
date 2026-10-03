@@ -57,6 +57,7 @@ describe("buyme bulk import", () => {
       provider: "buyme",
       externalId: "1",
       source: "buyme-sync",
+      supplierName: "BuyMe",
       url: "https://buyme.co.il/x",
     });
     assert.equal(buyMeVoucherKey(saved[0]), "api:1");
