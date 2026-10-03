@@ -261,7 +261,7 @@ export default function NewVoucherPage() {
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
           <Link
-            href="/vouchers/import/buyme"
+            href="/vouchers/import/buyme?auto=1"
             className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
           >
             חיבור וסנכרון BuyMe

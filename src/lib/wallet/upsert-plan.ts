@@ -26,6 +26,10 @@ export type VoucherWrite = {
     externalId: string;
     source: "buyme-sync";
     url: string | null;
+    shortToken: string | null;
+    supplierName: string | null;
+    supplierDescription: string | null;
+    redemptionInstructions: string | null;
   };
 };
 
@@ -57,6 +61,10 @@ export function voucherWriteFromItem(item: NormalizedWalletItem): VoucherWrite {
       externalId: item.externalId,
       source: "buyme-sync",
       url: item.url,
+      shortToken: item.shortToken,
+      supplierName: item.supplierName,
+      supplierDescription: item.supplierDescription,
+      redemptionInstructions: item.redemptionInstructions,
     },
   };
 }

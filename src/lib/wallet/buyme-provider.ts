@@ -21,6 +21,10 @@ export function normalizeBuyMeCard(card: BuyMeWalletCard): NormalizedWalletItem 
     code: card.code,
     barcode: card.barcode,
     url: card.url,
+    shortToken: card.shortToken,
+    supplierName: card.supplierName,
+    supplierDescription: card.supplierDescription,
+    redemptionInstructions: card.redemptionInstructions,
   };
 }
 

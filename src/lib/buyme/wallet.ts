@@ -14,6 +14,9 @@ export type BuyMeWalletCard = {
   used: boolean;
   supplierName: string | null;
   url: string | null;
+  shortToken: string | null;
+  supplierDescription: string | null;
+  redemptionInstructions: string | null;
 };
 
 type RawVoucherData = {
@@ -29,7 +32,13 @@ type RawVoucherData = {
   shortToken?: string | null;
   expiresAt?: string | null;
   used?: boolean;
-  supplier?: { name?: string } | null;
+  supplier?: {
+    name?: string;
+    description?: string | null;
+    smallPrint?: string | null;
+  } | null;
+  package?: { description?: string | null; smallPrint?: string | null } | null;
+  selfRedeemText?: string | null;
   url?: string | null;
 };
 
@@ -86,6 +95,13 @@ function normalizeCard(raw: RawVoucherData): BuyMeWalletCard | null {
     used: Boolean(raw.used),
     supplierName: raw.supplier?.name?.trim() || null,
     url: raw.url ?? null,
+    shortToken: textValue(raw.shortToken),
+    supplierDescription: textValue(raw.supplier?.description),
+    redemptionInstructions:
+      textValue(raw.selfRedeemText) ||
+      textValue(raw.supplier?.smallPrint) ||
+      textValue(raw.package?.description) ||
+      textValue(raw.package?.smallPrint),
   };
 }
 

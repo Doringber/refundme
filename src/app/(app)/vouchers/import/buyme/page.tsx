@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
@@ -57,6 +57,44 @@ export default function BuyMeImportPage() {
   const [busy, setBusy] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const autoSync =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("auto") === "1";
+
+  const syncAndFinish = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (app.mode === "supabase" && !app.user) {
+        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
+      }
+      if (app.mode !== "supabase") {
+        await loadWallet();
+        return;
+      }
+      const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+      const json = (await res.json()) as {
+        status?: string;
+        upserted?: number;
+        fetched?: number;
+        error?: string;
+      };
+      if (json.status === "login_required") {
+        throw new Error("BuyMe דורש חיבור מחדש");
+      }
+      if (!res.ok || json.status !== "synced") {
+        throw new Error(json.error || "הסנכרון נכשל");
+      }
+      setImportedCount(json.upserted ?? json.fetched ?? 0);
+      setStep("success");
+      window.setTimeout(() => router.push("/dashboard"), 900);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "הסנכרון נכשל");
+      setStep("connect");
+    } finally {
+      setBusy(false);
+    }
+  }, [app.mode, app.user, router]);
 
   async function loadWallet() {
     const res = await fetch("/api/buyme/wallet");
@@ -158,7 +196,10 @@ export default function BuyMeImportPage() {
       const status = await fetch("/api/buyme/session");
       const st = (await status.json()) as { connected?: boolean };
       if (st.connected) {
-        if (!cancelled) await loadWallet();
+        if (!cancelled) {
+          if (autoSync) await syncAndFinish();
+          else await loadWallet();
+        }
       } else if (!cancelled) {
         setStep("connect");
       }
@@ -168,7 +209,7 @@ export default function BuyMeImportPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [autoSync, router, syncAndFinish]);
 
   // Parent tab: wait until the popup finishes connecting.
   useEffect(() => {
@@ -177,11 +218,11 @@ export default function BuyMeImportPage() {
       const data = event.data as { type?: string } | null;
       if (data?.type !== BUYME_CONNECTED_MESSAGE) return;
       setStep("loading");
-      void loadWallet();
+      void (autoSync ? syncAndFinish() : loadWallet());
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [autoSync, syncAndFinish]);
 
   useEffect(() => {
     if (step !== "waiting") return;

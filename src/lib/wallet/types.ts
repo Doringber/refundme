@@ -12,6 +12,10 @@ export type NormalizedWalletItem = {
   code: string | null;
   barcode: string | null;
   url: string | null;
+  shortToken: string | null;
+  supplierName: string | null;
+  supplierDescription: string | null;
+  redemptionInstructions: string | null;
 };
 
 export type WalletSyncReport = {

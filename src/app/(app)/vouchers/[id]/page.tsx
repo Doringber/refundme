@@ -62,6 +62,16 @@ export default function VoucherDetailPage() {
     typeof buyMeData?.supplierName === "string"
       ? buyMeData.supplierName
       : null;
+  const buyMeShortToken =
+    typeof buyMeData?.shortToken === "string" ? buyMeData.shortToken : null;
+  const buyMeDescription =
+    typeof buyMeData?.supplierDescription === "string"
+      ? buyMeData.supplierDescription
+      : null;
+  const buyMeInstructions =
+    typeof buyMeData?.redemptionInstructions === "string"
+      ? buyMeData.redemptionInstructions
+      : null;
   const canRedeem =
     !isReceipt &&
     (voucher.status === "active" || voucher.status === "partially_redeemed") &&
@@ -168,10 +178,24 @@ export default function VoucherDetailPage() {
             label="סכום מקורי ב־BuyMe"
             value={formatIls(voucher.originalAmountAgorot)}
           />
+          {buyMeShortToken && <Row label="מזהה תעודה" value={buyMeShortToken} />}
+          {buyMeDescription && (
+            <div className="rounded-xl bg-white/10 px-3 py-3 text-xs leading-relaxed text-eggplant">
+              <p className="font-bold text-forest">פרטי הספק</p>
+              <p className="mt-1 whitespace-pre-line">{buyMeDescription}</p>
+            </div>
+          )}
+          {buyMeInstructions && (
+            <div className="rounded-xl bg-white/10 px-3 py-3 text-xs leading-relaxed text-eggplant">
+              <p className="font-bold text-forest">הוראות מימוש</p>
+              <p className="mt-1 whitespace-pre-line">{buyMeInstructions}</p>
+            </div>
+          )}
           {!voucher.voucherCode && !voucher.barcodeValue && (
             <p className="text-xs leading-relaxed text-eggplant">
-              BuyMe לא שלח קוד או ברקוד לשובר הזה. במקרה כזה יש לפתוח את השובר
-              המקורי בקישור למעלה ולהציג את פרטי המימוש משם.
+              BuyMe לא החזיר קוד או מספר ברקוד עבור השובר הזה. RefundMe לא
+              ממציא ברקוד — השתמשו בכפתור ״הצגה בקופה״ כדי לראות את הנתונים
+              שנשמרו, או פתחו את השובר המקורי אם BuyMe מציג שם QR/ברקוד.
             </p>
           )}
         </section>
