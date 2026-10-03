@@ -262,11 +262,20 @@ export default function BuyMeImportPage() {
       if (app.mode === "supabase" && !app.user) {
         throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
       }
-      const key = buyMeVoucherKey(voucher);
+      const reviewedVoucher: Voucher = {
+        ...voucher,
+        extractionRaw: {
+          provider: "buyme",
+          externalId: String(reviewFields?.id ?? ""),
+          source: "buyme-review",
+          url: reviewFields?.url ?? null,
+        },
+      };
+      const key = buyMeVoucherKey(reviewedVoucher);
       if (key && app.vouchers.some((item) => buyMeVoucherKey(item) === key)) {
         throw new Error("המתנה הזו כבר נשמרה — לא נוצר כפילות");
       }
-      await app.saveVoucher(voucher);
+      await app.saveVoucher(reviewedVoucher);
       setImportedCount(1);
       setStep("success");
       window.setTimeout(() => router.push("/dashboard"), 900);
@@ -422,6 +431,22 @@ export default function BuyMeImportPage() {
 
       {step === "review" && reviewFields && (
         <div className="card-surface space-y-4 p-5">
+          <div className="rounded-2xl bg-[rgba(71,181,168,0.12)] px-4 py-3 text-sm">
+            <p className="font-semibold text-forest">מקור השובר</p>
+            <p className="mt-1 text-xs text-eggplant">
+              מזהה BuyMe: {String(reviewFields.id)}
+            </p>
+            {reviewFields.url && (
+              <a
+                href={reviewFields.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex font-bold text-forest underline"
+              >
+                פתיחת השובר ב־BuyMe ↗
+              </a>
+            )}
+          </div>
           <VoucherReviewForm
             initial={valuesFromExtraction(reviewFields.fields)}
             documentMeta={{ fileName: null, mimeType: null, dataUrl: null }}

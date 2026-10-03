@@ -6,6 +6,7 @@ import {
   readBuyMeImportHash,
   vouchersFromBuyMeApiCards,
   vouchersFromBuyMeGifts,
+  buyMeVoucherKey,
 } from "./buyme-import";
 import { BUYME_GIFTS_LIST_TEXT } from "./extract-fixtures/israeli-vouchers";
 
@@ -51,6 +52,14 @@ describe("buyme bulk import", () => {
     assert.equal(saved[0].voucherCode, "ABC123XYZ");
     assert.equal(saved[0].remainingAmountAgorot, 88100);
     assert.equal(saved[0].expiryConfidence, "confirmed");
+    assert.equal(saved[0].barcodeValue, "729000111");
+    assert.deepEqual(saved[0].extractionRaw, {
+      provider: "buyme",
+      externalId: "1",
+      source: "buyme-sync",
+      url: "https://buyme.co.il/x",
+    });
+    assert.equal(buyMeVoucherKey(saved[0]), "api:1");
   });
 
   it("builds connect bridge script that extracts Ember session on BuyMe", () => {

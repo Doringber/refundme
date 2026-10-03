@@ -21,14 +21,38 @@ type RawVoucherData = {
   title?: string;
   amount?: number;
   originalValue?: number;
-  serialnumber?: string;
+  serialnumber?: string | null;
+  code?: string | null;
   voucherBarcode?: string | null;
+  barcode?: string | null;
+  codes?: unknown;
   shortToken?: string | null;
   expiresAt?: string | null;
   used?: boolean;
   supplier?: { name?: string } | null;
   url?: string | null;
 };
+
+function textValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function nestedCodeValue(value: unknown, names: string[]): string | null {
+  if (!value || typeof value !== "object") return textValue(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = nestedCodeValue(item, names);
+      if (found) return found;
+    }
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  for (const name of names) {
+    const found = textValue(record[name]);
+    if (found) return found;
+  }
+  return null;
+}
 
 function toShekels(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -43,13 +67,21 @@ function normalizeCard(raw: RawVoucherData): BuyMeWalletCard | null {
   const balance = toShekels(raw.amount);
   if (balance == null) return null;
   const title = (raw.title || raw.supplier?.name || "BuyMe").trim();
+  const code =
+    textValue(raw.serialnumber) ||
+    textValue(raw.code) ||
+    nestedCodeValue(raw.codes, ["serialnumber", "code", "voucherCode"]);
+  const barcode =
+    textValue(raw.voucherBarcode) ||
+    textValue(raw.barcode) ||
+    nestedCodeValue(raw.codes, ["voucherBarcode", "barcode", "barcodeValue"]);
   return {
     id: raw.id,
     title,
     balanceShekels: balance,
     originalValueShekels: toShekels(raw.originalValue),
-    code: raw.serialnumber?.trim() || null,
-    barcode: raw.voucherBarcode?.trim() || null,
+    code,
+    barcode,
     expiresAt: raw.expiresAt ?? null,
     used: Boolean(raw.used),
     supplierName: raw.supplier?.name?.trim() || null,
