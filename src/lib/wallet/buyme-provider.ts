@@ -20,6 +20,7 @@ export function normalizeBuyMeCard(card: BuyMeWalletCard): NormalizedWalletItem 
     status,
     code: card.code,
     barcode: card.barcode,
+    url: card.url,
   };
 }
 

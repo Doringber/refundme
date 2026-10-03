@@ -25,6 +25,7 @@ export type VoucherWrite = {
     provider: "buyme";
     externalId: string;
     source: "buyme-sync";
+    url: string | null;
   };
 };
 
@@ -55,6 +56,7 @@ export function voucherWriteFromItem(item: NormalizedWalletItem): VoucherWrite {
       provider: "buyme",
       externalId: item.externalId,
       source: "buyme-sync",
+      url: item.url,
     },
   };
 }

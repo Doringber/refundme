@@ -15,7 +15,7 @@ const card: BuyMeWalletCard = {
   expiresAt: "2027-01-15T00:00:00.000Z",
   used: false,
   supplierName: "Fox",
-  url: null,
+  url: "https://buyme.co.il/giftcard/abc",
 };
 
 describe("BuyMe wallet sync", () => {
@@ -28,6 +28,7 @@ describe("BuyMe wallet sync", () => {
     assert.equal(item.remainingValueShekels, 187.5);
     assert.equal(item.expiresAt, "2027-01-15");
     assert.equal(item.status, "active");
+    assert.equal(item.url, "https://buyme.co.il/giftcard/abc");
   });
 
   it("plans insert vs update by external id", () => {
@@ -40,6 +41,10 @@ describe("BuyMe wallet sync", () => {
     const fresh = planBuyMeUpserts([], [item]);
     assert.equal(fresh.inserts.length, 1);
     assert.equal(fresh.inserts[0].extraction_raw.externalId, "42");
+    assert.equal(
+      fresh.inserts[0].extraction_raw.url,
+      "https://buyme.co.il/giftcard/abc",
+    );
   });
 
   it("does not plan duplicate inserts from repeated wallet rows", () => {

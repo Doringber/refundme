@@ -11,6 +11,7 @@ export type NormalizedWalletItem = {
   status: "active" | "used" | "expired";
   code: string | null;
   barcode: string | null;
+  url: string | null;
 };
 
 export type WalletSyncReport = {
