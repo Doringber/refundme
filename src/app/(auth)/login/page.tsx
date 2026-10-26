@@ -19,8 +19,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(
-    () => oauthErrorMessage(searchParams.get("error")),
+  const [error, setError] = useState<string | null>(() =>
+    oauthErrorMessage(
+      searchParams.get("error"),
+      searchParams.get("error_description"),
+    ),
   );
   const [busy, setBusy] = useState(false);
 
