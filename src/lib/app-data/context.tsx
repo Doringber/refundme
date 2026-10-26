@@ -377,13 +377,20 @@ export function useAppData(): AppDataValue {
   return ctx;
 }
 
+function hardNavigate(path: string): void {
+  // Full load so the server layout sees the demo cookie. A client router push
+  // keeps the previous RSC payload and the mode does not switch.
+  const destination = new URL(path, window.location.origin);
+  window.location.assign(destination.href);
+}
+
 /** Enter demo mode explicitly (sets cookie) and reloads into demo store */
 export function enterDemoMode(): void {
   document.cookie = `${DEMO_COOKIE}=1; path=/; max-age=31536000; samesite=lax`;
-  window.location.assign("/dashboard");
+  hardNavigate("/dashboard");
 }
 
 export function exitDemoMode(): void {
   document.cookie = `${DEMO_COOKIE}=; path=/; max-age=0; samesite=lax`;
-  window.location.assign("/");
+  hardNavigate("/");
 }

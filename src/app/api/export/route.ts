@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { mapActivity, mapRedemption, mapVoucher } from "@/lib/data/mappers";
+import { logServerError } from "@/lib/log";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { mapActivity, mapRedemption, mapVoucher } from "@/lib/data/mappers";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -27,6 +28,17 @@ export async function GET() {
     supabase.from("redemptions").select("*").eq("user_id", user.id),
     supabase.from("activity_events").select("*").eq("user_id", user.id),
   ]);
+
+  if (vouchers.error || redemptions.error || activity.error) {
+    logServerError(
+      "export",
+      vouchers.error?.message ||
+        redemptions.error?.message ||
+        activity.error?.message ||
+        "query failed",
+    );
+    return NextResponse.json({ error: "הייצוא נכשל" }, { status: 500 });
+  }
 
   const payload = {
     exportedAt: new Date().toISOString(),

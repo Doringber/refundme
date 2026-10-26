@@ -1,10 +1,38 @@
 import { NextResponse } from "next/server";
-import { suggestFieldsFromText, suggestFromFileName } from "@/lib/extract";
-import { extractFieldsFromImage } from "@/lib/extract-vision";
-import type { ExtractedFields } from "@/lib/types";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/constants";
+import { suggestFieldsFromText, suggestFromFileName } from "@/lib/extract";
+import {
+  canUseVisionExtraction,
+  extractFieldsFromImage,
+  shouldRunVisionExtraction,
+} from "@/lib/extract-vision";
+import { logServerError } from "@/lib/log";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
+import type { ExtractedFields } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+const MAX_EXTRACT_TEXT_CHARS = 100_000;
+
+function boundedText(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, MAX_EXTRACT_TEXT_CHARS);
+}
+
+async function callerIsAuthenticated(): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return Boolean(user);
+  } catch (error) {
+    logServerError("extract", error);
+    return false;
+  }
+}
 
 function mergeFields(
   a: ExtractedFields | null,
@@ -41,20 +69,17 @@ export async function POST(request: Request) {
   try {
     const form = await request.formData();
     const file = form.get("file");
-    const pastedText = form.get("text");
-    const ocrText = form.get("ocrText");
+    const pastedText = boundedText(form.get("text"));
+    const ocrText = boundedText(form.get("ocrText"));
 
-    if (typeof pastedText === "string" && pastedText.trim()) {
+    if (pastedText) {
       return NextResponse.json({
         fields: suggestFieldsFromText(pastedText),
         source: "text",
       });
     }
 
-    const fromOcr =
-      typeof ocrText === "string" && ocrText.trim()
-        ? suggestFieldsFromText(ocrText)
-        : null;
+    const fromOcr = ocrText ? suggestFieldsFromText(ocrText) : null;
 
     if (!(file instanceof File)) {
       if (fromOcr) {
@@ -88,8 +113,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "הקובץ גדול מדי" }, { status: 400 });
     }
 
+    const visionConfigured = canUseVisionExtraction();
+    const supabaseConfigured = isSupabaseConfigured();
+    const authenticated =
+      visionConfigured && supabaseConfigured
+        ? await callerIsAuthenticated()
+        : false;
     let fromVision: ExtractedFields | null = null;
-    if (file.type.startsWith("image/")) {
+    const runVision = shouldRunVisionExtraction({
+      visionConfigured,
+      supabaseConfigured,
+      authenticated,
+    });
+    if (runVision && file.type.startsWith("image/")) {
       fromVision = await extractFieldsFromImage(file);
     }
 
@@ -120,7 +156,8 @@ export async function POST(request: Request) {
           ? "לא הצלחנו לקרוא את כל השדות מהתמונה. מלאו ידנית לפי המסמך — התמונה תישמר."
           : "הוצעו שדות מהתמונה — אשרו ותקנו לפני השמירה.",
     });
-  } catch {
+  } catch (error) {
+    logServerError("extract", error);
     return NextResponse.json(
       { error: "שגיאה בחילוץ", fields: suggestFromFileName("") },
       { status: 500 },

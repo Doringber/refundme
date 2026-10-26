@@ -2,7 +2,7 @@
 
 אפליקציית ווב בעברית (RTL) לניהול זיכויי חנות ושוברי קנייה בישראל. צילום מסמך → אישור שדות → מעקב יתרה, תוקף וחנויות.
 
-**Working name:** זיכוי שלי · Stack: Next.js, TypeScript, Tailwind CSS, Supabase.
+**Working name:** זיכוי שלי · Stack: Next.js 16, TypeScript, Tailwind CSS, Supabase. Node.js 22.
 
 ## תכונות בגרסה 1
 
@@ -19,20 +19,26 @@
 
 ## הרצה מהירה (מצב דמו)
 
+דרוש Node.js 22.
+
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
 פתחו [http://localhost:3000](http://localhost:3000) → **כניסה למצב דמו**.
 
-הדמו שומר נתונים ב־`localStorage` עם דוגמאות בעברית (FOX, זארה, סופר-פארם, קבלת איקאה).
+הדמו שומר נתונים ב־`localStorage` עם דוגמאות בעברית (FOX, זארה, סופר-פארם, קבלת איקאה). בלי משתני Supabase האפליקציה נשארת בדמו.
 
 ```bash
-npm test          # בדיקות לוגיקת יתרה / תוקף / קבלות
-npm run build     # בניית production
-npm run lint
+npm test           # בדיקות לוגיקה (יתרה, תוקף, BuyMe, ברקוד)
+npm run lint       # eslint, בלי אזהרות
+npm run typecheck  # next typegen && tsc --noEmit
+npm run build      # בניית production
+npm start          # שרת production אחרי build, פורט 3000
 ```
+
+GitHub Actions (`.github/workflows/ci.yml`) מריץ את אותו רצף על כל PR ועל `main`: `npm ci`, `npm audit`, lint, typecheck, test, build.
 
 ## חיבור Supabase
 
@@ -47,15 +53,17 @@ SUPABASE_SECRET_KEY=sb_secret_...   # רק בשרת — למחיקת חשבון
 
 גם מפתחות קלאסיים (`ANON_KEY` / `SERVICE_ROLE_KEY`) נתמכים.
 
-3. הריצו את המיגרציה:
+3. הריצו את **כל** המיגרציות ב־`supabase/migrations/` לפי הסדר (לא רק את הראשונה). מחיקת חשבון וסנכרון BuyMe נשענים על הטבלאות המאוחרות.
 
 ```bash
 npx supabase db push
-# או הדביקו את הקובץ ב־SQL Editor:
+# או הדביקו ב־SQL Editor, לפי הסדר:
 # supabase/migrations/20260328180000_initial_schema.sql
+# supabase/migrations/20260929071118_google_login_profiles.sql
+# supabase/migrations/20261001193000_buyme_wallet_sync.sql
 ```
 
-המיגרציה כוללת:
+המיגרציה הראשונה כוללת:
 
 - טבלאות: `profiles`, `merchants`, `merchant_branches`, `vouchers`, `redemptions`, `activity_events`
 - **RLS** על כל רשומות המשתמש
@@ -76,17 +84,27 @@ npx supabase db push
 
 ### משתני סביבה (לעולם לא ב־git)
 
-שמרו מפתחות רק ב־`.env.local` מקומית, וב־Vercel / Netlify Environment Variables בפרודקשן.
+שמרו מפתחות רק ב־`.env.local` מקומית, וב־Netlify Environment Variables בפרודקשן.
 `.env*` ב־`.gitignore` — רק `.env.example` (placeholders) נכנס ל־git.
 
-| משתנה | היכן | תפקיד |
-|--------|------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | לקוח+שרת | כתובת הפרויקט |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | לקוח+שרת | מפתח publishable (`sb_publishable_…`, כפוף ל־RLS) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | alias ישן ל־anon JWT |
-| `SUPABASE_SECRET_KEY` | שרת בלבד (לא `NEXT_PUBLIC_`) | מחיקת חשבון ומסמכים (`sb_secret_…`) דרך `src/lib/supabase/secret.ts` |
-| `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | alias ישן ל־service_role |
-| `DOCUMENT_OCR_API_KEY` | שרת בלבד | אופציונלי ל־`/api/extract` |
+משתני `NEXT_PUBLIC_*` נצרבים לתוך הבאנדל בזמן `npm run build`. ב־Netlify הם חייבים להיות מוגדרים **לפני** הבילד, לא רק בזמן ריצה. בלי זה הדפדפן חושב שהאפליקציה במצב דמו בזמן שהשרת כבר דורש התחברות.
+
+| משתנה | היכן | חובה? | תפקיד |
+|--------|------|--------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | לקוח+שרת | לענן | כתובת הפרויקט |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | לקוח+שרת | לענן | מפתח publishable (`sb_publishable_…`, כפוף ל־RLS) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | לא | alias ישן ל־anon JWT |
+| `SUPABASE_SECRET_KEY` | שרת בלבד (לא `NEXT_PUBLIC_`) | לענן | מחיקת חשבון, מסמכים וסנכרון BuyMe (`sb_secret_…`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | לא | alias ישן ל־service_role |
+| `BUYME_SESSION_KEY` | שרת בלבד | מומלץ | הצפנת סשן BuyMe ב־DB. בלי זה נופלים ל־`SUPABASE_SECRET_KEY`, ורוטציה של המפתח מנתקת את כולם |
+| `CRON_SECRET` | שרת בלבד | לסנכרון מתוזמן | סוד ל־`POST /api/cron/buyme-sync` בכותרת `x-cron-secret`. בלי ערך הנתיב נעול |
+| `GEMINI_API_KEY` | שרת בלבד | לא | חילוץ מתמונה מקומי. `GOOGLE_API_KEY` הוא alias |
+| `GOOGLE_GEMINI_BASE_URL` | שרת בלבד | לא | מוגדר אוטומטית כש־Netlify AI Gateway פעיל |
+| `DOCUMENT_OCR_API_KEY` | שרת בלבד | לא | מפתח OCR ישן; לא בשימוש כש־Gemini זמין |
+
+כש־Supabase מוגדר, `src/proxy.ts` שולח את מסכי האפליקציה (`/dashboard`, `/vouchers`, `/stores`, `/settings`, `/activity`) ל־`/login` בלי סשן ובלי עוגיית דמו. `/api/extract` קורא ל־Gemini רק למשתמש מחובר. בלי Supabase (דמו מקומי) Gemini רץ אם המפתח מוגדר.
+
+Next.js 16 מריץ את זה כ־`proxy` (Node), לא כ־middleware על Edge. אחרי השדרוג צריך לוודא ש־deploy ב־Netlify באמת מפעיל את `src/proxy.ts` (רענון סשן והפניה ל־login).
 
 אחרי התחברות/הרשמה האפליקציה קוראת וכותבת ל־Supabase (`profiles`, `vouchers`, `redemptions`, `activity_events`, storage `voucher-documents`). מצב דמו נשאר מקומי דרך cookie `zikuy_demo`.
 
@@ -94,7 +112,7 @@ npx supabase db push
 
 - העלאת תמונה נדחסת ל־JPEG לתצוגה ושמירה (גם בדמו וגם בענן).
 - HEIC מאייפון: ניסיון המרה אוטומטית; אם הדפדפן לא תומך — הודעה ברורה.
-- **חילוץ משדה**: אחרי צילום רץ OCR בעברית בדפדפן + פרסר לשוברים ישראליים (שופרסל / סופר-פארם / יוחננוף וכו׳). ב־Netlify עם **AI Gateway** נוסף גם Gemini Vision.
+- **חילוץ משדה**: אחרי צילום רץ OCR בעברית בדפדפן + פרסר לשוברים ישראליים (שופרסל / סופר-פארם / יוחננוף וכו׳). ב־Netlify עם **AI Gateway**, Gemini Vision רץ רק למשתמש מחובר.
 - במסך הוספה יש כפתורי **דוגמאות חיות** (תמונות אמיתיות) לבדיקה.
 - בפרודקשן הגדירו את משתני Supabase ב־Netlify Environment Variables (לא ב־git).
 
@@ -121,4 +139,32 @@ supabase/migrations/    # סכמה + RLS + storage
 - יתרה מאומתת מול מערכת הקופה
 - מימוש דיגיטלי / ברקוד דינמי בקופה
 - רשימת סניפים מלאה ומדיניות קבלה בזמן אמת לכל רשת
-- OCR מסחרי איכותי (אופציונלי דרך `DOCUMENT_OCR_API_KEY`)
+- OCR מסחרי איכותי (אופציונלי דרך Gemini / `DOCUMENT_OCR_API_KEY`)
+
+## פריסה
+
+הקונפיגורציה בריפו היא **Netlify** (`netlify.toml`): `npm run build`, פרסום `.next`, Node 22. אין Dockerfile. בחירת ספק אחר (Vercel, קונטיינר) דורשת החלטה — אל תניחו שה־`netlify.toml` יעבוד שם כמו שהוא.
+
+1. חברו את הריפו לאתר Netlify.
+2. הגדירו את משתני הסביבה מהטבלה למעלה ב־Site configuration (לא ב־git).
+3. הפעילו AI Gateway באתר אם רוצים חילוץ Gemini למשתמשים מחוברים.
+4. אחרי deploy, ודאו התחברות Google מול ה־redirect של הדומיין האמיתי.
+5. סנכרון BuyMe כל כמה שעות אינו רשום ב־`netlify.toml`. צריך מתזמן חיצוני:
+
+```bash
+curl -X POST "$SITE_URL/api/cron/buyme-sync" \
+  -H "x-cron-secret: $CRON_SECRET"
+```
+
+בלי `CRON_SECRET` הקריאה נדחית. שרת Node רגיל: `npm run build && npm start`.
+
+## בדיקות לפני שחרור
+
+```bash
+npm ci
+npm audit --audit-level=high
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```

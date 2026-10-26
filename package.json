@@ -2,25 +2,29 @@
   "name": "zikuy-sheli",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "tsx --test src/lib/calculations.test.ts src/lib/extract.test.ts src/lib/extract-buyme.test.ts src/lib/buyme-import.test.ts src/lib/buyme/session.test.ts src/lib/buyme/transport.test.ts src/lib/wallet/buyme-sync.test.ts src/lib/calendar/expiry-reminders.test.ts src/lib/notifications/expiry-alerts.test.ts src/lib/barcode/code128.test.ts src/lib/home-headline.test.ts"
+    "lint": "eslint --max-warnings 0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "date-fns": "^4.4.0",
-    "next": "16.3.6",
+    "next": "16.4.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
     "tesseract.js": "^7.0.0",
     "uuid": "^14.0.2",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -29,7 +33,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

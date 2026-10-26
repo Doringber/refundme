@@ -10,9 +10,13 @@
   SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.next/server/**,.next/standalone/**,.netlify/.next/cache/**,.netlify/.next/server/**,.netlify/.next/standalone/**,.netlify/functions-internal/**"
 
 # Set these in Netlify UI → Site configuration → Environment variables
-# (never commit real values):
+# (never commit real values). See .env.example for the full list.
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY          # optional legacy alias
-#   SUPABASE_SECRET_KEY                   # server only — NOT NEXT_PUBLIC_
-# Enable Netlify AI Gateway in the site UI so /api/extract can read voucher photos.
+#   SUPABASE_SECRET_KEY                    # server only — NOT NEXT_PUBLIC_
+#   BUYME_SESSION_KEY                      # server only; dedicated key recommended
+#   CRON_SECRET                            # server only; POST /api/cron/buyme-sync
+# Enable Netlify AI Gateway in the site UI so signed-in users can use Gemini
+# on /api/extract. There is no schedule in this file: point an external cron
+# at POST /api/cron/buyme-sync with header x-cron-secret.
