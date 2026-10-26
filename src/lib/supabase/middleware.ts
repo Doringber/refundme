@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { proxySkipsSessionRefresh, signedInEntryRedirect } from "@/lib/auth/oauth-callback";
 import { DEMO_COOKIE } from "@/lib/constants";
 import { logServerError } from "@/lib/log";
 import { getSupabasePublicEnv } from "./config";
@@ -18,7 +19,19 @@ function isProtectedPath(pathname: string): boolean {
   );
 }
 
+function redirectKeepingCookies(url: URL, supabaseResponse: NextResponse) {
+  const redirectResponse = NextResponse.redirect(url);
+  supabaseResponse.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie);
+  });
+  return redirectResponse;
+}
+
 export async function updateSession(request: NextRequest) {
+  if (proxySkipsSessionRefresh(request.nextUrl.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
   const env = getSupabasePublicEnv();
   if (!env) return supabaseResponse;
@@ -52,16 +65,20 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  const entry = signedInEntryRedirect(request.nextUrl.pathname, userId);
+  if (entry) {
+    const url = request.nextUrl.clone();
+    url.pathname = entry;
+    url.search = "";
+    return redirectKeepingCookies(url, supabaseResponse);
+  }
+
   const demo = request.cookies.get(DEMO_COOKIE)?.value === "1";
   if (!userId && !demo && isProtectedPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    const redirectResponse = NextResponse.redirect(url);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie);
-    });
-    return redirectResponse;
+    return redirectKeepingCookies(url, supabaseResponse);
   }
 
   return supabaseResponse;
