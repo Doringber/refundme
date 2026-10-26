@@ -34,34 +34,6 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-function useCountUp(target: number, durationMs: number, enabled: boolean) {
-  const [value, setValue] = useState(target);
-  const prev = useRef(target);
-
-  useEffect(() => {
-    if (!enabled) {
-      prev.current = target;
-      const id = requestAnimationFrame(() => setValue(target));
-      return () => cancelAnimationFrame(id);
-    }
-    if (prev.current === target) return;
-    const from = prev.current;
-    const start = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(Math.round(from + (target - from) * eased));
-      if (t < 1) frame = requestAnimationFrame(tick);
-      else prev.current = target;
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target, durationMs, enabled]);
-
-  return enabled ? value : target;
-}
-
 function useAnimatedFill(fillRatio: number, enabled: boolean) {
   const [animatedFill, setAnimatedFill] = useState(fillRatio);
   const fromRef = useRef(fillRatio);
@@ -105,7 +77,6 @@ export function CreditOrb({
 }: CreditOrbProps) {
   const uid = useId();
   const reducedMotion = usePrefersReducedMotion();
-  const displayTotal = useCountUp(totalAgorot, 900, !reducedMotion);
   const [gainFlash, setGainFlash] = useState<number | null>(null);
 
   useEffect(() => {
@@ -294,12 +265,6 @@ export function CreditOrb({
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
           <p className="text-sm font-semibold text-[color:var(--orb-ink-muted,#2f4f3acc)]">
             זיכויים זמינים
-          </p>
-          <p className="font-display mt-1 text-5xl tracking-tight text-[color:var(--orb-ink,#2f4f3a)]">
-            {formatIls(displayTotal)}
-          </p>
-          <p className="mt-1 text-xs font-medium text-[color:var(--orb-ink-soft,#5d7564)]">
-            יתרה לפי הדיווח שלך
           </p>
           {scaleLabel ? (
             <p className="mt-1 text-xs text-[color:var(--orb-ink-faint,#2f4f3a8c)]">

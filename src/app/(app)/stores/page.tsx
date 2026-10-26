@@ -1,30 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { LoadingBlock } from "@/components/ui/loading";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls } from "@/lib/calculations";
 import { DEMO_BRANCHES, DEMO_MERCHANTS } from "@/lib/demo/data";
 import { createClient } from "@/lib/supabase/client";
+import { catalogForVoucher } from "@/lib/stores/lookup";
 import {
   formatDistanceKm,
   haversineKm,
-  NEARBY_RADIUS_KM,
-  nearbyRedeemableCredits,
+  isRedeemableVoucher,
   voucherMatchesBranch,
 } from "@/lib/stores/nearby";
-import type { BranchAcceptance, MerchantBranch } from "@/lib/types";
+import type { MerchantBranch, Voucher } from "@/lib/types";
 
-function acceptanceLabel(acceptance: BranchAcceptance): { text: string; cls: string } {
-  switch (acceptance) {
-    case "verified":
-      return { text: "קבלה מאומתת בסניף זה", cls: "badge-pool" };
-    case "not_accepted":
-      return { text: "לא מתקבל בסניף זה", cls: "badge-poppy" };
-    default:
-      return { text: "לא אומת — אל תניחו שכל סניף מקבל", cls: "badge-daffodil" };
-  }
-}
+type PlaceHit = {
+  name: string;
+  address: string | null;
+  distanceKm: number;
+};
+
+type LookupState = {
+  label: string | null;
+  brandCount: number | null;
+  places: PlaceHit[];
+  status: "idle" | "loading" | "ok" | "no_places" | "catalog_unavailable" | "places_unavailable";
+};
 
 function asNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -34,24 +37,46 @@ function asNumber(value: unknown): number | null {
   return null;
 }
 
+function lookupKey(voucher: Voucher): string {
+  const catalog = catalogForVoucher(voucher);
+  return catalog ? `catalog:${catalog.id}` : `merchant:${voucher.merchantName}`;
+}
+
 export default function StoresPage() {
   const app = useAppData();
-  const [city, setCity] = useState("");
   const [query, setQuery] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
   const [locBusy, setLocBusy] = useState(false);
-  const [remote, setRemote] = useState<MerchantBranch[] | null>(null);
+  const [remoteBranches, setRemoteBranches] = useState<MerchantBranch[] | null>(null);
   const [remoteFor, setRemoteFor] = useState<string | null>(null);
-  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [lookups, setLookups] = useState<Record<string, LookupState>>({});
   const userId = app.mode === "supabase" ? (app.user?.id ?? null) : null;
+
+  const spendable = useMemo(
+    () => app.vouchers.filter(isRedeemableVoucher),
+    [app.vouchers],
+  );
+  const targets = useMemo(() => {
+    const catalogs = new Map<string, string>();
+    const merchants = new Set<string>();
+    for (const voucher of spendable) {
+      const catalog = catalogForVoucher(voucher);
+      if (catalog) catalogs.set(catalog.id, catalog.label);
+      else merchants.add(voucher.merchantName);
+    }
+    return {
+      catalogs: [...catalogs.entries()],
+      merchants: [...merchants],
+    };
+  }, [spendable]);
+  const targetKey = `${targets.catalogs.map(([id]) => id).join(",")}|${targets.merchants.join(",")}|${coords?.lat ?? ""}|${coords?.lng ?? ""}`;
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     const supabase = createClient();
     void (async () => {
-      setRemoteError(null);
       const [merchantsRes, branchesRes] = await Promise.all([
         supabase.from("merchants").select("id,name_he"),
         supabase
@@ -60,15 +85,14 @@ export default function StoresPage() {
       ]);
       if (cancelled) return;
       if (merchantsRes.error || branchesRes.error) {
-        setRemoteError("לא הצלחנו לטעון את רשימת הסניפים");
-        setRemote([]);
+        setRemoteBranches([]);
         setRemoteFor(userId);
         return;
       }
       const names = new Map(
         (merchantsRes.data ?? []).map((merchant) => [merchant.id, merchant.name_he]),
       );
-      setRemote(
+      setRemoteBranches(
         (branchesRes.data ?? []).map((row) => ({
           id: row.id,
           merchantId: row.merchant_id,
@@ -83,69 +107,94 @@ export default function StoresPage() {
         })),
       );
       setRemoteFor(userId);
-      setRemoteError(null);
     })();
     return () => {
       cancelled = true;
     };
   }, [userId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const catalogIds = targets.catalogs.map(([id]) => id);
+    if (!catalogIds.length && !(coords && targets.merchants.length)) return;
+
+    void (async () => {
+      const next: Record<string, LookupState> = {};
+      await Promise.all([
+        ...catalogIds.map(async (id) => {
+          const key = `catalog:${id}`;
+          if (!coords) {
+            const res = await fetch(`/api/stores/nearby?id=${id}`);
+            const json = (await res.json()) as {
+              label?: string | null;
+              brandCount?: number | null;
+              status?: LookupState["status"];
+            };
+            next[key] = {
+              label: json.label ?? null,
+              brandCount: json.brandCount ?? null,
+              places: [],
+              status: res.ok ? "ok" : "catalog_unavailable",
+            };
+            return;
+          }
+          const res = await fetch("/api/stores/nearby", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ lat: coords.lat, lng: coords.lng, catalogId: id }),
+          });
+          const json = (await res.json()) as LookupState;
+          next[key] = {
+            label: json.label ?? null,
+            brandCount: json.brandCount ?? null,
+            places: json.places ?? [],
+            status: json.status ?? "places_unavailable",
+          };
+        }),
+        ...(coords
+          ? targets.merchants.map(async (name) => {
+              const res = await fetch("/api/stores/nearby", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  lat: coords.lat,
+                  lng: coords.lng,
+                  merchantName: name,
+                }),
+              });
+              const json = (await res.json()) as LookupState;
+              next[`merchant:${name}`] = {
+                label: json.label ?? name,
+                brandCount: null,
+                places: json.places ?? [],
+                status: json.status ?? "places_unavailable",
+              };
+            })
+          : []),
+      ]);
+      if (!cancelled) setLookups(next);
+    })().catch(() => {
+      if (!cancelled) setLookups({});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [targetKey, coords, targets.catalogs, targets.merchants]);
+
   const sourceBranches = useMemo(() => {
     if (app.mode !== "supabase") return DEMO_BRANCHES;
     if (!userId || remoteFor !== userId) return [];
-    return remote ?? [];
-  }, [app.mode, userId, remote, remoteFor]);
+    return remoteBranches ?? [];
+  }, [app.mode, userId, remoteBranches, remoteFor]);
   const demoNames = useMemo(
     () => new Map(DEMO_MERCHANTS.map((merchant) => [merchant.id, merchant.nameHe])),
     [],
   );
 
-  const cities = useMemo(
-    () => [...new Set(sourceBranches.map((branch) => branch.city))].sort((a, b) => a.localeCompare(b, "he")),
-    [sourceBranches],
-  );
-
-  const branches = useMemo(() => {
-    let list = sourceBranches.map((branch) => ({
-      ...branch,
-      merchantNameHe:
-        branch.merchantNameHe ?? demoNames.get(branch.merchantId) ?? undefined,
-      distanceKm:
-        coords && branch.lat != null && branch.lng != null
-          ? haversineKm(coords.lat, coords.lng, branch.lat, branch.lng)
-          : null,
-    }));
-    if (city) list = list.filter((branch) => branch.city === city);
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      list = list.filter(
-        (branch) =>
-          branch.nameHe.toLowerCase().includes(q) ||
-          branch.addressHe.toLowerCase().includes(q) ||
-          (branch.merchantNameHe ?? "").toLowerCase().includes(q) ||
-          branch.city.toLowerCase().includes(q),
-      );
-    }
-    list.sort((a, b) => {
-      if (coords) return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
-      return a.city.localeCompare(b.city, "he") || a.nameHe.localeCompare(b.nameHe, "he");
-    });
-    return list;
-  }, [sourceBranches, demoNames, city, query, coords]);
-
-  const credits = useMemo(
-    () =>
-      nearbyRedeemableCredits(branches, app.vouchers, {
-        hasLocation: coords != null,
-        city,
-      }),
-    [branches, app.vouchers, coords, city],
-  );
-
   function requestLocation() {
     setLocError(null);
     if (!navigator.geolocation) {
-      setLocError("הדפדפן אינו תומך במיקום. בחרו עיר במקום.");
+      setLocError("הדפדפן אינו תומך במיקום.");
       return;
     }
     setLocBusy(true);
@@ -157,8 +206,8 @@ export default function StoresPage() {
       (err) => {
         setLocError(
           err.code === 1
-            ? "המיקום לא אושר. אפשר לבחור עיר או לחפש לפי שם."
-            : "לא הצלחנו לקבל מיקום. אפשר לבחור עיר.",
+            ? "המיקום לא אושר. בלי מיקום אי אפשר למיין לפי מרחק."
+            : "לא הצלחנו לקבל מיקום.",
         );
         setLocBusy(false);
       },
@@ -166,151 +215,262 @@ export default function StoresPage() {
     );
   }
 
-  const waitingForBranches = Boolean(userId) && remoteFor !== userId && !remoteError;
+  const waitingForBranches = Boolean(userId) && remoteFor !== userId;
   if (!app.ready || waitingForBranches) return <LoadingBlock />;
+
+  const needle = query.trim().toLowerCase();
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl text-forest">חנויות בקרבתי</h1>
+        <h1 className="font-display text-2xl text-forest">איפה אפשר לממש</h1>
         <p className="text-sm text-eggplant">
-          סניפים לפי מרחק, רק אחרי שתאשרו מיקום. המיקום נשאר במכשיר ולא נשמר
-          בחשבון. סימון הקבלה הוא לפי אימות ידני — לא מסיקים שכל סניף מקבל את
-          השובר.
+          לפי הזיכויים שלכם. כרטיס BuyMe מרובה־מותגים משתמש ברשימה הציבורית של
+          BuyMe, והמרחק מגיע מהמפה הפתוחה. המיקום נשאר במכשיר ולא נשמר.
         </p>
       </div>
 
-      <div className="card-surface grid gap-3 p-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">עיר</span>
-          <select
-            className="input-field"
-            value={city}
-            onChange={(event) => setCity(event.target.value)}
+      <div className="card-surface space-y-3 p-4">
+        <button
+          type="button"
+          className="btn-primary w-full"
+          onClick={requestLocation}
+          disabled={locBusy}
+        >
+          {locBusy
+            ? "מאתר…"
+            : coords
+              ? "המיקום פעיל — עדכון"
+              : "מציאת בתי עסק לפי המיקום שלי"}
+        </button>
+        {coords && (
+          <button
+            type="button"
+            className="min-h-11 w-full text-sm font-bold text-eggplant underline"
+            onClick={() => setCoords(null)}
           >
-            <option value="">כל הערים</option>
-            {cities.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+            ניקוי המיקום מהמסך
+          </button>
+        )}
+        {locError && (
+          <p className="text-sm text-[#a33a28]" role="alert">
+            {locError}
+          </p>
+        )}
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">חיפוש</span>
+          <span className="mb-1 block font-medium">סינון</span>
           <input
             className="input-field"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="רשת, סניף, כתובת…"
+            placeholder="שם בית עסק או כתובת"
           />
         </label>
-        <div className="sm:col-span-2 space-y-2">
-          <button
-            type="button"
-            className="btn-secondary w-full py-3"
-            onClick={requestLocation}
-            disabled={locBusy}
-          >
-            {locBusy ? "מאתר…" : "מציאת סניפים לפי המיקום שלי"}
-          </button>
-          {coords && (
-            <button
-              type="button"
-              className="w-full text-xs font-bold text-eggplant underline"
-              onClick={() => setCoords(null)}
-            >
-              ניקוי המיקום מהמסך
-            </button>
-          )}
-          {coords && (
-            <p className="text-xs text-eggplant">ממוין לפי מרחק. המיקום לא נשמר.</p>
-          )}
-          {locError && (
-            <p className="text-xs text-[#a33a28]" role="alert">
-              {locError}
-            </p>
-          )}
-        </div>
       </div>
 
-      {remoteError && (
-        <p className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm" role="alert">
-          {remoteError}
-        </p>
-      )}
-
-      {credits.length > 0 && (
-        <ul className="space-y-2" data-testid="nearby-credits">
-          {credits.map((credit) => (
-            <li
-              key={credit.voucherId}
-              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-bold text-forest"
-            >
-              {`יש לך זיכוי בשווי ${formatIls(credit.amountAgorot)} שמתאים ל${credit.merchantName} באזור`}
-              {credit.nearestBranchName ? ` · ${credit.nearestBranchName}` : ""}
-              {credit.distanceKm != null ? ` · ${formatDistanceKm(credit.distanceKm)}` : ""}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {branches.length === 0 ? (
-        <p className="card-surface px-4 py-8 text-center text-sm text-eggplant">
-          לא נמצאו סניפים לחיפוש הזה.
+      {spendable.length === 0 ? (
+        <p className="card-surface px-4 py-6 text-center text-sm text-eggplant">
+          אין זיכויים פעילים. אחרי שיופיע זיכוי, נציג בתי עסק שמקבלים אותו.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {branches.map((branch) => {
-            const badge = acceptanceLabel(branch.acceptance);
-            const inArea =
-              branch.acceptance !== "not_accepted" &&
-              (coords
-                ? branch.distanceKm != null && branch.distanceKm <= NEARBY_RADIUS_KM
-                : city !== "" && branch.city === city);
-            const match = inArea
-              ? credits.find((credit) => {
-                  const voucher = app.vouchers.find((item) => item.id === credit.voucherId);
-                  return voucher ? voucherMatchesBranch(voucher, branch) : false;
-                })
-              : undefined;
+        <div className="space-y-4">
+          {spendable.map((voucher) => {
+            const catalog = catalogForVoucher(voucher);
+            const lookup = lookups[lookupKey(voucher)];
+            const local = catalog
+              ? []
+              : sourceBranches
+                  .filter(
+                    (branch) =>
+                      branch.acceptance !== "not_accepted" &&
+                      voucherMatchesBranch(
+                        voucher,
+                        {
+                          ...branch,
+                          merchantNameHe:
+                            branch.merchantNameHe ??
+                            demoNames.get(branch.merchantId) ??
+                            undefined,
+                        },
+                      ),
+                  )
+                  .map((branch) => ({
+                    ...branch,
+                    merchantNameHe:
+                      branch.merchantNameHe ?? demoNames.get(branch.merchantId),
+                    distanceKm:
+                      coords && branch.lat != null && branch.lng != null
+                        ? haversineKm(coords.lat, coords.lng, branch.lat, branch.lng)
+                        : null,
+                  }))
+                  .filter((branch) => branch.distanceKm == null || branch.distanceKm <= 40)
+                  .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+
+            const remotePlaces =
+              catalog || local.length === 0 ? (lookup?.places ?? []) : [];
+            const rows = [
+              ...local.map((branch) => ({
+                key: branch.id,
+                name: branch.merchantNameHe || branch.nameHe,
+                detail: `${branch.nameHe} · ${branch.city} · ${branch.addressHe}`,
+                distanceKm: branch.distanceKm,
+              })),
+              ...remotePlaces.map((place, index) => ({
+                key: `${place.name}-${index}`,
+                name: place.name,
+                detail: place.address ?? "כתובת לא פורסמה",
+                distanceKm: place.distanceKm,
+              })),
+            ].filter((row) => {
+              if (!needle) return true;
+              return (
+                row.name.toLowerCase().includes(needle) ||
+                row.detail.toLowerCase().includes(needle)
+              );
+            });
+
             return (
-              <li key={branch.id} className="card-surface px-4 py-4">
+              <section key={voucher.id} className="card-surface space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-display text-lg text-forest">
-                      {branch.merchantNameHe}
-                    </p>
-                    <p className="font-medium text-night">{branch.nameHe}</p>
+                    <h2 className="font-display text-lg text-forest">
+                      {voucher.merchantName}
+                    </h2>
                     <p className="text-sm text-eggplant">
-                      {branch.city} · {branch.addressHe}
+                      יתרה {formatIls(voucher.remainingAmountAgorot)}
                     </p>
-                    {branch.lat == null || branch.lng == null ? (
-                      <p className="mt-1 text-xs text-eggplant">אין נקודת מיקום לסניף</p>
-                    ) : null}
-                    {branch.notesHe && (
-                      <p className="mt-1 text-xs text-eggplant">{branch.notesHe}</p>
-                    )}
                   </div>
-                  {branch.distanceKm != null && (
-                    <p className="text-sm font-semibold text-forest">
-                      {formatDistanceKm(branch.distanceKm)}
-                    </p>
-                  )}
+                  <Link
+                    href={`/vouchers/${voucher.id}`}
+                    className="min-h-11 text-sm font-extrabold text-forest"
+                  >
+                    לשובר
+                  </Link>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`badge ${badge.cls}`}>{badge.text}</span>
-                  {match && (
-                    <span className="badge badge-pool">
-                      יש לך זיכוי בשווי {formatIls(match.amountAgorot)}
-                    </span>
-                  )}
-                </div>
-              </li>
+                <VoucherNote
+                  catalog={Boolean(catalog)}
+                  merchantName={voucher.merchantName}
+                  lookup={lookup}
+                  hasLocation={coords != null}
+                  localCount={local.length}
+                />
+                {rows.length > 0 && (
+                  <ul className="space-y-2">
+                    {rows.map((row) => (
+                      <li
+                        key={row.key}
+                        className="flex items-start justify-between gap-3 rounded-2xl bg-white/10 px-3 py-3"
+                      >
+                        <div>
+                          <p className="font-extrabold text-night">{row.name}</p>
+                          <p className="text-sm text-eggplant">{row.detail}</p>
+                        </div>
+                        {row.distanceKm != null && (
+                          <p className="text-sm font-extrabold text-forest">
+                            {formatDistanceKm(row.distanceKm)}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
+  );
+}
+
+function VoucherNote({
+  catalog,
+  merchantName,
+  lookup,
+  hasLocation,
+  localCount,
+}: {
+  catalog: boolean;
+  merchantName: string;
+  lookup: LookupState | undefined;
+  hasLocation: boolean;
+  localCount: number;
+}) {
+  if (catalog) {
+    if (!lookup || lookup.status === "loading" || lookup.status === "idle") {
+      return (
+        <p className="text-sm text-eggplant">טוענים את רשימת בתי העסק של BuyMe…</p>
+      );
+    }
+    if (lookup.status === "catalog_unavailable") {
+      return (
+        <p className="text-sm text-eggplant">
+          לא הצלחנו לטעון את הרשימה הציבורית של BuyMe לשובר הזה.
+        </p>
+      );
+    }
+    if (!hasLocation) {
+      return (
+        <p className="text-sm text-eggplant">
+          BuyMe מפרסם {lookup.brandCount ?? "רשימת"} בתי עסק שמקבלים את{" "}
+          {lookup.label ?? merchantName}. אשרו מיקום כדי לראות מה קרוב.
+        </p>
+      );
+    }
+    if (lookup.status === "places_unavailable") {
+      return (
+        <p className="text-sm text-eggplant">
+          הרשימה הציבורית כוללת {lookup.brandCount ?? "כמה"} בתי עסק, אבל חיפוש
+          המרחק לא זמין כרגע.
+        </p>
+      );
+    }
+    if (lookup.status === "no_places" || lookup.places.length === 0) {
+      return (
+        <p className="text-sm text-eggplant">
+          לא נמצא סניף קרוב מתוך {lookup.brandCount ?? "רשימת"} בתי העסק. ל־BuyMe
+          אין נקודת מפה לכל סניף, וההתאמה היא לפי שם מול המפה הפתוחה.
+        </p>
+      );
+    }
+    return (
+      <p className="text-sm text-eggplant">
+        בתי עסק מהרשימה הציבורית של {lookup.label ?? merchantName}, לפי מרחק.
+      </p>
+    );
+  }
+
+  if (localCount > 0) {
+    return (
+      <p className="text-sm text-eggplant">
+        {hasLocation
+          ? "סניפים של הרשת הזו לפי מרחק."
+          : "סניפים של הרשת הזו. מרחק יופיע אחרי אישור מיקום."}
+      </p>
+    );
+  }
+  if (!hasLocation) {
+    return (
+      <p className="text-sm text-eggplant">
+        אין רשימת סניפים שמורה ל־{merchantName}. אשרו מיקום כדי לחפש במפה.
+      </p>
+    );
+  }
+  if (!lookup || lookup.status === "places_unavailable") {
+    return (
+      <p className="text-sm text-eggplant">
+        אין מידע על סניפים של {merchantName} ליד המיקום. לא מציגים רשימת רשתות אחרת.
+      </p>
+    );
+  }
+  if (lookup.places.length === 0) {
+    return (
+      <p className="text-sm text-eggplant">
+        לא נמצאו סניפים של {merchantName} ליד המיקום.
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm text-eggplant">מקומות במפה הפתוחה שתואמים ל־{merchantName}.</p>
   );
 }

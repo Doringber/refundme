@@ -1,50 +1,41 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import {
-  BUYME_SITE_URL,
-  buyMeBookmarkletHref,
-} from "@/lib/buyme-import";
+import { useSyncExternalStore } from "react";
+import { BUYME_SITE_URL, buyMeBookmarkletHref } from "@/lib/buyme-import";
 
 function subscribe() {
   return () => {};
 }
 
-export type BuyMeConnectCardProps = {
-  /** Called after we open the BuyMe window — parent can show “waiting”. */
-  onPopupOpened?: () => void;
-};
-
 /**
- * One-time BuyMe window → sign in → paste the connection step in that
- * window’s address bar → token saved → continue with API.
- *
- * No bookmarks bar. Browsers block reading BuyMe storage from our origin,
- * so the connect script must run inside the BuyMe window (paste + Enter).
+ * Existing BuyMe connect: open the site and copy the bridge that returns
+ * the user's own session token. Settings is the only screen that shows this.
  */
-export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
+export function BuyMeConnectCard({
+  label,
+  variant = "primary",
+  onOpened,
+}: {
+  label: string;
+  variant?: "primary" | "secondary";
+  onOpened?: (copied: boolean) => void;
+}) {
   const href = useSyncExternalStore(
     subscribe,
     () => buyMeBookmarkletHref(window.location.origin),
-    () => "#",
+    () => "",
   );
-  const [opened, setOpened] = useState(false);
-  const [copyState, setCopyState] = useState<"idle" | "ok" | "fail">("idle");
-
-  async function copyBridge() {
-    try {
-      await navigator.clipboard.writeText(href);
-      setCopyState("ok");
-      window.setTimeout(() => setCopyState("idle"), 2500);
-      return true;
-    } catch {
-      setCopyState("fail");
-      return false;
-    }
-  }
 
   async function openBuyMeWindow() {
-    await copyBridge();
+    let copied = false;
+    if (href) {
+      try {
+        await navigator.clipboard.writeText(href);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
     const popup = window.open(
       BUYME_SITE_URL,
       "buyme_connect",
@@ -59,58 +50,17 @@ export function BuyMeConnectCard({ onPopupOpened }: BuyMeConnectCardProps) {
     } catch {
       /* ignore */
     }
-    setOpened(true);
-    onPopupOpened?.();
+    onOpened?.(copied);
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-[rgba(71,181,168,0.35)] bg-[rgba(71,181,168,0.08)] px-4 py-4">
-      <div>
-        <p className="font-display text-base text-forest">חיבור ל־BuyMe</p>
-        <p className="mt-1 text-xs font-semibold leading-relaxed text-eggplant">
-          חיבור חד־פעמי: מתחברים ב־BuyMe, מריצים את שלב החיבור, ואז הארנק נטען
-          כאן. הסיסמה לא עוברת דרך RefundMe.
-        </p>
-      </div>
-
-      <button
-        type="button"
-        className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
-        onClick={() => void openBuyMeWindow()}
-        data-testid="buyme-open-popup"
-      >
-        {opened ? "החלון פתוח — התחברו ב־BuyMe" : "התחברות חד־פעמית ל־BuyMe"}
-      </button>
-
-      {opened && (
-        <div className="space-y-2 rounded-xl bg-white/10 px-3 py-3">
-          <p className="text-xs font-bold text-forest">בחלון של BuyMe</p>
-          <ol className="list-decimal space-y-1 pe-5 text-[11px] font-semibold leading-relaxed text-eggplant">
-            <li>התחברו (גוגל) ופתחו «המתנות שלי»</li>
-            <li>
-              כתבו קודם <code>javascript:</code> בשורת הכתובת ← הדביקו (
-              <span className="whitespace-nowrap">Ctrl+V</span> /{" "}
-              <span className="whitespace-nowrap">⌘V</span>) ← Enter / Go
-            </li>
-            <li>החלון נסגר / חוזר לכאן והארנק נטען</li>
-          </ol>
-          <button
-            type="button"
-            className="btn-secondary w-full py-2.5 text-xs"
-            onClick={() => void copyBridge()}
-            data-testid="buyme-copy-bridge"
-          >
-            {copyState === "ok"
-              ? "הועתק שוב — הדביקו בשורת הכתובת בחלון BuyMe"
-              : copyState === "fail"
-                ? "ההעתקה נכשלה — נסו שוב"
-                : "העתק שוב את שלב החיבור"}
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      className={`${variant === "primary" ? "btn-primary" : "btn-secondary"} px-5 py-3 text-sm`}
+      onClick={() => void openBuyMeWindow()}
+      data-testid="buyme-open-popup"
+    >
+      {label}
+    </button>
   );
 }
-
-/** @deprecated Prefer BuyMeConnectCard — kept for existing imports. */
-export { BuyMeConnectCard as BuyMeBookmarkCard };

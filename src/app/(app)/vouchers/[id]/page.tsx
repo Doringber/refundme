@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BackLink } from "@/components/layout/back-link";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
   ExpiryBadge,
@@ -14,11 +15,7 @@ import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
-import {
-  buyMeOpenUrl,
-  checkoutKind,
-  offerCheckoutDisplay,
-} from "@/lib/vouchers/checkout-display";
+import { buyMeOpenUrl, checkoutKind } from "@/lib/vouchers/checkout-display";
 
 export default function VoucherDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,9 +46,7 @@ export default function VoucherDetailPage() {
     return (
       <div className="card-surface px-6 py-12 text-center">
         <p className="font-display text-xl">המסמך לא נמצא</p>
-        <Link href="/vouchers" className="btn-primary mt-4 inline-flex px-5 py-2.5">
-          חזרה לרשימה
-        </Link>
+        <BackLink href="/vouchers" label="חזרה לרשימה" className="mt-4" />
       </div>
     );
   }
@@ -107,14 +102,7 @@ export default function VoucherDetailPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <Link href="/vouchers" className="text-sm font-semibold text-forest">
-          ← חזרה
-        </Link>
-        <p className="text-xs font-bold text-eggplant">
-          {isReceipt ? "קבלה" : "תעודת זיכוי"}
-        </p>
-      </div>
+      <BackLink href="/vouchers" />
 
       <header className="space-y-2">
         <h1 className="font-display text-3xl text-forest">{voucher.merchantName}</h1>
@@ -141,45 +129,54 @@ export default function VoucherDetailPage() {
         </div>
       </header>
 
-      {/* Invoice first — the main thing users need at the register */}
-      <section className="space-y-2">
-        <h2 className="font-display text-lg text-forest">תעודת הזיכוי</h2>
-        <DocumentPreview
-          url={docUrl}
-          mimeType={voucher.documentMimeType}
-          fileName={voucher.documentFileName}
-          merchantName={voucher.merchantName}
-          hero
-        />
-      </section>
+      {docUrl || voucher.documentFileName ? (
+        <section className="space-y-2">
+          <h2 className="font-display text-lg text-forest">תעודת הזיכוי</h2>
+          <DocumentPreview
+            url={docUrl}
+            mimeType={voucher.documentMimeType}
+            fileName={voucher.documentFileName}
+            merchantName={voucher.merchantName}
+            hero
+          />
+        </section>
+      ) : (
+        <p className="text-sm text-eggplant">אין תמונת מסמך לשובר הזה.</p>
+      )}
 
-      {offerCheckoutDisplay(voucher) && (
+      {checkoutKind(voucher) === "code" && (
         <Link
           href={`/vouchers/${voucher.id}/present`}
-          className="btn-primary flex w-full items-center justify-center py-3.5 text-base"
+          className="btn-primary flex w-full items-center justify-center text-base"
           data-testid="open-present"
         >
-          {checkoutKind(voucher) === "code"
-            ? "הצגה בקופה — קוד וברקוד"
-            : checkoutKind(voucher) === "buyme"
-              ? "הצגה בקופה — פתיחה ב־BuyMe"
-              : "הצגה בקופה — תעודת הזיכוי"}
+          הצגה בקופה
+        </Link>
+      )}
+      {checkoutKind(voucher) === "buyme" && buyMeUrl && (
+        <a
+          href={buyMeUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-primary flex w-full items-center justify-center text-base"
+          data-testid="open-buyme"
+        >
+          פתיחה ב־BuyMe
+        </a>
+      )}
+      {checkoutKind(voucher) === "document" && (
+        <Link
+          href={`/vouchers/${voucher.id}/present`}
+          className="btn-primary flex w-full items-center justify-center text-base"
+          data-testid="open-present"
+        >
+          הצגת התעודה
         </Link>
       )}
 
       {buyMeData && (
         <section className="card-surface space-y-3 p-5">
           <h2 className="font-display text-lg text-forest">פרטי BuyMe</h2>
-          {buyMeUrl && (
-            <a
-              href={buyMeUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="block rounded-xl bg-[rgba(71,181,168,0.12)] px-3 py-3 text-sm font-bold text-forest underline"
-            >
-              פתיחת השובר המקורי ב־BuyMe ↗
-            </a>
-          )}
           <Row label="מזהה שובר ב־BuyMe" value={buyMeId ?? "—"} />
           <Row label="ספק" value={buyMeSupplier ?? voucher.merchantName} />
           <Row
@@ -202,7 +199,7 @@ export default function VoucherDetailPage() {
           {!voucher.voucherCode && !voucher.barcodeValue && (
             <p className="text-xs leading-relaxed text-eggplant">
               {buyMeUrl
-                ? "BuyMe לא החזיר קוד קופה לרשימה. פתחו את השובר המקורי — שם מופיע הקוד או ה־QR אם BuyMe הנפיק אחד. RefundMe לא ממציא ברקוד."
+                ? "BuyMe לא החזיר קוד קופה לרשימה. הקוד או ה־QR, אם BuyMe הנפיק אחד, נמצאים בקישור למעלה. RefundMe לא ממציא ברקוד."
                 : "BuyMe לא החזיר קוד, ברקוד או קישור לשובר. RefundMe לא ממציא ברקוד. אפשר להוסיף קוד ידנית אם הוא מודפס על השובר."}
             </p>
           )}
