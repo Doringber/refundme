@@ -33,19 +33,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ? app.user.user_metadata.picture
         : null);
 
-  const isPresent = pathname.includes("/present");
   const isHome = pathname === "/dashboard";
   const shortName = displayName?.trim().split(/[\s@._-]+/)[0] || null;
 
   return (
     <div
-      className={`mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-4 md:max-w-5xl md:pt-6 ${
-        isPresent ? "pb-4 md:pb-4" : "pb-28 md:pb-10"
-      }`}
+      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-4 pb-28 md:max-w-5xl md:pt-6 md:pb-10"
     >
       <ExpiryNotifier />
       <BuyMeAutoSync />
-      {!isPresent && (
       <header className="mb-5 flex items-center justify-between gap-3">
         <Link
           href="/settings"
@@ -98,11 +94,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </header>
-      )}
 
       <main className="flex-1">{children}</main>
 
-      {!isPresent && (
       <nav
         className="fixed inset-x-3 bottom-3 z-40 md:static md:inset-auto md:mt-10 md:bottom-auto"
         aria-label="ניווט ראשי"
@@ -135,7 +129,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </ul>
       </nav>
-      )}
     </div>
   );
 }

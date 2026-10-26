@@ -183,6 +183,23 @@ export async function createVoucher(
   return mapVoucher(data);
 }
 
+export async function updateVoucherCode(
+  supabase: SupabaseClient,
+  userId: string,
+  voucherId: string,
+  voucherCode: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("vouchers")
+    .update({
+      voucher_code: voucherCode,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", voucherId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
 export async function deleteVoucher(
   supabase: SupabaseClient,
   userId: string,

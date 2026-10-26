@@ -1,5 +1,6 @@
 import { shekelsToAgorot } from "@/lib/calculations";
 import type { ExtractedFields } from "@/lib/types";
+import { buyMeHttpsUrl } from "./url";
 import { UpstreamError } from "./errors";
 import type { BuyMeTransport } from "./transport";
 
@@ -19,45 +20,75 @@ export type BuyMeWalletCard = {
   redemptionInstructions: string | null;
 };
 
-type RawVoucherData = {
-  id?: number | string;
-  title?: string;
-  amount?: number;
-  originalValue?: number;
-  serialnumber?: string | null;
-  code?: string | null;
-  voucherBarcode?: string | null;
-  barcode?: string | null;
-  codes?: unknown;
-  shortToken?: string | null;
-  expiresAt?: string | null;
-  used?: boolean;
-  supplier?: {
-    name?: string;
-    description?: string | null;
-    smallPrint?: string | null;
-  } | null;
-  package?: { description?: string | null; smallPrint?: string | null } | null;
-  selfRedeemText?: string | null;
-  url?: string | null;
-};
+const CODE_KEYS = [
+  "serialnumber",
+  "serial",
+  "sn",
+  "code",
+  "vouchercode",
+  "vouchernumber",
+  "giftcardcode",
+  "cardnumber",
+];
+const BARCODE_KEYS = ["voucherbarcode", "barcode", "barcodevalue", "barcodenumber"];
+const URL_KEYS = ["url", "redeemurl", "voucherurl", "link"];
+const TOKEN_KEYS = ["shorttoken"];
+const NESTED_KEYS = ["codes", "voucher", "giftcard", "card"];
 
 function textValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function nestedCodeValue(value: unknown, names: string[]): string | null {
-  if (!value || typeof value !== "object") return textValue(value);
+function keyIndex(record: Record<string, unknown>): Map<string, unknown> {
+  const index = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(record)) {
+    index.set(key.toLowerCase().replace(/[_-]/g, ""), value);
+  }
+  return index;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function pickFromRecord(
+  record: Record<string, unknown>,
+  names: string[],
+  opts: { allowUrl: boolean; min: number; max: number },
+): string | null {
+  const index = keyIndex(record);
+  for (const name of names) {
+    const found = textValue(index.get(name));
+    if (!found) continue;
+    if (!opts.allowUrl && /^https?:\/\//i.test(found)) continue;
+    if (found.length < opts.min || found.length > opts.max) continue;
+    return found;
+  }
+  return null;
+}
+
+function pickNested(
+  value: unknown,
+  names: string[],
+  opts: { allowUrl: boolean; min: number; max: number },
+  depth = 0,
+): string | null {
+  if (depth > 3) return null;
   if (Array.isArray(value)) {
     for (const item of value) {
-      const found = nestedCodeValue(item, names);
+      const found = pickNested(item, names, opts, depth + 1);
       if (found) return found;
     }
     return null;
   }
-  const record = value as Record<string, unknown>;
-  for (const name of names) {
-    const found = textValue(record[name]);
+  const record = asRecord(value);
+  if (!record) return null;
+  const direct = pickFromRecord(record, names, opts);
+  if (direct) return direct;
+  const index = keyIndex(record);
+  for (const key of NESTED_KEYS) {
+    const found = pickNested(index.get(key), names, opts, depth + 1);
     if (found) return found;
   }
   return null;
@@ -71,37 +102,46 @@ function toShekels(v: unknown): number | null {
   return null;
 }
 
-function normalizeCard(raw: RawVoucherData): BuyMeWalletCard | null {
-  if (raw.id == null) return null;
-  const balance = toShekels(raw.amount);
+const CODE_OPTS = { allowUrl: false, min: 3, max: 80 };
+const TOKEN_OPTS = { allowUrl: false, min: 4, max: 120 };
+const URL_OPTS = { allowUrl: true, min: 1, max: 500 };
+
+/** Map one BuyMe list (or nested) voucher object. Unknown shapes return null. */
+export function normalizeBuyMeVoucherRecord(input: unknown): BuyMeWalletCard | null {
+  const raw = asRecord(input);
+  if (!raw) return null;
+  const index = keyIndex(raw);
+  const id = index.get("id");
+  if (typeof id !== "number" && typeof id !== "string") return null;
+  const balance = toShekels(index.get("amount") ?? index.get("balance"));
   if (balance == null) return null;
-  const title = (raw.title || raw.supplier?.name || "BuyMe").trim();
-  const code =
-    textValue(raw.serialnumber) ||
-    textValue(raw.code) ||
-    nestedCodeValue(raw.codes, ["serialnumber", "code", "voucherCode"]);
-  const barcode =
-    textValue(raw.voucherBarcode) ||
-    textValue(raw.barcode) ||
-    nestedCodeValue(raw.codes, ["voucherBarcode", "barcode", "barcodeValue"]);
+
+  const supplier = asRecord(index.get("supplier"));
+  const supplierIndex = supplier ? keyIndex(supplier) : null;
+  const supplierName = textValue(supplierIndex?.get("name"));
+  const packageRecord = asRecord(index.get("package"));
+  const packageIndex = packageRecord ? keyIndex(packageRecord) : null;
+  const title = textValue(index.get("title")) || supplierName || "BuyMe";
+  const expiresAt = textValue(index.get("expiresat"));
+
   return {
-    id: raw.id,
+    id,
     title,
     balanceShekels: balance,
-    originalValueShekels: toShekels(raw.originalValue),
-    code,
-    barcode,
-    expiresAt: raw.expiresAt ?? null,
-    used: Boolean(raw.used),
-    supplierName: raw.supplier?.name?.trim() || null,
-    url: raw.url ?? null,
-    shortToken: textValue(raw.shortToken),
-    supplierDescription: textValue(raw.supplier?.description),
+    originalValueShekels: toShekels(index.get("originalvalue")),
+    code: pickNested(raw, CODE_KEYS, CODE_OPTS),
+    barcode: pickNested(raw, BARCODE_KEYS, CODE_OPTS),
+    expiresAt,
+    used: Boolean(index.get("used")),
+    supplierName,
+    url: buyMeHttpsUrl(pickNested(raw, URL_KEYS, URL_OPTS)),
+    shortToken: pickNested(raw, TOKEN_KEYS, TOKEN_OPTS),
+    supplierDescription: textValue(supplierIndex?.get("description")),
     redemptionInstructions:
-      textValue(raw.selfRedeemText) ||
-      textValue(raw.supplier?.smallPrint) ||
-      textValue(raw.package?.description) ||
-      textValue(raw.package?.smallPrint),
+      textValue(index.get("selfredeemtext")) ||
+      textValue(supplierIndex?.get("smallprint")) ||
+      textValue(packageIndex?.get("description")) ||
+      textValue(packageIndex?.get("smallprint")),
   };
 }
 
@@ -110,7 +150,7 @@ async function fetchVoucherPage(
   page: number,
   isUsed: 0 | 1,
   isExpired: 0 | 1,
-): Promise<{ vouchers: RawVoucherData[]; hasMore: boolean }> {
+): Promise<{ vouchers: unknown[]; hasMore: boolean }> {
   const path =
     `/siteapi/vouchers/received?page=${page}&perPage=50` +
     `&isUsed=${isUsed}&isExpired=${isExpired}`;
@@ -130,7 +170,7 @@ async function fetchVoucherPage(
   }
 
   const body = json as {
-    vouchers?: Array<{ data?: RawVoucherData }>;
+    vouchers?: Array<{ data?: unknown }>;
     meta?: { hasMore?: boolean };
   };
   if (!body || !Array.isArray(body.vouchers)) {
@@ -140,7 +180,7 @@ async function fetchVoucherPage(
   return {
     vouchers: body.vouchers
       .map((v) => v.data)
-      .filter((d): d is RawVoucherData => Boolean(d)),
+      .filter((d) => d != null),
     hasMore: Boolean(body.meta?.hasMore),
   };
 }
@@ -165,7 +205,7 @@ export async function fetchBuyMeWallet(
         expired,
       );
       for (const raw of vouchers) {
-        const card = normalizeCard(raw);
+        const card = normalizeBuyMeVoucherRecord(raw);
         if (!card) continue;
         byId.set(String(card.id), card);
       }

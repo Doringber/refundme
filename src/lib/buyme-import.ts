@@ -1,3 +1,4 @@
+import { buyMeHttpsUrl } from "./buyme/url";
 import type { BuyMeGiftCandidate } from "./extract-buyme";
 import { extractBuyMeGifts } from "./extract-buyme";
 import { DEMO_USER_ID } from "./demo/data";
@@ -24,6 +25,9 @@ export type BuyMeApiCard = {
   used: boolean;
   supplierName: string | null;
   url: string | null;
+  shortToken?: string | null;
+  supplierDescription?: string | null;
+  redemptionInstructions?: string | null;
   fields: ExtractedFields;
 };
 
@@ -108,7 +112,10 @@ export function voucherFromBuyMeApiCard(
       externalId: String(card.id),
       source: "buyme-sync",
       supplierName: card.supplierName,
-      url: card.url,
+      url: buyMeHttpsUrl(card.url),
+      shortToken: card.shortToken ?? null,
+      supplierDescription: card.supplierDescription ?? null,
+      redemptionInstructions: card.redemptionInstructions ?? null,
     },
     fieldsConfirmed: true,
     createdAt: now,

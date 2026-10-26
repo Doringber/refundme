@@ -34,6 +34,7 @@ import {
   fetchVouchers,
   getDocumentSignedUrl,
   updateProfile,
+  updateVoucherCode,
 } from "@/lib/data/supabase-repo";
 
 type AppDataValue = {
@@ -64,6 +65,7 @@ type AppDataValue = {
   getVoucher: (id: string) => Voucher | undefined;
   getRedemptions: (voucherId: string) => Redemption[];
   resolveDocumentUrl: (voucher: Voucher) => Promise<string | null>;
+  saveVoucherCode: (voucherId: string, code: string) => Promise<void> | void;
   signOut: () => Promise<void>;
 };
 
@@ -278,6 +280,12 @@ function SupabaseAppProvider({ children }: { children: React.ReactNode }) {
         const supabase = createClient();
         return getDocumentSignedUrl(supabase, voucher.documentPath);
       },
+      saveVoucherCode: async (voucherId, code) => {
+        if (!user) throw new Error("יש להתחבר כדי לשמור קוד");
+        const supabase = createClient();
+        await updateVoucherCode(supabase, user.id, voucherId, code);
+        await loadAll(user.id);
+      },
       signOut: async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
@@ -338,6 +346,15 @@ function DemoAppBridge({ children }: { children: React.ReactNode }) {
       getVoucher: demo.getVoucher,
       getRedemptions: demo.getRedemptions,
       resolveDocumentUrl: async (voucher) => voucher.documentDataUrl,
+      saveVoucherCode: (voucherId, code) => {
+        const voucher = demo.getVoucher(voucherId);
+        if (!voucher) return;
+        demo.saveVoucher({
+          ...voucher,
+          voucherCode: code,
+          updatedAt: new Date().toISOString(),
+        });
+      },
       signOut: async () => undefined,
     }),
     [demo],

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { LegalLinks } from "@/components/legal-links";
 import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
+  const [disconnectBusy, setDisconnectBusy] = useState(false);
 
   if (!app.ready) return <LoadingBlock />;
 
@@ -243,6 +245,31 @@ export default function SettingsPage() {
           >
             {syncBusy ? "מסנכרנים…" : "סנכרן עכשיו"}
           </button>
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2 text-sm"
+            disabled={disconnectBusy}
+            onClick={() => {
+              void (async () => {
+                setMessage(null);
+                setDisconnectBusy(true);
+                try {
+                  const res = await fetch("/api/buyme/session", { method: "DELETE" });
+                  if (!res.ok) {
+                    setMessage("הניתוק לא הושלם. נסו שוב.");
+                    return;
+                  }
+                  setMessage("BuyMe נותק. האסימון השמור נמחק.");
+                } catch {
+                  setMessage("הניתוק לא הושלם. נסו שוב.");
+                } finally {
+                  setDisconnectBusy(false);
+                }
+              })();
+            }}
+          >
+            {disconnectBusy ? "מנתקים…" : "ניתוק BuyMe"}
+          </button>
         </div>
       </section>
 
@@ -328,6 +355,7 @@ export default function SettingsPage() {
         בלי אינטגרציית סוחרים, אין יתרה מאומתת מול הקופה ואין מימוש NFC. המודל
         מוכן להרחבה עתידית.
       </p>
+      <LegalLinks />
     </div>
   );
 }

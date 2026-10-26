@@ -4,7 +4,21 @@ import type { NormalizedWalletItem } from "./types";
 export type ExistingBuyMeVoucher = {
   id: string;
   externalId: string;
+  voucherCode?: string | null;
+  barcodeValue?: string | null;
+  url?: string | null;
+  shortToken?: string | null;
+  supplierName?: string | null;
+  supplierDescription?: string | null;
+  redemptionInstructions?: string | null;
 };
+
+function preferText(
+  next: string | null,
+  previous: string | null | undefined,
+): string | null {
+  return next && next.trim() ? next : (previous ?? null);
+}
 
 export type VoucherWrite = {
   id?: string;
@@ -73,7 +87,7 @@ export function planBuyMeUpserts(
   existing: ExistingBuyMeVoucher[],
   items: NormalizedWalletItem[],
 ): { inserts: VoucherWrite[]; updates: Array<VoucherWrite & { id: string }> } {
-  const byExternal = new Map(existing.map((row) => [row.externalId, row.id]));
+  const byExternal = new Map(existing.map((row) => [row.externalId, row]));
   const inserts: VoucherWrite[] = [];
   const updates: Array<VoucherWrite & { id: string }> = [];
   const seenExternalIds = new Set<string>();
@@ -82,9 +96,31 @@ export function planBuyMeUpserts(
     if (seenExternalIds.has(item.externalId)) continue;
     seenExternalIds.add(item.externalId);
     const row = voucherWriteFromItem(item);
-    const id = byExternal.get(item.externalId);
-    if (id) updates.push({ ...row, id });
-    else inserts.push(row);
+    const prev = byExternal.get(item.externalId);
+    if (prev) {
+      updates.push({
+        ...row,
+        id: prev.id,
+        voucher_code: preferText(row.voucher_code, prev.voucherCode),
+        barcode_value: preferText(row.barcode_value, prev.barcodeValue),
+        extraction_raw: {
+          ...row.extraction_raw,
+          url: preferText(row.extraction_raw.url, prev.url),
+          shortToken: preferText(row.extraction_raw.shortToken, prev.shortToken),
+          supplierName: preferText(row.extraction_raw.supplierName, prev.supplierName),
+          supplierDescription: preferText(
+            row.extraction_raw.supplierDescription,
+            prev.supplierDescription,
+          ),
+          redemptionInstructions: preferText(
+            row.extraction_raw.redemptionInstructions,
+            prev.redemptionInstructions,
+          ),
+        },
+      });
+    } else {
+      inserts.push(row);
+    }
   }
   return { inserts, updates };
 }
