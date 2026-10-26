@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { secretsMatch } from "@/lib/security/secret-compare";
 import { listConnectedBuyMeUserIds } from "@/lib/wallet/connection-store";
 import { syncBuyMeForStoredSession } from "@/lib/wallet/buyme-sync";
 
@@ -9,9 +10,7 @@ export const runtime = "nodejs";
  * Header: x-cron-secret = CRON_SECRET
  */
 export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  const got = request.headers.get("x-cron-secret");
-  if (!expected || got !== expected) {
+  if (!secretsMatch(process.env.CRON_SECRET, request.headers.get("x-cron-secret"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const userIds = await listConnectedBuyMeUserIds();

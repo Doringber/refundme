@@ -2,7 +2,7 @@ import "server-only";
 
 /**
  * Server-only secret. Supports classic service_role JWT and newer
- * `sb_secret_...` keys. Never import this module from client or middleware.
+ * `sb_secret_...` keys. Never import this module from client or proxy code.
  */
 export function getSecretKey(): string | undefined {
   return (

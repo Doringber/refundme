@@ -32,9 +32,16 @@ export function decodeJwtExpMs(token: string): number | null {
   }
 }
 
+/** Stay under typical browser cookie limits once the token is JSON-wrapped. */
+export const MAX_BUYME_TOKEN_LENGTH = 3500;
+
 export function createBuyMeSession(token: string, now = Date.now()): BuyMeSession {
   const trimmed = token.trim();
-  if (!trimmed || trimmed.split(".").length < 2) {
+  if (
+    !trimmed ||
+    trimmed.length > MAX_BUYME_TOKEN_LENGTH ||
+    trimmed.split(".").length < 2
+  ) {
     throw new Error("INVALID_BUYME_TOKEN");
   }
   return {

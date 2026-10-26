@@ -23,4 +23,9 @@ describe("BuyMeSession", () => {
     assert.equal(isSessionExpired(session), false);
     assert.equal(isSessionExpired(session, exp * 1000 + 1), true);
   });
+
+  it("rejects oversized tokens before they are stored in a cookie", () => {
+    const huge = `aaaa.${"b".repeat(4000)}.sig`;
+    assert.throws(() => createBuyMeSession(huge), /INVALID_BUYME_TOKEN/);
+  });
 });

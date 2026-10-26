@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clearBuyMeSessionCookie, readBuyMeSessionCookie } from "@/lib/buyme/cookie";
 import { ReauthenticationRequired } from "@/lib/buyme/errors";
+import { logServerError } from "@/lib/log";
 import { BuyMeTransport } from "@/lib/buyme/transport";
 import {
   activeImportableCards,
@@ -47,6 +48,7 @@ export async function GET() {
         { status: 401 },
       );
     }
+    logServerError("buyme-wallet", err);
     return NextResponse.json(
       { status: "ERROR", error: "wallet_fetch_failed" },
       { status: 502 },

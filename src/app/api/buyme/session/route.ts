@@ -4,6 +4,7 @@ import {
   readBuyMeSessionCookie,
   writeBuyMeSessionCookie,
 } from "@/lib/buyme/cookie";
+import { logServerError } from "@/lib/log";
 import { createBuyMeSession, isSessionExpired } from "@/lib/buyme/session";
 import { createClient } from "@/lib/supabase/server";
 import { saveBuyMeConnection } from "@/lib/wallet/connection-store";
@@ -45,11 +46,13 @@ export async function POST(request: Request) {
         });
         sync = await syncBuyMeWallet(user.id, session.token);
       }
-    } catch {
+    } catch (syncError) {
+      logServerError("buyme-session", syncError);
       error = "sync_unavailable";
     }
     return NextResponse.json({ ok: true, expiresAt, sync, error });
-  } catch {
+  } catch (error) {
+    logServerError("buyme-session", error);
     return NextResponse.json({ error: "invalid_token" }, { status: 400 });
   }
 }

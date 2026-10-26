@@ -13,6 +13,10 @@ import {
   mapRedemption,
   mapVoucher,
 } from "@/lib/data/mappers";
+import {
+  isOwnedDocumentPath,
+  voucherDocumentObjectPath,
+} from "@/lib/storage/object-path";
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, body] = dataUrl.split(",");
@@ -121,7 +125,11 @@ export async function createVoucher(
 
   if (voucher.documentDataUrl && voucher.documentFileName) {
     const blob = dataUrlToBlob(voucher.documentDataUrl);
-    const path = `${voucher.userId}/${voucher.id}/${voucher.documentFileName}`;
+    const path = voucherDocumentObjectPath(
+      voucher.userId,
+      voucher.id,
+      voucher.documentFileName,
+    );
     const { error: uploadError } = await supabase.storage
       .from("voucher-documents")
       .upload(path, blob, {
@@ -181,7 +189,7 @@ export async function deleteVoucher(
   voucherId: string,
   documentPath: string | null,
 ): Promise<void> {
-  if (documentPath) {
+  if (documentPath && isOwnedDocumentPath(userId, documentPath)) {
     await supabase.storage.from("voucher-documents").remove([documentPath]);
   }
   const { error } = await supabase

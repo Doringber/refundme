@@ -1,3 +1,4 @@
+import { logServerError } from "./log";
 import type { DocumentType, ExtractedFields } from "./types";
 import { suggestFieldsFromText } from "./extract";
 
@@ -124,6 +125,21 @@ export function canUseVisionExtraction(): boolean {
   );
 }
 
+/**
+ * Gemini is billed per call. On a deployed app (Supabase configured) only a
+ * signed-in user may run it. Local demo without Supabase keeps the documented
+ * GEMINI_API_KEY workflow.
+ */
+export function shouldRunVisionExtraction(input: {
+  visionConfigured: boolean;
+  supabaseConfigured: boolean;
+  authenticated: boolean;
+}): boolean {
+  if (!input.visionConfigured) return false;
+  if (!input.supabaseConfigured) return true;
+  return input.authenticated;
+}
+
 export async function extractFieldsFromImage(
   file: File,
 ): Promise<ExtractedFields | null> {
@@ -163,7 +179,8 @@ export async function extractFieldsFromImage(
     const parsed = parseJsonContent(text);
     if (!parsed) return null;
     return normalizeVision(parsed);
-  } catch {
+  } catch (error) {
+    logServerError("extract-vision", error);
     return null;
   }
 }
