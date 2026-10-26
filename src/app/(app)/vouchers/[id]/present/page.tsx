@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BackLink } from "@/components/layout/back-link";
 import { LoadingBlock } from "@/components/ui/loading";
 import { AddVoucherCodeForm } from "@/components/vouchers/add-voucher-code";
 import { Code128Barcode } from "@/components/vouchers/code128-barcode";
@@ -66,9 +66,7 @@ export default function VoucherPresentPage() {
     return (
       <div className="card-surface px-6 py-12 text-center">
         <p className="font-display text-xl">המסמך לא נמצא</p>
-        <Link href="/vouchers" className="btn-primary mt-4 inline-flex px-5 py-2.5">
-          חזרה לרשימה
-        </Link>
+        <BackLink href="/vouchers" label="חזרה לרשימה" className="mt-4" />
       </div>
     );
   }
@@ -103,14 +101,10 @@ export default function VoucherPresentPage() {
     <div className={shell} data-testid="present-screen" data-present-kind={kind}>
       <div className={`mx-auto flex w-full max-w-xl flex-col px-4 py-4 ${fullScreen ? "flex-1" : ""}`}>
         <div className="flex items-center justify-between gap-3">
-          <Link
+          <BackLink
             href={`/vouchers/${voucher.id}`}
-            className={`text-sm font-extrabold ${
-              fullScreen && bright ? "text-black/70" : "text-forest"
-            }`}
-          >
-            ← חזרה
-          </Link>
+            className={fullScreen && bright ? "text-black/80" : ""}
+          />
           {fullScreen && (
             <button
               type="button"

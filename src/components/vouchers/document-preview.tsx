@@ -58,7 +58,7 @@ export function DocumentPreview({
   }
 
   return (
-    <div className="rounded-2xl bg-[rgba(163,193,226,0.2)] px-4 py-8 text-center text-sm text-eggplant">
+    <div className="rounded-2xl bg-[rgba(163,193,226,0.2)] px-4 py-3 text-center text-sm text-eggplant">
       {fileName ? (
         <p>
           הקובץ <span className="font-semibold text-night">{fileName}</span>{" "}

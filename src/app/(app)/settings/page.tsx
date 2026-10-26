@@ -1,16 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LegalLinks } from "@/components/legal-links";
 import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
+import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
 import {
   exitDemoMode,
   useAppData,
 } from "@/lib/app-data/context";
+import { BUYME_CONNECTED_MESSAGE } from "@/lib/buyme-import";
 import { agorotToShekels, parseShekelInput, formatIls } from "@/lib/calculations";
 
 export default function SettingsPage() {
@@ -25,6 +27,53 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [disconnectBusy, setDisconnectBusy] = useState(false);
+  const [buyMeConnected, setBuyMeConnected] = useState<boolean | null>(null);
+  const [connectHint, setConnectHint] = useState<string | null>(null);
+  const [waitingConnect, setWaitingConnect] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/buyme/session")
+      .then(async (res) => {
+        const json = (await res.json()) as { connected?: boolean };
+        if (!cancelled) setBuyMeConnected(Boolean(json.connected));
+      })
+      .catch(() => {
+        if (!cancelled) setBuyMeConnected(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string } | null;
+      if (data?.type !== BUYME_CONNECTED_MESSAGE) return;
+      setBuyMeConnected(true);
+      setWaitingConnect(false);
+      setMessage("BuyMe חובר והארנק סונכרן.");
+      window.setTimeout(() => window.location.reload(), 600);
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!waitingConnect) return;
+    const id = window.setInterval(() => {
+      void fetch("/api/buyme/session")
+        .then(async (res) => {
+          const json = (await res.json()) as { connected?: boolean };
+          if (json.connected) window.location.reload();
+        })
+        .catch(() => {
+          /* next tick retries */
+        });
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [waitingConnect]);
 
   if (!app.ready) return <LoadingBlock />;
 
@@ -194,23 +243,29 @@ export default function SettingsPage() {
         </button>
       </section>
 
-      <section className="card-surface space-y-3 p-5">
+      <section id="buyme" className="card-surface scroll-mt-24 space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
-          החיבור מתבצע במסך הייבוא פעם אחת. מכאן אפשר לסנכרן את הארנק מול
-          BuyMe בכל עת — בלי להוסיף שוב את אותן מתנות. אם הסשן פג תופיע בקשה
-          להתחבר מחדש.
+          {buyMeConnected
+            ? "BuyMe מחובר. «סנכרן עכשיו» מרענן את הארנק בלי להוסיף שוב את אותן מתנות."
+            : "זה המקום היחיד לחיבור. פותחים את BuyMe, מתחברים, וחוזרים לכאן לסנכרון. הסיסמה לא נשמרת אצלנו."}
         </p>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/vouchers/import/buyme"
-            className="btn-primary inline-flex px-4 py-2 text-sm"
-          >
-            פתיחת מסך החיבור
-          </Link>
+          <BuyMeConnectCard
+            label={buyMeConnected ? "חיבור מחדש" : "חבר את BuyMe"}
+            variant={buyMeConnected ? "secondary" : "primary"}
+            onOpened={(copied) => {
+              setWaitingConnect(true);
+              setConnectHint(
+                copied
+                  ? "חלון BuyMe נפתח והחיבור הועתק. התחברו שם, הדביקו בשורת הכתובת ולחצו מעבר."
+                  : "חלון BuyMe נפתח, אבל ההעתקה נכשלה. לחצו שוב על «חבר את BuyMe».",
+              );
+            }}
+          />
           <button
             type="button"
-            className="btn-secondary px-4 py-2 text-sm"
+            className={`${buyMeConnected ? "btn-primary" : "btn-secondary"} px-5 py-3 text-sm`}
             disabled={syncBusy}
             onClick={() => {
               void (async () => {
@@ -224,7 +279,7 @@ export default function SettingsPage() {
                     error?: string;
                   };
                   if (json.status === "login_required") {
-                    setMessage("BuyMe דורש חיבור מחדש — פתחו «מסך החיבור»");
+                    setMessage("BuyMe עדיין לא מחובר. לחצו «חבר את BuyMe».");
                     return;
                   }
                   if (!res.ok || json.status !== "synced") {
@@ -245,32 +300,40 @@ export default function SettingsPage() {
           >
             {syncBusy ? "מסנכרנים…" : "סנכרן עכשיו"}
           </button>
-          <button
-            type="button"
-            className="btn-secondary px-4 py-2 text-sm"
-            disabled={disconnectBusy}
-            onClick={() => {
-              void (async () => {
-                setMessage(null);
-                setDisconnectBusy(true);
-                try {
-                  const res = await fetch("/api/buyme/session", { method: "DELETE" });
-                  if (!res.ok) {
+          {buyMeConnected && (
+            <button
+              type="button"
+              className="btn-secondary px-5 py-3 text-sm"
+              disabled={disconnectBusy}
+              onClick={() => {
+                void (async () => {
+                  setMessage(null);
+                  setDisconnectBusy(true);
+                  try {
+                    const res = await fetch("/api/buyme/session", { method: "DELETE" });
+                    if (!res.ok) {
+                      setMessage("הניתוק לא הושלם. נסו שוב.");
+                      return;
+                    }
+                    setBuyMeConnected(false);
+                    setMessage("BuyMe נותק. האסימון השמור נמחק.");
+                  } catch {
                     setMessage("הניתוק לא הושלם. נסו שוב.");
-                    return;
+                  } finally {
+                    setDisconnectBusy(false);
                   }
-                  setMessage("BuyMe נותק. האסימון השמור נמחק.");
-                } catch {
-                  setMessage("הניתוק לא הושלם. נסו שוב.");
-                } finally {
-                  setDisconnectBusy(false);
-                }
-              })();
-            }}
-          >
-            {disconnectBusy ? "מנתקים…" : "ניתוק BuyMe"}
-          </button>
+                })();
+              }}
+            >
+              {disconnectBusy ? "מנתקים…" : "ניתוק BuyMe"}
+            </button>
+          )}
         </div>
+        {connectHint && (
+          <p className="text-sm font-semibold text-forest" role="status">
+            {connectHint}
+          </p>
+        )}
       </section>
 
       {app.mode === "demo" ? (

@@ -1,29 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
-import { LoadingBlock } from "@/components/ui/loading";
-import {
-  valuesFromExtraction,
-  VoucherReviewForm,
-} from "@/components/vouchers/voucher-form";
-import { useAppData } from "@/lib/app-data/context";
+import { useEffect, useState } from "react";
+import { BackLink } from "@/components/layout/back-link";
 import {
   BUYME_CONNECTED_MESSAGE,
-  parseBuyMePageText,
   readBuyMeImportHash,
-  vouchersFromBuyMeApiCards,
-  vouchersFromBuyMeGifts,
-  buyMeVoucherKey,
-  type BuyMeApiCard,
 } from "@/lib/buyme-import";
-import { formatIls, shekelsToAgorot } from "@/lib/calculations";
-import type { BuyMeGiftCandidate } from "@/lib/extract";
-import type { Voucher } from "@/lib/types";
-
-type Step = "loading" | "connect" | "waiting" | "pick" | "review" | "success";
 
 function notifyOpenerAndClose() {
   try {
@@ -36,7 +19,6 @@ function notifyOpenerAndClose() {
   } catch {
     /* ignore cross-window issues */
   }
-  // Close the temporary connect window when we were opened as a popup.
   window.setTimeout(() => {
     try {
       window.close();
@@ -46,493 +28,65 @@ function notifyOpenerAndClose() {
   }, 120);
 }
 
+/**
+ * Landing for the existing BuyMe bridge (`#token=`). Not a second connect
+ * screen: with no token we go to Settings, which is the only connect UI.
+ */
 export default function BuyMeImportPage() {
-  const app = useAppData();
   const router = useRouter();
-  const [step, setStep] = useState<Step>("loading");
-  const [cards, setCards] = useState<BuyMeApiCard[]>([]);
-  const [ocrGifts, setOcrGifts] = useState<BuyMeGiftCandidate[]>([]);
-  const [reviewFields, setReviewFields] = useState<BuyMeApiCard | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [importedCount, setImportedCount] = useState(0);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const autoSync =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("auto") === "1";
-
-  const syncAndFinish = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      if (app.mode === "supabase" && !app.user) {
-        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
-      }
-      if (app.mode !== "supabase") {
-        await loadWallet();
-        return;
-      }
-      const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
-      const json = (await res.json()) as {
-        status?: string;
-        upserted?: number;
-        fetched?: number;
-        error?: string;
-      };
-      if (json.status === "login_required") {
-        throw new Error("BuyMe דורש חיבור מחדש");
-      }
-      if (!res.ok || json.status !== "synced") {
-        throw new Error(json.error || "הסנכרון נכשל");
-      }
-      setImportedCount(json.upserted ?? json.fetched ?? 0);
-      setStep("success");
-      window.setTimeout(() => router.push("/dashboard"), 900);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "הסנכרון נכשל");
-      setStep("connect");
-    } finally {
-      setBusy(false);
-    }
-  }, [app.mode, app.user, router]);
-
-  async function loadWallet() {
-    const res = await fetch("/api/buyme/wallet");
-    const json = (await res.json()) as {
-      status?: string;
-      cards?: BuyMeApiCard[];
-      expiresAt?: string | null;
-      error?: string;
-    };
-    if (json.status === "NEEDS_REAUTH" || res.status === 401) {
-      setCards([]);
-      setStep("connect");
-      return;
-    }
-    if (!res.ok || json.status !== "OK") {
-      setError("שליפת הארנק מ־BuyMe נכשלה");
-      setStep("connect");
-      return;
-    }
-    setCards(json.cards ?? []);
-    setExpiresAt(json.expiresAt ?? null);
-    setOcrGifts([]);
-    setStep("pick");
-  }
+  const [message, setMessage] = useState("בודקים את החיבור…");
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function boot() {
-      const { token, pageText } = readBuyMeImportHash(window.location.hash);
-
-      if (token) {
-        history.replaceState(null, "", window.location.pathname);
-        const res = await fetch("/api/buyme/session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-        const saved = (await res.json()) as {
-          error?: string | null;
-          sync?: { status?: string; upserted?: number; fetched?: number } | null;
-        };
-        if (!res.ok) {
-          if (!cancelled) {
-            setError("הטוקן מ־BuyMe לא נשמר. פתיחת האתר לבד לא מחברת.");
-            setStep("connect");
-          }
-          return;
-        }
-        const report = saved.sync;
-        if (!cancelled) {
-          if (saved.error === "app_login_required") {
-            setError("התחברו לזיכוי שלי באותו דפדפן. בלי חשבון אין לאן לשמור את המתנות.");
-            setStep("connect");
-            return;
-          }
-          if (report?.status === "login_required") {
-            setError("החיבור מ־BuyMe לא תקף — התחברו מחדש בחלון והדביקו שוב בשורת הכתובת");
-            setStep("connect");
-            return;
-          }
-          if (report?.status === "error") {
-            setError(
-              saved.error === "session_store_unconfigured" ||
-                saved.error === "session_store_failed"
-                ? "החיבור לא נשמר מוצפן בשרת, ושאיבת הארנק מ־BuyMe נכשלה."
-                : "החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה.",
-            );
-            setStep("connect");
-            return;
-          }
-          if (
-            saved.error === "session_store_unconfigured" ||
-            saved.error === "session_store_failed"
-          ) {
-            setError(
-              saved.error === "session_store_unconfigured"
-                ? "הארנק סונכרן, אבל השמירה המוצפנת לא הוגדרה בשרת (BUYME_SESSION_KEY). הסנכרון המתוזמן לא יימשך."
-                : "הארנק סונכרן, אבל שמירת החיבור המוצפן נכשלה. הסנכרון המתוזמן לא יימשך עד חיבור מחדש.",
-            );
-          }
-          const upserted = report?.upserted ?? 0;
-          if (window.opener && !window.opener.closed) {
-            notifyOpenerAndClose();
-            setImportedCount(upserted);
-            setStep("success");
-            return;
-          }
-          if (report?.status === "synced") {
-            if (upserted > 0) {
-              setImportedCount(upserted);
-              setStep("success");
-              window.setTimeout(() => router.push("/dashboard"), 900);
-            } else {
-              await loadWallet();
-            }
-          } else {
-            await loadWallet();
-          }
-        }
-        return;
-      }
-
-      if (pageText?.trim()) {
-        history.replaceState(null, "", window.location.pathname);
-        const parsed = parseBuyMePageText(pageText);
-        if (!cancelled) {
-          setOcrGifts(parsed);
-          setStep(parsed.length ? "pick" : "connect");
-        }
-        return;
-      }
-
-      const status = await fetch("/api/buyme/session");
-      const st = (await status.json()) as { connected?: boolean };
-      if (st.connected) {
-        if (!cancelled) {
-          if (autoSync) await syncAndFinish();
-          else await loadWallet();
-        }
-      } else if (!cancelled) {
-        setStep("connect");
-      }
+    const { token } = readBuyMeImportHash(window.location.hash);
+    if (!token) {
+      router.replace("/settings#buyme");
+      return;
     }
-
-    void boot();
+    history.replaceState(null, "", window.location.pathname);
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch("/api/buyme/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const saved = (await res.json()) as {
+        error?: string | null;
+        sync?: { status?: string } | null;
+      };
+      if (cancelled) return;
+      if (!res.ok) {
+        setMessage("החיבור מ־BuyMe לא נשמר. חזרו להגדרות ונסו שוב.");
+        return;
+      }
+      if (saved.error === "app_login_required") {
+        setMessage("התחברו לזיכוי שלי באותו דפדפן, ואז חברו שוב את BuyMe מההגדרות.");
+        return;
+      }
+      if (saved.sync?.status === "login_required") {
+        setMessage("BuyMe דורש חיבור מחדש. חזרו להגדרות.");
+        return;
+      }
+      if (window.opener && !window.opener.closed) {
+        notifyOpenerAndClose();
+        setMessage("החיבור נשמר. אפשר לסגור את החלון.");
+        return;
+      }
+      router.replace("/settings#buyme");
+    })().catch(() => {
+      if (!cancelled) setMessage("שמירת החיבור נכשלה. חזרו להגדרות ונסו שוב.");
+    });
     return () => {
       cancelled = true;
     };
-  }, [autoSync, router, syncAndFinish]);
-
-  // Parent tab: wait until the popup finishes connecting.
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data as { type?: string } | null;
-      if (data?.type !== BUYME_CONNECTED_MESSAGE) return;
-      setStep("loading");
-      void (autoSync ? syncAndFinish() : loadWallet());
-    }
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [autoSync, syncAndFinish]);
-
-  useEffect(() => {
-    if (step !== "waiting") return;
-    const id = window.setInterval(() => {
-      void (async () => {
-        const status = await fetch("/api/buyme/session");
-        const st = (await status.json()) as { connected?: boolean };
-        if (st.connected) {
-          setStep("loading");
-          await loadWallet();
-        }
-      })();
-    }, 1600);
-    return () => window.clearInterval(id);
-  }, [step]);
-
-  async function disconnect() {
-    const res = await fetch("/api/buyme/session", { method: "DELETE" });
-    if (!res.ok) {
-      setError("הניתוק לא הושלם. נסו שוב.");
-      return;
-    }
-    setCards([]);
-    setStep("connect");
-  }
-
-  async function importAll() {
-    setBusy(true);
-    setError(null);
-    try {
-      if (app.mode === "supabase" && !app.user) {
-        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
-      }
-      // Cloud imports must use the server sync path. It plans updates by the
-      // stable BuyMe id and is protected by the database unique index.
-      if (app.mode === "supabase") {
-        const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
-        const json = (await res.json()) as {
-          status?: string;
-          upserted?: number;
-          error?: string;
-        };
-        if (json.status === "login_required") throw new Error("BuyMe דורש חיבור מחדש");
-        if (!res.ok || json.status !== "synced") {
-          throw new Error(json.error || "הסנכרון נכשל");
-        }
-        setImportedCount(json.upserted ?? cards.length);
-        setStep("success");
-        window.setTimeout(() => router.push("/dashboard"), 1100);
-        return;
-      }
-
-      const existingIds = new Set(
-        app.vouchers.map((voucher) => buyMeVoucherKey(voucher)).filter(Boolean),
-      );
-      const { saved } =
-        cards.length > 0
-          ? vouchersFromBuyMeApiCards(cards, { userId: app.user?.id })
-          : vouchersFromBuyMeGifts(ocrGifts, { userId: app.user?.id });
-      const newSaved = saved.filter((voucher) => {
-        const id = buyMeVoucherKey(voucher);
-        return id ? !existingIds.has(id) : true;
-      });
-      if (!newSaved.length) throw new Error("המתנות האלה כבר נשמרו — לא נוצר כפילויות");
-      for (const v of newSaved) {
-        await app.saveVoucher(v);
-      }
-      setImportedCount(newSaved.length);
-      setStep("success");
-      window.setTimeout(() => router.push("/dashboard"), 1100);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "הייבוא נכשל");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleSaveOne(voucher: Voucher) {
-    setBusy(true);
-    setError(null);
-    try {
-      if (app.mode === "supabase" && !app.user) {
-        throw new Error("יש להתחבר כדי לשמור זיכויים בענן");
-      }
-      const reviewedVoucher: Voucher = {
-        ...voucher,
-        extractionRaw: {
-          provider: "buyme",
-          externalId: String(reviewFields?.id ?? ""),
-          source: "buyme-review",
-          url: reviewFields?.url ?? null,
-        },
-      };
-      const key = buyMeVoucherKey(reviewedVoucher);
-      if (key && app.vouchers.some((item) => buyMeVoucherKey(item) === key)) {
-        throw new Error("המתנה הזו כבר נשמרה — לא נוצר כפילות");
-      }
-      await app.saveVoucher(reviewedVoucher);
-      setImportedCount(1);
-      setStep("success");
-      window.setTimeout(() => router.push("/dashboard"), 900);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "השמירה נכשלה");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!app.ready || step === "loading") {
-    return <LoadingBlock label="מתחברים לארנק BuyMe…" />;
-  }
-
-  const listCount = cards.length || ocrGifts.length;
-  const totalShekels =
-    cards.length > 0
-      ? cards.reduce((s, c) => s + c.balanceShekels, 0)
-      : ocrGifts.reduce((s, g) => s + (g.amountAgorot ?? 0), 0) / 100;
+  }, [router]);
 
   return (
-    <div className="mx-auto max-w-xl space-y-5">
-      <div>
-        <Link href="/vouchers/new" className="text-sm font-semibold text-forest">
-          ← חזרה להוספה
-        </Link>
-        <h1 className="font-display mt-2 text-2xl text-forest">ייבוא מ־BuyMe</h1>
-        <p className="text-sm text-eggplant">
-          חלון חיבור זמני → שמירת חיבור → שליפת הארנק ב־API
-        </p>
-      </div>
-
-      {(step === "connect" || step === "waiting") && (
-        <div className="space-y-4">
-          {error && (
-            <p
-              className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm"
-              role="alert"
-            >
-              {error}
-            </p>
-          )}
-          {step === "waiting" && (
-            <p
-              className="rounded-2xl bg-[rgba(71,181,168,0.14)] px-4 py-3 text-sm font-semibold text-forest"
-              role="status"
-            >
-              ממתינים לחיבור מהחלון… אחרי התחברות ב־BuyMe: הדביקו בשורת
-              הכתובת שם ולחצו Enter.
-            </p>
-          )}
-          <BuyMeConnectCard onPopupOpened={() => setStep("waiting")} />
-          <p className="text-center text-xs text-eggplant">
-            או{" "}
-            <Link href="/vouchers/new" className="font-bold text-forest">
-              צילום מסך אחד של הרשימה
-            </Link>{" "}
-            כגיבוי
-          </p>
-        </div>
-      )}
-
-      {step === "pick" && (
-        <div className="card-surface space-y-4 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg text-forest">הארנק שלכם</h2>
-              <p className="mt-1 text-sm text-eggplant">
-                {listCount} מתנות · סה״כ{" "}
-                {formatIls(shekelsToAgorot(totalShekels))}
-                {expiresAt
-                  ? ` · סשן עד ${new Date(expiresAt).toLocaleDateString("he-IL")}`
-                  : ""}
-              </p>
-            </div>
-            {cards.length > 0 && (
-              <button
-                type="button"
-                className="text-xs font-bold text-eggplant underline"
-                onClick={() => void disconnect()}
-              >
-                ניתוק
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className="btn-primary w-full py-3.5 text-base"
-            disabled={busy || listCount === 0}
-            onClick={() => void importAll()}
-            data-testid="buyme-import-all"
-          >
-            {listCount > 1
-              ? `ייבוא הכל (${listCount})`
-              : listCount === 1
-                ? "ייבוא המתנה"
-                : "אין מתנות לייבוא"}
-          </button>
-
-          <ul className="space-y-2">
-            {cards.map((card) => (
-              <li key={String(card.id)}>
-                <button
-                  type="button"
-                  className="flex w-full flex-col gap-1 rounded-2xl bg-white/10 px-4 py-3 text-start transition hover:bg-white/16"
-                  disabled={busy}
-                  onClick={() => {
-                    setReviewFields(card);
-                    setStep("review");
-                  }}
-                >
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span className="font-display text-base">{card.title}</span>
-                    <span className="font-display text-lg">
-                      {formatIls(shekelsToAgorot(card.balanceShekels))}
-                    </span>
-                  </span>
-                  <span className="text-xs text-eggplant">
-                    {card.code ? `קוד ${card.code}` : "בלי קוד"}
-                    {card.expiresAt
-                      ? ` · תוקף ${card.expiresAt.slice(0, 10)}`
-                      : ""}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {cards.length === 0 &&
-              ocrGifts.map((gift) => (
-                <li key={`${gift.title}-${gift.amountAgorot ?? "x"}`}>
-                  <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                    <span className="font-display">{gift.title}</span>
-                    <span className="font-display">
-                      {gift.amountAgorot != null
-                        ? formatIls(gift.amountAgorot)
-                        : "—"}
-                    </span>
-                  </div>
-                </li>
-              ))}
-          </ul>
-
-          {error && (
-            <p
-              className="rounded-2xl bg-[rgba(247,111,84,0.14)] px-4 py-3 text-sm"
-              role="alert"
-            >
-              {error}
-            </p>
-          )}
-        </div>
-      )}
-
-      {step === "review" && reviewFields && (
-        <div className="card-surface space-y-4 p-5">
-          <div className="rounded-2xl bg-[rgba(71,181,168,0.12)] px-4 py-3 text-sm">
-            <p className="font-semibold text-forest">מקור השובר</p>
-            <p className="mt-1 text-xs text-eggplant">
-              מזהה BuyMe: {String(reviewFields.id)}
-            </p>
-            {reviewFields.url && (
-              <a
-                href={reviewFields.url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex font-bold text-forest underline"
-              >
-                פתיחת השובר ב־BuyMe ↗
-              </a>
-            )}
-          </div>
-          <VoucherReviewForm
-            initial={valuesFromExtraction(reviewFields.fields)}
-            documentMeta={{ fileName: null, mimeType: null, dataUrl: null }}
-            onSubmit={handleSaveOne}
-            busy={busy}
-          />
-        </div>
-      )}
-
-      {step === "success" && (
-        <div className="card-surface px-6 py-12 text-center" role="status">
-          <p className="font-display text-2xl text-forest">
-            {importedCount > 0
-              ? `יובאו ${importedCount} מתנות`
-              : "החיבור נשמר — אפשר לסגור את החלון"}
-          </p>
-          <p className="mt-2 text-sm text-eggplant">
-            {importedCount > 0 ? "חוזרים לבית…" : "החלון הראשי ממשיך לייבוא"}
-          </p>
-          {error && (
-            <p className="mt-4 text-sm text-[#a33a28]" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-      )}
+    <div className="mx-auto max-w-xl space-y-4">
+      <BackLink href="/settings#buyme" label="חזרה להגדרות" />
+      <p className="text-sm font-semibold text-eggplant" role="status">
+        {message}
+      </p>
     </div>
   );
 }

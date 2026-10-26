@@ -49,10 +49,10 @@ export default function DashboardPage() {
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/vouchers/new" className="btn-primary px-6 py-2.5 text-sm">
+          <Link href="/vouchers/new" className="btn-primary inline-flex px-6 py-2.5 text-sm">
             צילום זיכוי
           </Link>
-          <Link href="/vouchers" className="btn-secondary px-6 py-2.5 text-sm">
+          <Link href="/vouchers" className="btn-secondary inline-flex px-6 py-2.5 text-sm">
             כל הזיכויים
           </Link>
         </div>

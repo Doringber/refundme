@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-4 pb-28 md:max-w-5xl md:pt-6 md:pb-10"
+      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] md:max-w-5xl md:pt-6 md:pb-10"
     >
       <ExpiryNotifier />
       <BuyMeAutoSync />
@@ -61,24 +61,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {(shortName ?? displayName ?? "?").slice(0, 1)}
             </span>
           )}
-          <span className="min-w-0">
-            {isHome ? (
-              <span className="chrome-ink block truncate font-display text-lg leading-none md:text-xl">
-                {shortName ? `היי ${shortName}` : "היי"}
+          {!isHome && (
+            <span className="min-w-0">
+              <span className="chrome-ink block font-display text-lg leading-none md:text-xl">
+                {APP_NAME}
               </span>
-            ) : (
-              <>
-                <span className="chrome-ink block font-display text-lg leading-none md:text-xl">
-                  {APP_NAME}
+              {displayName && (
+                <span className="chrome-muted mt-1 block truncate text-xs font-bold">
+                  {displayName}
                 </span>
-                {displayName && (
-                  <span className="chrome-muted mt-1 block truncate text-xs font-bold">
-                    {displayName}
-                  </span>
-                )}
-              </>
-            )}
-          </span>
+              )}
+            </span>
+          )}
         </Link>
         <div className="flex items-center gap-2">
           {demo && (
@@ -98,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 md:static md:inset-auto md:mt-10 md:bottom-auto"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 md:static md:inset-auto md:bottom-auto md:mt-10"
         aria-label="ניווט ראשי"
       >
         <ul className="pill-nav mx-auto grid max-w-3xl grid-cols-5 gap-1 px-2 py-2 md:flex md:justify-center md:gap-2 md:px-3">
@@ -114,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex flex-col items-center rounded-full px-2 py-2 text-xs font-extrabold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
+                  className={`flex min-h-11 flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
                     active ? "nav-link-active" : "nav-link-idle"
                   }`}
                   aria-current={active ? "page" : undefined}

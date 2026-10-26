@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BuyMeGiftImportPanel } from "@/components/vouchers/buyme-gift-import";
@@ -26,7 +26,6 @@ type Step = "upload" | "pick-buyme" | "review" | "success";
 export default function NewVoucherPage() {
   const app = useAppData();
   const router = useRouter();
-  const buyMeInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,7 +104,7 @@ export default function NewVoucherPage() {
             merchantName: fallback.merchantName ?? "BuyMe",
             documentType: "shopping_voucher",
           },
-          "לא זיהינו כרטיסי מתנה ברורים — נסו סימנייה מתוך BuyMe, או צלמו שוב את «המתנות שלי».",
+          "לא זיהינו כרטיסי מתנה ברורים בתמונה. זיכויי BuyMe מסתנכרנים מההגדרות.",
         );
         return;
       }
@@ -245,7 +244,11 @@ export default function NewVoucherPage() {
       <div>
         <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
         <p className="text-sm text-eggplant">
-          חיבור ל־BuyMe (API) — או צילום תעודת זיכוי רגילה
+          צילום תעודת זיכוי, או מילוי ידני.{" "}
+          <Link href="/settings#buyme" className="font-extrabold text-forest">
+            חיבור BuyMe נמצא בהגדרות
+          </Link>
+          .
         </p>
       </div>
 
@@ -260,46 +263,6 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <Link
-            href="/vouchers/import/buyme?auto=1"
-            className="btn-primary flex w-full items-center justify-center py-3.5 text-sm"
-          >
-            חיבור וסנכרון BuyMe
-          </Link>
-
-          <div className="relative flex items-center gap-3 py-1 text-xs font-bold text-eggplant">
-            <span className="h-px flex-1 bg-white/10" />
-            או צילום מסך אחד של כל הרשימה
-            <span className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <button
-            type="button"
-            className="btn-secondary flex w-full flex-col items-center gap-1 py-3.5 text-sm"
-            disabled={busy}
-            onClick={() => buyMeInputRef.current?.click()}
-            data-testid="buyme-import-button"
-          >
-            <span className="font-extrabold">צילום «המתנות שלי»</span>
-            <span className="text-xs opacity-80">
-              ייבוא כל המתנות עם יתרה — בלי כרטיס־כרטיס
-            </span>
-          </button>
-          <input
-            ref={buyMeInputRef}
-            type="file"
-            accept="image/*,image/heic,image/heif"
-            capture="environment"
-            className="sr-only"
-            aria-label="צילום מסך מ־BuyMe"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              e.target.value = "";
-              void handleFile(file, { buyMeMode: true });
-            }}
-            disabled={busy}
-          />
-
           <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-8 text-center">
             <span className="font-display text-xl text-forest">
               צלמו תעודת זיכוי / שובר

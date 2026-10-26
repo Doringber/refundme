@@ -112,6 +112,7 @@ npx supabase db push
 | `GEMINI_API_KEY` | שרת בלבד | לא | חילוץ מתמונה מקומי. `GOOGLE_API_KEY` הוא alias |
 | `GOOGLE_GEMINI_BASE_URL` | שרת בלבד | לא | מוגדר אוטומטית כש־Netlify AI Gateway פעיל |
 | `DOCUMENT_OCR_API_KEY` | שרת בלבד | לא | מפתח OCR ישן; לא בשימוש כש־Gemini זמין |
+| `GOOGLE_PLACES_API_KEY` | שרת בלבד | לא | גיבוי לחיפוש סניף בודד כש־OpenStreetMap לא מחזיר תוצאה. כרטיסי BuyMe מרובי־מותגים משתמשים ברשימה הציבורית של BuyMe וב־OSM. המיקום לא נשמר |
 
 כש־Supabase מוגדר, `src/proxy.ts` שולח את מסכי האפליקציה (`/dashboard`, `/vouchers`, `/stores`, `/settings`, `/activity`) ל־`/login` בלי סשן ובלי עוגיית דמו. `/api/extract` קורא ל־Gemini רק למשתמש מחובר. בלי Supabase (דמו מקומי) Gemini רץ אם המפתח מוגדר.
 
