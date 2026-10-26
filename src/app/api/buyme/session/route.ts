@@ -6,8 +6,12 @@ import {
 } from "@/lib/buyme/cookie";
 import { logServerError } from "@/lib/log";
 import { createBuyMeSession, isSessionExpired } from "@/lib/buyme/session";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { saveBuyMeConnection } from "@/lib/wallet/connection-store";
+import {
+  disconnectBuyMeConnection,
+  saveBuyMeConnection,
+} from "@/lib/wallet/connection-store";
 import { syncBuyMeWallet } from "@/lib/wallet/buyme-sync";
 import type { WalletSyncReport } from "@/lib/wallet/types";
 
@@ -39,11 +43,17 @@ export async function POST(request: Request) {
       if (!user) {
         error = "app_login_required";
       } else {
-        await saveBuyMeConnection({
+        const saved = await saveBuyMeConnection({
           userId: user.id,
           token: session.token,
           expiresAt,
         });
+        if (!saved.ok) {
+          error =
+            saved.reason === "server_unconfigured"
+              ? "session_store_unconfigured"
+              : "session_store_failed";
+        }
         sync = await syncBuyMeWallet(user.id, session.token);
       }
     } catch (syncError) {
@@ -71,5 +81,20 @@ export async function GET() {
 
 export async function DELETE() {
   await clearBuyMeSessionCookie();
-  return NextResponse.json({ ok: true });
+  if (!isSupabaseConfigured()) return NextResponse.json({ ok: true });
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ ok: true });
+    const removed = await disconnectBuyMeConnection(user.id);
+    if (!removed) {
+      return NextResponse.json({ ok: false, error: "disconnect_failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    logServerError("buyme-session", error);
+    return NextResponse.json({ ok: false, error: "disconnect_failed" }, { status: 500 });
+  }
 }

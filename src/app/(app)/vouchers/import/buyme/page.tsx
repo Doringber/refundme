@@ -157,9 +157,24 @@ export default function BuyMeImportPage() {
             return;
           }
           if (report?.status === "error") {
-            setError("החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה.");
+            setError(
+              saved.error === "session_store_unconfigured" ||
+                saved.error === "session_store_failed"
+                ? "החיבור לא נשמר מוצפן בשרת, ושאיבת הארנק מ־BuyMe נכשלה."
+                : "החיבור נשמר, אבל שאיבת הארנק מ־BuyMe נכשלה.",
+            );
             setStep("connect");
             return;
+          }
+          if (
+            saved.error === "session_store_unconfigured" ||
+            saved.error === "session_store_failed"
+          ) {
+            setError(
+              saved.error === "session_store_unconfigured"
+                ? "הארנק סונכרן, אבל השמירה המוצפנת לא הוגדרה בשרת (BUYME_SESSION_KEY). הסנכרון המתוזמן לא יימשך."
+                : "הארנק סונכרן, אבל שמירת החיבור המוצפן נכשלה. הסנכרון המתוזמן לא יימשך עד חיבור מחדש.",
+            );
           }
           const upserted = report?.upserted ?? 0;
           if (window.opener && !window.opener.closed) {
@@ -240,7 +255,11 @@ export default function BuyMeImportPage() {
   }, [step]);
 
   async function disconnect() {
-    await fetch("/api/buyme/session", { method: "DELETE" });
+    const res = await fetch("/api/buyme/session", { method: "DELETE" });
+    if (!res.ok) {
+      setError("הניתוק לא הושלם. נסו שוב.");
+      return;
+    }
     setCards([]);
     setStep("connect");
   }
@@ -507,6 +526,11 @@ export default function BuyMeImportPage() {
           <p className="mt-2 text-sm text-eggplant">
             {importedCount > 0 ? "חוזרים לבית…" : "החלון הראשי ממשיך לייבוא"}
           </p>
+          {error && (
+            <p className="mt-4 text-sm text-[#a33a28]" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
     </div>

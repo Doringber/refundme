@@ -9,10 +9,16 @@ import {
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { AddVoucherCodeForm } from "@/components/vouchers/add-voucher-code";
 import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, parseShekelInput } from "@/lib/calculations";
+import {
+  buyMeOpenUrl,
+  checkoutKind,
+  offerCheckoutDisplay,
+} from "@/lib/vouchers/checkout-display";
 
 export default function VoucherDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,7 +61,7 @@ export default function VoucherDetailPage() {
     voucher.extractionRaw?.provider === "buyme"
       ? voucher.extractionRaw
       : null;
-  const buyMeUrl = typeof buyMeData?.url === "string" ? buyMeData.url : null;
+  const buyMeUrl = buyMeOpenUrl(voucher);
   const buyMeId =
     typeof buyMeData?.externalId === "string" ? buyMeData.externalId : null;
   const buyMeSupplier =
@@ -147,17 +153,19 @@ export default function VoucherDetailPage() {
         />
       </section>
 
-      {!isReceipt &&
-        (voucher.status === "active" ||
-          voucher.status === "partially_redeemed") && (
-          <Link
-            href={`/vouchers/${voucher.id}/present`}
-            className="btn-primary flex w-full items-center justify-center py-3.5 text-base"
-            data-testid="open-present"
-          >
-            הצגה בקופה — קוד וברקוד
-          </Link>
-        )}
+      {offerCheckoutDisplay(voucher) && (
+        <Link
+          href={`/vouchers/${voucher.id}/present`}
+          className="btn-primary flex w-full items-center justify-center py-3.5 text-base"
+          data-testid="open-present"
+        >
+          {checkoutKind(voucher) === "code"
+            ? "הצגה בקופה — קוד וברקוד"
+            : checkoutKind(voucher) === "buyme"
+              ? "הצגה בקופה — פתיחה ב־BuyMe"
+              : "הצגה בקופה — תעודת הזיכוי"}
+        </Link>
+      )}
 
       {buyMeData && (
         <section className="card-surface space-y-3 p-5">
@@ -193,11 +201,24 @@ export default function VoucherDetailPage() {
           )}
           {!voucher.voucherCode && !voucher.barcodeValue && (
             <p className="text-xs leading-relaxed text-eggplant">
-              BuyMe לא החזיר קוד או מספר ברקוד עבור השובר הזה. RefundMe לא
-              ממציא ברקוד — השתמשו בכפתור ״הצגה בקופה״ כדי לראות את הנתונים
-              שנשמרו, או פתחו את השובר המקורי אם BuyMe מציג שם QR/ברקוד.
+              {buyMeUrl
+                ? "BuyMe לא החזיר קוד קופה לרשימה. פתחו את השובר המקורי — שם מופיע הקוד או ה־QR אם BuyMe הנפיק אחד. RefundMe לא ממציא ברקוד."
+                : "BuyMe לא החזיר קוד, ברקוד או קישור לשובר. RefundMe לא ממציא ברקוד. אפשר להוסיף קוד ידנית אם הוא מודפס על השובר."}
             </p>
           )}
+        </section>
+      )}
+
+      {!voucher.voucherCode && !voucher.barcodeValue && !isReceipt && (
+        <section className="card-surface space-y-3 p-5">
+          <h2 className="font-display text-lg">קוד לקופה</h2>
+          <p className="text-xs leading-relaxed text-eggplant">
+            בלי קוד שמור אין מסך סריקה. הוסיפו את הקוד שמופיע על השובר או
+            ב־BuyMe.
+          </p>
+          <AddVoucherCodeForm
+            onSave={(code) => app.saveVoucherCode(voucher.id, code)}
+          />
         </section>
       )}
 

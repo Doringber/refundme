@@ -37,7 +37,7 @@ export const SPENDABLE_TYPES: DocumentType[] = [
 ];
 
 export const DEMO_COOKIE = "zikuy_demo";
-/** v3 seeds real sample refund invoices for quick viewing */
-export const DEMO_STORAGE_KEY = "zikuy_sheli_demo_v3";
+/** v4 adds a BuyMe FOODY sample that has a link and no cashier code */
+export const DEMO_STORAGE_KEY = "zikuy_sheli_demo_v4";
 
 export const APP_NAME = "זיכוי שלי";

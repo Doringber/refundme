@@ -14,7 +14,7 @@
 - לוח בקרה עם **Credit Orb**, פירוט לפי חנות, פגים בקרוב, ציר תוקף ופעילות
 - חיפוש וסינון, פרטי שובר, מימוש מלא/חלקי
 - תזכורות לפי תוקף מאומת; אחרת — «תוקף לא אומת»
-- חנויות בקרבתי + סימון האם הקבלה בסניף אומתה
+- חנויות בקרבתי (מיקום בדפדפן או חיפוש עיר) + סימון האם הקבלה בסניף אומתה, והדגשת זיכוי שמתאים לסניף באזור
 - ייצוא JSON ומחיקת נתונים
 
 ## הרצה מהירה (מצב דמו)
@@ -28,7 +28,7 @@ npm run dev
 
 פתחו [http://localhost:3000](http://localhost:3000) → **כניסה למצב דמו**.
 
-הדמו שומר נתונים ב־`localStorage` עם דוגמאות בעברית (FOX, זארה, סופר-פארם, קבלת איקאה). בלי משתני Supabase האפליקציה נשארת בדמו.
+הדמו שומר נתונים ב־`localStorage` (`zikuy_sheli_demo_v4`) עם דוגמאות בעברית (FOX, זארה, סופר-פארם, קבלת איקאה, ושובר BuyMe FOODY בלי קוד קופה אבל עם קישור). בלי משתני Supabase האפליקציה נשארת בדמו.
 
 ```bash
 npm test           # בדיקות לוגיקה (יתרה, תוקף, BuyMe, ברקוד)
@@ -61,6 +61,7 @@ npx supabase db push
 # supabase/migrations/20260328180000_initial_schema.sql
 # supabase/migrations/20260929071118_google_login_profiles.sql
 # supabase/migrations/20261001193000_buyme_wallet_sync.sql
+# supabase/migrations/20261026160000_shufersal_yochananof_branches.sql
 ```
 
 המיגרציה הראשונה כוללת:
@@ -68,7 +69,8 @@ npx supabase db push
 - טבלאות: `profiles`, `merchants`, `merchant_branches`, `vouchers`, `redemptions`, `activity_events`
 - **RLS** על כל רשומות המשתמש
 - באקט פרטי `voucher-documents` (עד 10MB, תמונות/PDF) עם מדיניות לפי `user_id`
-- סט סניפים קטן עם סימון `verified` / `unverified`
+- סט סניפים קטן עם `lat`/`lng` וסימון `verified` / `unverified`
+- המיגרציה `20261026160000` מוסיפה סניפי שופרסל ויוחננוף עם קואורדינטות משוערות. הסניפים מהמיגרציה הראשונה כבר כוללים קואורדינטות; אין צורך למלא אותן מחדש.
 
 4. הפעילו **Email** ו־**Google** בלוח הבקרה של Supabase:
    - [Authentication → Providers → Google](https://supabase.com/dashboard/project/_/auth/providers)
@@ -79,6 +81,14 @@ npx supabase db push
      - Site URL: כתובת האפליקציה
      - Redirect URLs: `http://localhost:3000/auth/callback` ו־`https://YOUR_DOMAIN/auth/callback`
 5. `npm run dev` — מסכי התחברות/הרשמה (כולל כפתור Google) יופיעו כשמשתני הסביבה מוגדרים.
+
+לפרסום אפליקציית Google OAuth (מסך ההסכמה) צריך כתובת מדיניות פרטיות ציבורית. אחרי deploy:
+
+- דף הבית: `https://justrefundme.netlify.app`
+- פרטיות: `https://justrefundme.netlify.app/privacy`
+- תנאים: `https://justrefundme.netlify.app/terms`
+
+`NEXT_PUBLIC_SITE_URL` (אופציונלי) קובע את בסיס ה־Open Graph. בלי ערך הבסיס הוא `https://justrefundme.netlify.app`.
 
 אחרי התחברות עם Google נוצרת רשומה ב־`profiles` (שם, אימייל, `avatar_url`) אוטומטית דרך trigger על `auth.users`.
 
@@ -96,7 +106,8 @@ npx supabase db push
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | לקוח+שרת | לא | alias ישן ל־anon JWT |
 | `SUPABASE_SECRET_KEY` | שרת בלבד (לא `NEXT_PUBLIC_`) | לענן | מחיקת חשבון, מסמכים וסנכרון BuyMe (`sb_secret_…`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | לא | alias ישן ל־service_role |
-| `BUYME_SESSION_KEY` | שרת בלבד | מומלץ | הצפנת סשן BuyMe ב־DB. בלי זה נופלים ל־`SUPABASE_SECRET_KEY`, ורוטציה של המפתח מנתקת את כולם |
+| `BUYME_SESSION_KEY` | שרת בלבד | מומלץ | הצפנת סשן BuyMe ב־DB. בלי זה נופלים ל־`SUPABASE_SECRET_KEY`, ורוטציה של המפתח מנתקת את כולם. בלי מפתח הצפנה בכלל השמירה נכשלת והסנכרון המתוזמן לא רץ |
+| `NEXT_PUBLIC_SITE_URL` | לקוח+שרת | לא | בסיס מטא־דאטה (OG). ברירת מחדל: האתר בפרודקשן |
 | `CRON_SECRET` | שרת בלבד | לסנכרון מתוזמן | סוד ל־`POST /api/cron/buyme-sync` בכותרת `x-cron-secret`. בלי ערך הנתיב נעול |
 | `GEMINI_API_KEY` | שרת בלבד | לא | חילוץ מתמונה מקומי. `GOOGLE_API_KEY` הוא alias |
 | `GOOGLE_GEMINI_BASE_URL` | שרת בלבד | לא | מוגדר אוטומטית כש־Netlify AI Gateway פעיל |
@@ -119,7 +130,8 @@ Next.js 16 מריץ את זה כ־`proxy` (Node), לא כ־middleware על Edge.
 ## כללי מוצר חשובים
 
 - היתרה תמיד **«יתרה לפי הדיווח שלך»** — לא «יתרה מאומתת»
-- אין המצאת ברקודים, תאריכי תוקף, סניפים או מימושים
+- אין המצאת ברקודים, תאריכי תוקף או מימושים. קוד קופה מוצג רק אם נשמר מהמקור או הוזן ידנית. לשובר BuyMe בלי קוד מוצג קישור לשובר המקורי, אם BuyMe החזיר קישור
+- מיקום בדפדפן (מסך החנויות) לא נשמר בשרת. בלי אישור מיקום אפשר לחפש לפי עיר
 - בלי תוקף מאומת — אין ספירה לאחור בכדור
 - תמונה של שובר אינה מבטיחה קבלה בכל קופה
 - אין NFC / מימוש בטרמינלים של רשתות
@@ -156,7 +168,9 @@ curl -X POST "$SITE_URL/api/cron/buyme-sync" \
   -H "x-cron-secret: $CRON_SECRET"
 ```
 
-בלי `CRON_SECRET` הקריאה נדחית. שרת Node רגיל: `npm run build && npm start`.
+בלי `CRON_SECRET` הקריאה נדחית. ניתוק BuyMe מוחק את האסימון המוצפן מהמסד, לא רק את עוגיית הדפדפן — אחרת הסנכרון המתוזמן ממשיך. שרת Node רגיל: `npm run build && npm start`.
+
+מסך החנויות מבקש `geolocation` רק אחרי לחיצה. כותרת `Permissions-Policy` מאפשרת את זה לדומיין עצמו (`geolocation=(self)`). הקואורדינטות לא נשמרות.
 
 ## בדיקות לפני שחרור
 

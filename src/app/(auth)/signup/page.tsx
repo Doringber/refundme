@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LegalLinks } from "@/components/legal-links";
 import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +30,7 @@ export default function SignupPage() {
           Supabase אינו מוגדר. השתמשו במצב הדמו.
         </p>
         <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
+        <LegalLinks />
       </div>
     );
   }
@@ -124,6 +126,7 @@ export default function SignupPage() {
           התחברות
         </Link>
       </p>
+      <LegalLinks />
     </div>
   );
 }

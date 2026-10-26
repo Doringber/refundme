@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LegalLinks } from "@/components/legal-links";
 import { oauthErrorMessage } from "@/lib/auth/oauth-errors";
 import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -35,6 +36,7 @@ function LoginForm() {
           Supabase אינו מוגדר. השתמשו במצב הדמו או הגדירו משתני סביבה.
         </p>
         <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
+        <LegalLinks />
       </div>
     );
   }
@@ -117,6 +119,7 @@ function LoginForm() {
           הרשמה
         </Link>
       </p>
+      <LegalLinks />
     </div>
   );
 }

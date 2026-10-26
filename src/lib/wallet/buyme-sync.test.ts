@@ -53,6 +53,41 @@ describe("BuyMe wallet sync", () => {
     assert.equal(fresh.inserts[0].extraction_raw.shortToken, "abc-token");
   });
 
+  it("keeps a stored code and BuyMe link when a later sync omits them", () => {
+    const item = normalizeBuyMeCard({
+      ...card,
+      code: null,
+      barcode: null,
+      url: null,
+      shortToken: null,
+      supplierDescription: null,
+      redemptionInstructions: null,
+    });
+    const plan = planBuyMeUpserts(
+      [
+        {
+          id: "row-1",
+          externalId: "42",
+          voucherCode: "KEEP",
+          barcodeValue: "111",
+          url: "https://buyme.co.il/giftcard/keep",
+          shortToken: "tok",
+          supplierName: "Fox",
+          supplierDescription: "keep-desc",
+          redemptionInstructions: "keep-steps",
+        },
+      ],
+      [item],
+    );
+    assert.equal(plan.updates.length, 1);
+    assert.equal(plan.updates[0].voucher_code, "KEEP");
+    assert.equal(plan.updates[0].barcode_value, "111");
+    assert.equal(plan.updates[0].extraction_raw.url, "https://buyme.co.il/giftcard/keep");
+    assert.equal(plan.updates[0].extraction_raw.shortToken, "tok");
+    assert.equal(plan.updates[0].extraction_raw.supplierDescription, "keep-desc");
+    assert.equal(plan.updates[0].extraction_raw.redemptionInstructions, "keep-steps");
+  });
+
   it("does not plan duplicate inserts from repeated wallet rows", () => {
     const item = normalizeBuyMeCard(card);
     const plan = planBuyMeUpserts([], [item, item]);

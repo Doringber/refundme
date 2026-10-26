@@ -102,6 +102,18 @@ export async function touchBuyMeSync(userId: string): Promise<void> {
     .eq("provider", "buyme");
 }
 
+/** Drop the stored BuyMe session so cron cannot keep syncing after disconnect. */
+export async function disconnectBuyMeConnection(userId: string): Promise<boolean> {
+  const db = admin();
+  if (!db) return false;
+  const { error } = await db
+    .from("wallet_connections")
+    .delete()
+    .eq("user_id", userId)
+    .eq("provider", "buyme");
+  return !error;
+}
+
 export async function listConnectedBuyMeUserIds(): Promise<string[]> {
   const db = admin();
   if (!db) return [];

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
+import { LegalLinks } from "@/components/legal-links";
 import { APP_NAME } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -94,9 +95,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <p className="text-center text-xs leading-relaxed text-eggplant">
-        היתרה לפי הדיווח שלכם. תמונה אינה מבטיחה קבלה בקופה.
-      </p>
+      <div className="space-y-2">
+        <p className="text-center text-xs leading-relaxed text-eggplant">
+          היתרה לפי הדיווח שלכם. תמונה אינה מבטיחה קבלה בקופה.
+        </p>
+        <LegalLinks />
+      </div>
     </div>
   );
 }

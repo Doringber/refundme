@@ -55,7 +55,7 @@ export async function syncBuyMeWallet(
 
   const { data: existingRows, error: readError } = await db
     .from("vouchers")
-    .select("id, extraction_raw")
+    .select("id, voucher_code, barcode_value, extraction_raw")
     .eq("user_id", userId)
     .eq("extraction_raw->>provider", "buyme");
   if (readError) {
@@ -67,12 +67,29 @@ export async function syncBuyMeWallet(
       error: "read_failed",
     };
   }
-  const existing: ExistingBuyMeVoucher[] = (existingRows ?? [])
-    .map((row) => {
-      const raw = row.extraction_raw as { externalId?: string } | null;
-      return raw?.externalId ? { id: row.id as string, externalId: raw.externalId } : null;
-    })
-    .filter((row): row is ExistingBuyMeVoucher => Boolean(row));
+  const existing: ExistingBuyMeVoucher[] = [];
+  for (const row of existingRows ?? []) {
+    const raw = row.extraction_raw as {
+      externalId?: string;
+      url?: string | null;
+      shortToken?: string | null;
+      supplierName?: string | null;
+      supplierDescription?: string | null;
+      redemptionInstructions?: string | null;
+    } | null;
+    if (!raw?.externalId) continue;
+    existing.push({
+      id: row.id,
+      externalId: raw.externalId,
+      voucherCode: row.voucher_code,
+      barcodeValue: row.barcode_value,
+      url: raw.url ?? null,
+      shortToken: raw.shortToken ?? null,
+      supplierName: raw.supplierName ?? null,
+      supplierDescription: raw.supplierDescription ?? null,
+      redemptionInstructions: raw.redemptionInstructions ?? null,
+    });
+  }
 
   const plan = planBuyMeUpserts(existing, items);
   let upserted = 0;
