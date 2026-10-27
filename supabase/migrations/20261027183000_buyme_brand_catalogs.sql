@@ -1,7 +1,9 @@
--- Slim BuyMe multi-brand lists (ALL, FOODY, STYLE, TOGETHER): brand titles
--- and the distinctive aliases from each brand's searchTerms. No user id and
--- no coordinates. Nearby search matches these names to the map at request
--- time and does not store where the user was.
+-- Slim BuyMe multi-brand lists (ALL, FOODY, STYLE, TOGETHER).
+-- Each brand object may include id, title, nameHe, nameEn, logo, categories,
+-- onlineOnly, address (a street from the same BuyMe document, never a URL),
+-- regions, and strict aliases. BuyMe does not publish branch coordinates.
+-- No user id. Nearby search matches physical brands to the map at request
+-- time and does not store where the user was. fetched_at is the last refresh.
 --
 -- Writes: server only (service role) from POST /api/cron/buyme-catalogs and
 -- from an on-demand refresh after a nearby search. The app still answers
@@ -16,7 +18,7 @@ create table if not exists public.buyme_brand_catalogs (
     check (catalog_id in ('13438757', '17573460', '7565407', '17574075')),
   label text not null
     check (char_length(label) between 2 and 200),
-  -- [{ "title": text, "aliases": text[] }]
+  -- brand records: id, title, nameHe, nameEn, logo, categories, onlineOnly, address, regions, aliases
   brands jsonb not null
     check (jsonb_typeof(brands) = 'array' and jsonb_array_length(brands) between 1 and 2500),
   brand_count integer not null

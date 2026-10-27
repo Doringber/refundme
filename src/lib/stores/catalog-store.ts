@@ -31,7 +31,18 @@ export function asCatalogBrands(value: unknown): CatalogBrand[] | null {
   const brands: CatalogBrand[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
-    const row = item as { title?: unknown; aliases?: unknown };
+    const row = item as {
+      title?: unknown;
+      aliases?: unknown;
+      id?: unknown;
+      nameHe?: unknown;
+      nameEn?: unknown;
+      logo?: unknown;
+      categories?: unknown;
+      onlineOnly?: unknown;
+      address?: unknown;
+      regions?: unknown;
+    };
     if (typeof row.title !== "string") continue;
     const title = row.title.trim();
     if (title.length < 2) continue;
@@ -42,7 +53,26 @@ export function asCatalogBrands(value: unknown): CatalogBrand[] | null {
           .filter((alias) => alias.length >= 2)
           .slice(0, MAX_ALIASES)
       : [];
-    brands.push({ title, aliases });
+    const texts = (value: unknown, limit: number) =>
+      Array.isArray(value)
+        ? value
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter((item) => item.length >= 2)
+            .slice(0, limit)
+        : [];
+    brands.push({
+      title,
+      aliases,
+      id: typeof row.id === "string" && row.id.trim() ? row.id.trim() : undefined,
+      nameHe: typeof row.nameHe === "string" ? row.nameHe : null,
+      nameEn: typeof row.nameEn === "string" ? row.nameEn : null,
+      logo: typeof row.logo === "string" && row.logo.startsWith("https://buyme.co.il/files/") ? row.logo : null,
+      categories: texts(row.categories, 4),
+      onlineOnly: row.onlineOnly === true,
+      address: typeof row.address === "string" ? row.address : null,
+      regions: texts(row.regions, 8),
+    });
     if (brands.length >= MAX_BRANDS) break;
   }
   return brands.length ? brands : null;

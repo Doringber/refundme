@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ExpiryNotifier } from "@/components/notifications/expiry-notifier";
+import { NearCreditBanner } from "@/components/stores/near-credit-banner";
 import { BuyMeAutoSync } from "@/components/wallet/buyme-auto-sync";
 import { useAppData } from "@/lib/app-data/context";
 import { APP_NAME } from "@/lib/constants";
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {pathname !== "/stores/near" && <NearCreditBanner />}
       <main className="flex-1">
         <div key={pathname} className="page-enter">
           {children}

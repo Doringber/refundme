@@ -34,10 +34,26 @@ export function catalogForVoucher(voucher: {
   );
 }
 
-/** A catalog brand plus the distinctive names BuyMe lists beside the title. */
+/**
+ * One brand inside a BuyMe money card, taken from
+ * `GET https://buyme.co.il/brands/{cardId}/options` (the same document as
+ * `GET https://buyme.co.il/siteapi/brands/{cardId}`).
+ * BuyMe does not publish branch coordinates. `address` is a street only when
+ * the card document itself has one (not a store-locator URL, not an office
+ * pulled from a second request).
+ */
 export type CatalogBrand = {
   title: string;
   aliases: string[];
+  id?: string;
+  nameHe?: string | null;
+  nameEn?: string | null;
+  logo?: string | null;
+  categories?: string[];
+  /** True when BuyMe lists the brand only under online redemption. */
+  onlineOnly?: boolean;
+  address?: string | null;
+  regions?: string[];
 };
 
 export type CatalogSummary = {
@@ -136,7 +152,112 @@ const ALIAS_NOISE = new Set([
   "כלי",
   "טעמים",
   "חומוס",
+  "איפור",
+  "קוסמטיקה",
+  "הלבשה",
+  "בגדי",
+  "ביגוד",
+  "תחתון",
+  "תחתונה",
+  "מן",
+  "קידס",
+  "נשים",
+  "גברים",
+  "men",
+  "women",
+  "מרכז",
+  "צפון",
+  "דרום",
+  "תל",
+  "אביב",
+  "ירושלים",
+  "חיפה",
+  "הרצליה",
+  "נתניה",
+  "אשדוד",
+  "אשקלון",
+  "רמת",
+  "פתח",
+  "תקווה",
+  "עזריאלי",
+  "קניון",
+  "ארצית",
 ]);
+
+/** BuyMe's own label for a brand that is redeemed on a website, not in a shop. */
+const ONLINE_REGION = "מימוש אונליין";
+
+const LOGO_PREFIX = "https://buyme.co.il/files/";
+
+/** Israeli keyboard: Latin typed as Hebrew, and the reverse. */
+const LATIN_TO_HEBREW: Record<string, string> = {
+  q: "/", w: "'", e: "ק", r: "ר", t: "א", y: "ט", u: "ו", i: "ן", o: "ם", p: "פ",
+  a: "ש", s: "ד", d: "ג", f: "כ", g: "ע", h: "י", j: "ח", k: "ל", l: "ך", ";": "ף",
+  z: "ז", x: "ס", c: "ב", v: "ה", b: "נ", n: "מ", m: "צ", ",": "ת", ".": "ץ",
+};
+const HEBREW_TO_LATIN: Record<string, string> = Object.fromEntries(
+  Object.entries(LATIN_TO_HEBREW).map(([latin, hebrew]) => [hebrew, latin]),
+);
+
+function keyboardMap(value: string, table: Record<string, string>): string {
+  return [...value].map((char) => table[char] ?? char).join("");
+}
+
+/** The same letters typed on the other keyboard layout, not a translation. */
+function isKeyboardEcho(term: string, title: string): boolean {
+  const left = term.replace(/\s+/g, "");
+  const right = title.replace(/\s+/g, "");
+  if (!left || !right) return false;
+  return (
+    keyboardMap(left, HEBREW_TO_LATIN) === right ||
+    keyboardMap(right, LATIN_TO_HEBREW) === left ||
+    keyboardMap(right, HEBREW_TO_LATIN) === left ||
+    keyboardMap(left, LATIN_TO_HEBREW) === right
+  );
+}
+
+function hasHebrew(value: string): boolean {
+  return /[\u0590-\u05FF]/.test(value);
+}
+
+function hasLatin(value: string): boolean {
+  return /[a-z]/i.test(value);
+}
+
+/** A house number and a street. Store-locator URLs are not branches. */
+export function streetAddress(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.length < 4 || trimmed.length > 140) return null;
+  if (/^https?:/i.test(trimmed) || trimmed.includes("www.")) return null;
+  if (!/\d/.test(trimmed)) return null;
+  if (!hasHebrew(trimmed) && !hasLatin(trimmed)) return null;
+  return trimmed;
+}
+
+function logoUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const file = value.trim();
+  if (!/^[\w.-]+\.(?:jpe?g|png|webp)(?:\?[\w.=-]*)?$/i.test(file)) return null;
+  return `${LOGO_PREFIX}${file}`;
+}
+
+function stringList(value: unknown, key: string, limit: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const name = (item as Record<string, unknown>)[key];
+    if (typeof name !== "string") continue;
+    const trimmed = name.trim();
+    if (trimmed.length < 2 || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
 
 /** `searchTerms` is either a string array or a JSON string of one. */
 export function parseSearchTerms(value: unknown): string[] {
@@ -165,48 +286,61 @@ function noisyAlias(token: string): boolean {
 }
 
 /**
- * Names worth matching on the map. Hebrew terms that stand alone ("אדידס")
- * and siblings that share a search term with the title ("reebok" next to
- * "adidas") are kept. Category keywords and keyboard-smash typos are not.
+ * Other spellings of this brand only. A search term is kept when it is the
+ * title in the other script, or the title plus a qualifier ("קסטרו מן").
+ * Sister brands stuffed into the same list ("allsaints" on STORY, "reebok"
+ * beside adidas) are not aliases. Keyboard-layout echoes ("צשב" for MAC) are
+ * not aliases. Category words are not aliases.
  */
 export function distinctiveAliases(title: string, searchTerms: unknown): string[] {
-  const titleTokens = new Set(tokens(title).filter((token) => !noisyAlias(token)));
-  const seen = new Set<string>([normalize(title)]);
+  const titleNorm = normalize(title);
+  const titleTokens = new Set(tokens(title).filter((token) => !noisyAlias(token) && token.length >= 3));
+  const seen = new Set<string>([titleNorm]);
   const aliases: string[] = [];
+  const hebrewSingles: string[] = [];
   const push = (phrase: string) => {
     if (aliases.length >= MAX_ALIASES) return;
     const prepared = prepareBrand(phrase, 0);
     if (!prepared || prepared.genericOnly || seen.has(prepared.norm)) return;
     if (prepared.tokens.every((token) => noisyAlias(token))) return;
+    if (isKeyboardEcho(prepared.norm, titleNorm)) return;
+    if (/[&/#]/.test(phrase)) return;
     seen.add(prepared.norm);
     aliases.push(prepared.tokens.join(" "));
   };
-  const sharesTitle = (termTokens: string[]) =>
-    termTokens.some(
-      (token) =>
-        titleTokens.has(token) ||
-        [...titleTokens].some(
-          (titleToken) =>
-            titleToken.length >= 4 &&
-            token.length >= 4 &&
-            (token.includes(titleToken) || titleToken.includes(token)),
-        ),
-    );
+  const containsTitle = (term: string, termTokens: string[]) =>
+    termTokens.some((token) => titleTokens.has(token)) ||
+    [...titleTokens].some((token) => token.length >= 4 && normalize(term).includes(token));
 
   for (const term of parseSearchTerms(searchTerms)) {
-    if (aliases.length >= MAX_ALIASES) break;
-    const termTokens = tokens(term);
-    if (sharesTitle(termTokens)) {
-      for (const token of termTokens) {
-        if (titleTokens.has(token) || noisyAlias(token)) continue;
-        if (!/[\u0590-\u05FF]/.test(token) && token.length < 4) continue;
-        push(token);
+    const norm = normalize(term);
+    if (!norm || norm === titleNorm || isKeyboardEcho(norm, titleNorm)) continue;
+    const termTokens = tokens(term).filter((token) => !noisyAlias(token) && token.length >= 3);
+    if (!termTokens.length) continue;
+    if (containsTitle(term, termTokens)) {
+      const extras = termTokens.filter((token) => !titleTokens.has(token) && hasHebrew(token));
+      const extraLatin = termTokens.filter(
+        (token) => hasLatin(token) && !hasHebrew(token) && !titleTokens.has(token),
+      );
+      // A sister brand in the same phrase ("adidas & reebok") contributes only
+      // the first Hebrew word. A city glued on ("פתח תקווה") stays one phrase,
+      // so "מרכז" alone cannot match a mall.
+      if (extraLatin.length) {
+        if (extras[0]) push(extras[0]);
+      } else if (extras.length === 1) {
+        push(extras[0]!);
+      } else if (extras.length > 1 && extras.length <= 3) {
+        push(extras.join(" "));
       }
       continue;
     }
-    const kept = termTokens.filter((token) => !noisyAlias(token));
-    if (kept.length === 1 && /[\u0590-\u05FF]/.test(kept[0]!)) push(kept[0]!);
+    if (termTokens.length === 1 && hasHebrew(termTokens[0]!) && !hasLatin(termTokens[0]!)) {
+      hebrewSingles.push(termTokens[0]!);
+    }
   }
+  // A single standalone Hebrew spelling is the brand name. Two or more are
+  // other chains BuyMe copied into the same list.
+  if (hebrewSingles.length === 1) push(hebrewSingles[0]!);
   return aliases;
 }
 
@@ -225,13 +359,51 @@ export function slimCatalog(id: string, data: unknown): CatalogSummary | null {
   const seen = new Set<string>();
   for (const brand of record.brands) {
     if (!brand || typeof brand !== "object") continue;
-    const row = brand as { title?: unknown; searchTerms?: unknown };
+    const row = brand as {
+      id?: unknown;
+      title?: unknown;
+      searchTerms?: unknown;
+      logo?: unknown;
+      googleMapAddr?: unknown;
+      siteAddress?: unknown;
+      supplier_regions?: unknown;
+      categories_on_brands?: unknown;
+    };
     if (typeof row.title !== "string") continue;
     const trimmed = row.title.trim();
     if (trimmed.length < 2 || seen.has(trimmed)) continue;
     seen.add(trimmed);
+    const aliases = distinctiveAliases(trimmed, row.searchTerms);
+    const regions = stringList(row.supplier_regions, "name", 8);
+    const physicalRegions = regions.filter((region) => region !== ONLINE_REGION);
+    const address =
+      streetAddress(row.googleMapAddr) ?? streetAddress(row.siteAddress);
+    const onlineOnly = physicalRegions.length === 0 && regions.includes(ONLINE_REGION);
+    const hebrewAlias = aliases.find((alias) => hasHebrew(alias)) ?? null;
+    const latinAlias = aliases.find((alias) => hasLatin(alias) && !hasHebrew(alias)) ?? null;
     titles.push(trimmed);
-    brands.push({ title: trimmed, aliases: distinctiveAliases(trimmed, row.searchTerms) });
+    brands.push({
+      id: row.id == null ? undefined : String(row.id),
+      title: trimmed,
+      aliases,
+      nameHe: hasHebrew(trimmed) ? trimmed : hebrewAlias,
+      nameEn: hasLatin(trimmed) ? trimmed : latinAlias,
+      logo: logoUrl(row.logo),
+      categories: stringList(row.categories_on_brands, "name", 4),
+      onlineOnly,
+      address: onlineOnly ? null : address,
+      regions,
+    });
+  }
+  const titlesNorm = new Set(titles.map((title) => normalize(title)));
+  for (const brand of brands) {
+    brand.aliases = brand.aliases.filter((alias) => {
+      const norm = normalize(alias);
+      return norm === normalize(brand.title) || !titlesNorm.has(norm);
+    });
+    if (brand.nameHe && brand.nameHe !== brand.title && titlesNorm.has(normalize(brand.nameHe))) {
+      brand.nameHe = brand.aliases.find((alias) => hasHebrew(alias)) ?? null;
+    }
   }
   const fallback = BUYME_CATALOGS.find((item) => item.id === id)?.label ?? "BuyMe";
   const name =
@@ -443,6 +615,7 @@ function catalogMatcher(brands: CatalogBrand[]): (placeNames: string[]) => strin
     }
   };
   brands.forEach((entry, order) => {
+    if (entry.onlineOnly) return;
     const title = prepareBrand(entry.title, order);
     if (title) remember(title);
     for (const alias of entry.aliases) {

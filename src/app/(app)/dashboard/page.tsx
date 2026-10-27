@@ -4,7 +4,6 @@ import Link from "next/link";
 import { BagMascot, TicketSlip } from "@/components/illustrations/bag-mascot";
 import { ExpiryBadge } from "@/components/ui/status-badge";
 import { CreditOrb } from "@/components/orb/credit-orb";
-import { NearCreditBanner } from "@/components/stores/near-credit-banner";
 import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
 import { formatIls, isSpendable } from "@/lib/calculations";
@@ -57,7 +56,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        <NearCreditBanner />
         <p className="mt-4 text-sm font-semibold text-eggplant">
           צילום זיכוי חדש נמצא תחת «עוד».
         </p>

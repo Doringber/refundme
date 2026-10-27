@@ -28,6 +28,18 @@ export function bundledCatalog(id: string): StoredCatalog | null {
     brands: brands.map((brand) => ({
       title: brand.title,
       aliases: Array.isArray(brand.aliases) ? brand.aliases.filter((alias) => typeof alias === "string") : [],
+      id: typeof brand.id === "string" ? brand.id : undefined,
+      nameHe: typeof brand.nameHe === "string" ? brand.nameHe : null,
+      nameEn: typeof brand.nameEn === "string" ? brand.nameEn : null,
+      logo: typeof brand.logo === "string" ? brand.logo : null,
+      categories: Array.isArray(brand.categories)
+        ? brand.categories.filter((item) => typeof item === "string")
+        : [],
+      onlineOnly: brand.onlineOnly === true,
+      address: typeof brand.address === "string" ? brand.address : null,
+      regions: Array.isArray(brand.regions)
+        ? brand.regions.filter((item) => typeof item === "string")
+        : [],
     })),
   };
   return {
