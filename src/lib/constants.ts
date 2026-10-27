@@ -40,4 +40,4 @@ export const DEMO_COOKIE = "zikuy_demo";
 /** v4 adds a BuyMe FOODY sample that has a link and no cashier code */
 export const DEMO_STORAGE_KEY = "zikuy_sheli_demo_v4";
 
-export const APP_NAME = "זיכוי שלי";
+export const APP_NAME = "Refunds Bag";

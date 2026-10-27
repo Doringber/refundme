@@ -1,5 +1,6 @@
 import "server-only";
 
+import { APP_NAME } from "@/lib/constants";
 import { logServerError } from "@/lib/log";
 import { reminderEmail } from "./reminder-message";
 
@@ -63,8 +64,8 @@ export async function sendHouseholdInviteEmail(input: {
       body: JSON.stringify({
         from,
         to: [input.to],
-        subject: "הזמנה לארנק המשותף בזיכוי שלי",
-        text: `מזמינים אותך לארנק «${input.householdName}» בזיכוי שלי.\n\n${input.url}\n\nהקישור תקף ל־14 יום. מי שיש לו את הקישור יכול להצטרף, אז עדיף לא לפרסם אותו.\n`,
+        subject: `הזמנה לארנק המשותף ב־${APP_NAME}`,
+        text: `מזמינים אותך לארנק «${input.householdName}» ב־${APP_NAME}.\n\n${input.url}\n\nהקישור תקף ל־14 יום. מי שיש לו את הקישור יכול להצטרף, אז עדיף לא לפרסם אותו.\n`,
       }),
     });
     if (!response.ok) {

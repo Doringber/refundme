@@ -1,8 +1,8 @@
-# זיכוי שלי
+# Refunds Bag
 
 אפליקציית ווב בעברית (RTL) לניהול זיכויי חנות ושוברי קנייה בישראל. צילום מסמך → אישור שדות → מעקב יתרה, תוקף וחנויות.
 
-**Working name:** זיכוי שלי · Stack: Next.js 16, TypeScript, Tailwind CSS, Supabase. Node.js 22.
+**Name:** Refunds Bag · Stack: Next.js 16, TypeScript, Tailwind CSS, Supabase. Node.js 22.
 
 ## תכונות בגרסה 1
 

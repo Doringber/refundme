@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { APP_NAME } from "./constants";
 import { homeHeadline } from "./home-headline";
 import type { Voucher } from "./types";
 
@@ -44,8 +45,8 @@ describe("homeHeadline", () => {
       now: new Date("2026-04-01T09:00:00"),
     });
     assert.match(title, /דור/);
-    assert.notEqual(title, "זיכוי שלי");
-    assert.doesNotMatch(title, /^זיכוי שלי$/);
+    assert.notEqual(title, APP_NAME);
+    assert.doesNotMatch(title, new RegExp(`^${APP_NAME}$`));
   });
 
   it("uses empty-state humor when no credits", () => {

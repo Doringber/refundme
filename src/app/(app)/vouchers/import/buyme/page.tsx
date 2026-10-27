@@ -7,6 +7,7 @@ import {
   BUYME_CONNECTED_MESSAGE,
   readBuyMeImportHash,
 } from "@/lib/buyme-import";
+import { APP_NAME } from "@/lib/constants";
 
 function notifyOpenerAndClose() {
   try {
@@ -60,7 +61,7 @@ export default function BuyMeImportPage() {
         return;
       }
       if (saved.error === "app_login_required") {
-        setMessage("התחברו לזיכוי שלי באותו דפדפן, ואז חברו שוב את BuyMe מההגדרות.");
+        setMessage(`התחברו ל־${APP_NAME} באותו דפדפן, ואז חברו שוב את BuyMe מההגדרות.`);
         return;
       }
       if (saved.sync?.status === "login_required") {

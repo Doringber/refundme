@@ -7,7 +7,7 @@ export default function NotFound() {
       <p className="font-display text-5xl text-forest">404</p>
       <h1 className="font-display text-2xl text-night">העמוד לא נמצא</h1>
       <p className="text-sm text-eggplant">
-        הכתובת לא קיימת ב{APP_NAME}. אפשר לחזור לדף הבית.
+        הכתובת לא קיימת ב־{APP_NAME}. אפשר לחזור לדף הבית.
       </p>
       <Link href="/" className="btn-primary px-5 py-3">
         לדף הבית

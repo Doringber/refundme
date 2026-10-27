@@ -159,7 +159,7 @@ export function buildExpiryCalendarReminder(
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Zikuy Sheli//Expiry Reminders//HE",
+    `PRODID:-//${APP_NAME}//Expiry Reminders//HE`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     ...events,
@@ -177,7 +177,7 @@ export function buildExpiryCalendarReminder(
 
   return {
     icsBlob: new Blob([ics], { type: "text/calendar;charset=utf-8" }),
-    fileName: `zikuy-${voucher.merchantName.replaceAll(/\s+/g, "-")}-expiry.ics`,
+    fileName: `refunds-bag-${voucher.merchantName.replaceAll(/\s+/g, "-")}-expiry.ics`,
     googleUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
   };
 }

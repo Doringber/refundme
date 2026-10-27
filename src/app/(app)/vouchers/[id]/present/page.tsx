@@ -10,6 +10,7 @@ import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { barcodePayload } from "@/lib/barcode/code128";
 import { formatIls } from "@/lib/calculations";
+import { APP_NAME } from "@/lib/constants";
 import {
   buyMeOpenUrl,
   checkoutKind,
@@ -189,7 +190,7 @@ export default function VoucherPresentPage() {
             >
               <p className={`text-sm leading-relaxed ${bright ? "text-black/70" : "text-eggplant"}`}>
                 BuyMe לא החזיר קוד קופה לרשימת הארנק. אם יש קוד או QR, הם
-                מופיעים בשובר המקורי. RefundMe לא ממציא ברקוד.
+                מופיעים בשובר המקורי. {APP_NAME} לא ממציא ברקוד.
               </p>
               <a
                 href={buyMeUrl}

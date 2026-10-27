@@ -4,7 +4,7 @@ import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `פרטיות · ${APP_NAME}`,
-  description: "אילו נתונים זיכוי שלי שומר, ומה לא נשמר — כולל מיקום וחיבור BuyMe.",
+  description: `אילו נתונים ${APP_NAME} שומר, ומה לא נשמר — כולל מיקום וחיבור BuyMe.`,
 };
 
 export default function PrivacyPage() {
