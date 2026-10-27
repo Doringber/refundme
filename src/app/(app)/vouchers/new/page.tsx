@@ -8,6 +8,7 @@ import {
   valuesFromExtraction,
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { useAppData } from "@/lib/app-data/context";
 import { buyMeVoucherKey, vouchersFromBuyMeGifts } from "@/lib/buyme-import";
 import {
@@ -241,15 +242,18 @@ export default function NewVoucherPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <div>
-        <h1 className="font-display text-2xl text-forest">הוספת זיכוי</h1>
-        <p className="text-sm text-eggplant">
-          צילום תעודת זיכוי, או מילוי ידני.{" "}
-          <Link href="/settings#buyme" className="font-extrabold text-forest">
-            חיבור BuyMe נמצא בהגדרות
-          </Link>
-          .
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl leading-none text-forest">צילום חדש</h1>
+          <p className="mt-2 text-sm font-semibold text-eggplant">
+            תעודה אחת נכנסת לשקית.{" "}
+            <Link href="/settings#buyme" className="font-extrabold text-forest underline">
+              BuyMe מתחבר בהגדרות
+            </Link>
+            .
+          </p>
+        </div>
+        <BagMascot className="h-24 w-24 shrink-0" />
       </div>
 
       {app.mode === "supabase" && !app.user && (
@@ -263,11 +267,11 @@ export default function NewVoucherPage() {
 
       {step === "upload" && (
         <div className="card-surface space-y-4 p-5">
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[rgba(71,181,168,0.45)] bg-[rgba(71,181,168,0.06)] px-4 py-8 text-center">
-            <span className="font-display text-xl text-forest">
-              צלמו תעודת זיכוי / שובר
+          <label className="btn-primary flex cursor-pointer flex-col items-center gap-2 px-4 py-8 text-center">
+            <span className="font-display text-2xl">
+              צלמו את השובר
             </span>
-            <span className="text-sm text-eggplant">
+            <span className="text-sm font-bold opacity-90">
               JPEG, PNG, WebP או PDF · עד 10MB
             </span>
             <input
@@ -282,11 +286,11 @@ export default function NewVoucherPage() {
 
           <button
             type="button"
-            className="btn-secondary w-full py-3"
+            className="min-h-11 w-full text-sm font-extrabold text-eggplant underline"
             onClick={continueManual}
             disabled={busy}
           >
-            המשך למילוי ידני בלי קובץ
+            מילוי ידני בלי צילום
           </button>
 
           {(busy || status) && (

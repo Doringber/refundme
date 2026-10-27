@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { TicketSlip } from "@/components/illustrations/bag-mascot";
 import { BackLink } from "@/components/layout/back-link";
 import { LoadingBlock } from "@/components/ui/loading";
 import {
@@ -104,21 +105,23 @@ export default function VoucherDetailPage() {
     <div className="mx-auto max-w-xl space-y-5">
       <BackLink href="/vouchers" />
 
-      <header className="space-y-2">
-        <h1 className="font-display text-3xl text-forest">{voucher.merchantName}</h1>
-        <p className="font-display text-3xl text-night">
-          {formatIls(
+      <header className="space-y-3">
+        <h1 className="font-display text-4xl leading-none text-forest">{voucher.merchantName}</h1>
+        <TicketSlip
+          amount={formatIls(
             isReceipt
               ? voucher.originalAmountAgorot
               : voucher.remainingAmountAgorot,
           )}
-        </p>
-        <p className="text-sm text-eggplant">
-          {isReceipt ? "סכום קבלה" : "יתרה לפי הדיווח שלך"}
-          {!isReceipt && voucher.originalAmountAgorot !== voucher.remainingAmountAgorot
-            ? ` · מקורי ${formatIls(voucher.originalAmountAgorot)}`
-            : ""}
-        </p>
+          caption={
+            isReceipt
+              ? "סכום קבלה"
+              : voucher.originalAmountAgorot !== voucher.remainingAmountAgorot
+                ? `לפי הדיווח שלך · מקורי ${formatIls(voucher.originalAmountAgorot)}`
+                : "לפי הדיווח שלך"
+          }
+          className="inline-block"
+        />
         <div className="flex flex-wrap gap-2">
           <TypeBadge type={voucher.documentType} />
           <StatusBadge status={voucher.status} />
@@ -298,7 +301,7 @@ export default function VoucherDetailPage() {
                 {ok}
               </p>
             )}
-            <button type="submit" className="btn-primary w-full py-3" disabled={busy}>
+            <button type="submit" className="btn-secondary w-full py-3" disabled={busy}>
               {busy ? "שומרים…" : "שמירת מימוש"}
             </button>
           </form>

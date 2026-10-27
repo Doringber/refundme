@@ -35,3 +35,9 @@ export function safeInternalPath(
   if (url.origin !== "https://zikuy.local") return fallback;
   return `${url.pathname}${url.search}${url.hash}`;
 }
+
+/** OAuth return URL on this origin; `next` is re-validated by the callback too. */
+export function googleRedirectTo(origin: string, next: string | null | undefined): string {
+  const params = new URLSearchParams({ next: safeInternalPath(next) });
+  return `${origin.replace(/\/+$/, "")}/auth/callback?${params.toString()}`;
+}

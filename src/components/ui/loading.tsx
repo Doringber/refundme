@@ -5,8 +5,9 @@ export function LoadingBlock({ label = "טוען…" }: { label?: string }) {
       role="status"
       aria-live="polite"
     >
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-[rgba(53,94,78,0.2)] border-t-[var(--forest)] motion-reduce:animate-none" />
-      <p className="text-sm text-eggplant">{label}</p>
+      <div className="skeleton h-28 w-28 rounded-full" />
+      <div className="skeleton h-4 w-40" />
+      <p className="text-sm font-bold text-eggplant">{label}</p>
     </div>
   );
 }

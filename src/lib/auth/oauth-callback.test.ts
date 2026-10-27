@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   isOAuthPrefetch,
   loginErrorLocation,
+  loginLocationFor,
   oauthCallbackDestination,
+  oauthErrorCode,
   pkceFlowId,
   proxySkipsSessionRefresh,
   shouldExchangeOAuthCode,
@@ -86,5 +88,29 @@ describe("OAuth callback planning", () => {
     assert.equal(signedInEntryRedirect("/dashboard", "user-1"), null);
     assert.equal(proxySkipsSessionRefresh("/auth/callback"), true);
     assert.equal(proxySkipsSessionRefresh("/dashboard"), false);
+  });
+
+  it("sends a signed-in visitor of /login?next= to that page, never off-site", () => {
+    assert.equal(signedInEntryRedirect("/login", "user-1", "/stores"), "/stores");
+    assert.equal(signedInEntryRedirect("/login", "user-1", "//evil.example"), "/dashboard");
+    assert.equal(signedInEntryRedirect("/login", null, "/stores"), null);
+  });
+
+  it("keeps the protected page in next when bouncing to login", () => {
+    assert.equal(loginLocationFor("/stores", ""), "/login?next=%2Fstores");
+    assert.equal(
+      loginLocationFor("/vouchers/abc", "?tab=1"),
+      "/login?next=%2Fvouchers%2Fabc%3Ftab%3D1",
+    );
+    assert.equal(loginLocationFor("/dashboard", ""), "/login");
+  });
+
+  it("prefers Supabase's specific error_code over the generic error", () => {
+    assert.equal(
+      oauthErrorCode(new URLSearchParams("error=access_denied&error_code=otp_expired")),
+      "otp_expired",
+    );
+    assert.equal(oauthErrorCode(new URLSearchParams("error=access_denied")), "access_denied");
+    assert.equal(oauthErrorCode(new URLSearchParams("")), null);
   });
 });
