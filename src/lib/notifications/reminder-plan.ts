@@ -148,7 +148,7 @@ export function planExpiryReminders(input: {
         emailReminders: person.emailReminders,
         title: copy.title,
         body: copy.body,
-        path: `/vouchers/${voucher.id}`,
+        path: channel === "push" ? "/stores/near" : `/vouchers/${voucher.id}`,
       });
     }
   }

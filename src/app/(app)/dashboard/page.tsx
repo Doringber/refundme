@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BagMascot, TicketSlip } from "@/components/illustrations/bag-mascot";
+import { ExpiryBadge } from "@/components/ui/status-badge";
 import { CreditOrb } from "@/components/orb/credit-orb";
 import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
@@ -42,25 +43,22 @@ export default function DashboardPage() {
         </h1>
 
         <div className="mt-6 flex items-end justify-between gap-3">
-          <BagMascot
-            mood={hasCredits ? "happy" : "empty"}
-            className="h-36 w-36 shrink-0"
-          />
+          <div className="mascot-hello shrink-0">
+            <BagMascot
+              mood={hasCredits ? "happy" : "empty"}
+              className="h-36 w-36"
+            />
+          </div>
           <TicketSlip
             amount={formatIls(summary.totalActiveCreditAgorot)}
             caption="לפי הדיווח שלך"
+            className="ticket-float"
           />
         </div>
 
-        <Link href="/vouchers/new" className="btn-primary mt-6 flex w-full items-center justify-center text-base">
-          צילום זיכוי
-        </Link>
-        <Link
-          href="/vouchers"
-          className="mt-3 flex min-h-11 items-center justify-center text-sm font-extrabold text-forest underline"
-        >
-          כל הזיכויים
-        </Link>
+        <p className="mt-4 text-sm font-semibold text-eggplant">
+          צילום זיכוי חדש נמצא תחת «עוד».
+        </p>
 
         <div
           className={`mt-4 grid items-center gap-4 ${
@@ -90,27 +88,16 @@ export default function DashboardPage() {
           <h2 className="sheet-title font-display text-xl">
             {hasCredits ? "פעילות אחרונה" : "התחילו כאן"}
           </h2>
-          {hasCredits && (
-            <Link href="/activity" className="sheet-link text-sm font-extrabold">
-              הכל
-            </Link>
-          )}
         </div>
 
         {!hasCredits ? (
           <div className="space-y-4 py-2 text-center">
             <p className="sheet-muted text-sm font-semibold">
-              עדיין אין זיכויים. צלמו שובר — והיתרה תופיע בעיגול.
+              עדיין אין זיכויים. צילום שובר נמצא תחת «עוד», והיתרה תופיע בעיגול.
             </p>
-            <Link
-              href="/vouchers/new"
-              className="btn-primary inline-flex px-7 py-3 text-sm"
-            >
-              הוספת זיכוי ראשון
-            </Link>
           </div>
         ) : recent.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="stagger-list space-y-2">
             {recent.map((a) => (
               <li key={a.id}>
                 {a.voucherId ? (
@@ -139,7 +126,7 @@ export default function DashboardPage() {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2">
+          <ul className="stagger-list space-y-2">
             {active.slice(0, 6).map((v) => (
               <li key={v.id}>
                 <Link
@@ -150,8 +137,11 @@ export default function DashboardPage() {
                     <p className="sheet-title truncate text-sm font-extrabold">
                       {v.merchantName}
                     </p>
-                    <p className="sheet-muted text-xs font-semibold">
-                      {v.expiryDate ? `תוקף ${v.expiryDate}` : "תוקף לא אומת"}
+                    <p className="sheet-muted mt-1 text-xs font-semibold">
+                      <ExpiryBadge
+                        expiryDate={v.expiryDate}
+                        confidence={v.expiryConfidence}
+                      />
                     </p>
                   </div>
                   <p className="sheet-title font-display text-base">

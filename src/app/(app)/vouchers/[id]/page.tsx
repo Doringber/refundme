@@ -15,7 +15,8 @@ import { AddVoucherCodeForm } from "@/components/vouchers/add-voucher-code";
 import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
-import { formatIls, parseShekelInput } from "@/lib/calculations";
+import { formatIls, expiryIndicatorLabel, parseShekelInput } from "@/lib/calculations";
+import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { buyMeOpenUrl, checkoutKind } from "@/lib/vouchers/checkout-display";
 
 export default function VoucherDetailPage() {
@@ -28,6 +29,7 @@ export default function VoucherDetailPage() {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [burst, setBurst] = useState(0);
   const [busy, setBusy] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
 
@@ -96,6 +98,7 @@ export default function VoucherDetailPage() {
       setAmount("");
       setNote("");
       setOk("המימוש נרשם. היתרה עודכנה לפי הדיווח שלך.");
+      setBurst((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "המימוש נכשל");
     } finally {
@@ -103,8 +106,11 @@ export default function VoucherDetailPage() {
     }
   }
 
+  const expiryCopy = expiryIndicatorLabel(voucher.expiryDate, voucher.expiryConfidence);
+
   return (
     <div className="mx-auto max-w-xl space-y-5">
+      {burst > 0 ? <ConfettiBurst key={burst} /> : null}
       <BackLink href="/vouchers" />
 
       <header className="space-y-3">
@@ -218,8 +224,11 @@ export default function VoucherDetailPage() {
         </section>
       )}
 
+      <details className="card-surface p-5">
+        <summary className="min-h-11 cursor-pointer font-display text-lg">עוד</summary>
+        <div className="mt-4 space-y-4">
       {isOwner ? (
-        <section className="card-surface space-y-3 p-5">
+        <section className="space-y-3">
           <h2 className="font-display text-lg">שיתוף עם הבית</h2>
           <p className="text-sm leading-relaxed text-eggplant">
             {voucher.shared
@@ -247,7 +256,7 @@ export default function VoucherDetailPage() {
           </button>
         </section>
       ) : (
-        <section className="card-surface space-y-2 p-5">
+        <section className="space-y-2">
           <h2 className="font-display text-lg">זיכוי משותף</h2>
           <p className="text-sm leading-relaxed text-eggplant">
             זה זיכוי של {voucher.ownerName || "בן/בת הזוג"}. אפשר לרשום מימוש.
@@ -257,7 +266,7 @@ export default function VoucherDetailPage() {
       )}
 
       {!voucher.voucherCode && !voucher.barcodeValue && !isReceipt && isOwner && (
-        <section className="card-surface space-y-3 p-5">
+        <section className="space-y-3">
           <h2 className="font-display text-lg">קוד לקופה</h2>
           <p className="text-xs leading-relaxed text-eggplant">
             בלי קוד שמור אין מסך סריקה. הוסיפו את הקוד שמופיע על השובר או
@@ -296,14 +305,7 @@ export default function VoucherDetailPage() {
       <section className="card-surface space-y-2 p-5 text-sm">
         <h2 className="font-display text-lg">פרטים</h2>
         <Row label="תאריך הנפקה" value={voucher.issueDate ?? "—"} />
-        <Row
-          label="תוקף"
-          value={
-            voucher.expiryConfidence === "confirmed" && voucher.expiryDate
-              ? voucher.expiryDate
-              : "תוקף לא אומת"
-          }
-        />
+        <Row label="תוקף" value={expiryCopy.label} />
         <Row label="תנאים" value={voucher.usageTerms ?? "—"} />
         <Row label="הערות" value={voucher.notes ?? "—"} />
       </section>
@@ -314,7 +316,7 @@ export default function VoucherDetailPage() {
       />
 
       {canRedeem && (
-        <section className="card-surface space-y-3 p-5">
+        <section className="space-y-3">
           <h2 className="font-display text-lg">רישום מימוש</h2>
           <p className="text-xs text-eggplant">
             מימוש מלא או חלקי. היתרה מחושבת מהסכום המקורי ומהמימושים שדיווחתם.
@@ -395,6 +397,8 @@ export default function VoucherDetailPage() {
           מחיקת מסמך
         </button>
       ) : null}
+        </div>
+      </details>
     </div>
   );
 }

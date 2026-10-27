@@ -1,10 +1,13 @@
 import "server-only";
 
 import { haversineKm } from "@/lib/stores/nearby";
+import { readStoredCatalog, saveStoredCatalog } from "@/lib/stores/catalog-store";
+import { bundledCatalog } from "@/lib/stores/catalog-snapshot";
 import {
   BUYME_CATALOGS,
   matchCatalogPlaces,
   slimCatalog,
+  type CatalogSummary,
   type GeoPlace,
 } from "@/lib/stores/lookup";
 import { queryOverpass } from "@/lib/stores/overpass";
@@ -28,7 +31,8 @@ import {
   type StoredPlace,
 } from "@/lib/stores/search";
 
-const CATALOG_TTL_MS = 6 * 60 * 60 * 1000;
+/** BuyMe republishes brand lists during the day; the cron should run at least this often. */
+export const CATALOG_TTL_MS = 12 * 60 * 60 * 1000;
 const CHAIN_TTL_MS = 6 * 60 * 60 * 1000;
 const PLACE_TTL_MS = 30 * 60 * 1000;
 const CACHE_LIMIT = 500;
@@ -63,8 +67,12 @@ function boundedCache<T>() {
   };
 }
 
-type CatalogSummary = { label: string; titles: string[] };
-const catalogCache = boundedCache<CatalogSummary>();
+type CachedCatalog = {
+  summary: CatalogSummary;
+  fetchedAt: number;
+  lastModified: string | null;
+};
+const catalogCache = boundedCache<CachedCatalog>();
 const chainCache = boundedCache<StoredPlace[]>();
 const resultCache = boundedCache<NearbyPayload>();
 const areaCache = boundedCache<GeoPlace[]>();
@@ -75,30 +83,123 @@ export function catalogLabel(id: string): string | null {
   return BUYME_CATALOGS.find((item) => item.id === id)?.label ?? null;
 }
 
-export async function loadCatalog(id: string, deadline: number): Promise<CatalogSummary | null> {
-  const hit = catalogCache.get(id);
-  if (hit) return hit;
-  const left = deadline - Date.now();
-  if (left < 1_000) return null;
+function fresher(left: CachedCatalog | null, right: CachedCatalog | null): CachedCatalog | null {
+  if (!left) return right;
+  if (!right) return left;
+  return left.fetchedAt >= right.fetchedAt ? left : right;
+}
+
+/**
+ * Download one public `/brands/{id}/options` document and keep only titles
+ * and aliases. The raw payload is 2–10MB, so callers use this on the cron
+ * and on a background refresh, not on the nearby-search deadline.
+ */
+export async function fetchLiveCatalog(id: string, timeoutMs: number): Promise<CachedCatalog | null> {
   try {
     const response = await fetch(`https://buyme.co.il/brands/${id}/options`, {
       headers: {
         accept: "application/json",
         "user-agent": "refundme-catalog",
       },
-      signal: AbortSignal.timeout(Math.min(6_000, left)),
-      // Payloads run 2-10MB, over the Next data cache limit; catalogCache holds the slim summary.
+      signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
     });
     if (!response.ok) return null;
     const summary = slimCatalog(id, await response.json());
     if (!summary) return null;
-    const value = { label: summary.label, titles: summary.titles };
-    catalogCache.set(id, value, CATALOG_TTL_MS);
-    return value;
+    return {
+      summary,
+      fetchedAt: Date.now(),
+      lastModified: response.headers.get("last-modified"),
+    };
   } catch {
     return null;
   }
+}
+
+async function resolveCatalog(id: string, deadline: number): Promise<CachedCatalog | null> {
+  const hit = catalogCache.get(id);
+  if (hit) return hit;
+  const stored = await readStoredCatalog(id);
+  const bundled = bundledCatalog(id);
+  const cached = fresher(stored, bundled);
+  const fresh = cached != null && Date.now() - cached.fetchedAt < CATALOG_TTL_MS;
+  if (fresh && cached) {
+    catalogCache.set(id, cached, CATALOG_TTL_MS);
+    return cached;
+  }
+  const left = deadline - Date.now();
+  // A slim list already answers the map query. Downloading the full BuyMe
+  // document here is what used to eat the request budget before Overpass ran.
+  if (!cached && left > 1_500) {
+    const live = await fetchLiveCatalog(id, Math.min(6_000, left));
+    if (live) {
+      catalogCache.set(id, live, CATALOG_TTL_MS);
+      void saveStoredCatalog(live);
+      return live;
+    }
+  }
+  if (cached) {
+    catalogCache.set(id, cached, 5 * 60 * 1000);
+    return cached;
+  }
+  return null;
+}
+
+export async function loadCatalog(id: string, deadline: number): Promise<CatalogSummary | null> {
+  const loaded = await resolveCatalog(id, deadline);
+  return loaded?.summary ?? null;
+}
+
+/** True when the in-memory copy is missing or older than the catalog TTL. */
+export function catalogNeedsRefresh(id: string): boolean {
+  const hit = catalogCache.get(id);
+  if (!hit) return true;
+  return Date.now() - hit.fetchedAt >= CATALOG_TTL_MS;
+}
+
+/**
+ * Refresh catalogs whose cache is older than the TTL. Safe to run after the
+ * nearby response: a failure leaves the previous slim list in place.
+ */
+export async function refreshStaleCatalogs(ids: string[]): Promise<void> {
+  const pending = ids.filter((id) => catalogNeedsRefresh(id));
+  await Promise.all(pending.map((id) => refreshCatalogNow(id)));
+}
+
+export async function refreshCatalogNow(id: string): Promise<{
+  id: string;
+  label: string | null;
+  brandCount: number | null;
+  persisted: "saved" | "skipped" | "migration_required" | "failed" | "unavailable";
+  elapsedMs: number;
+  lastModified: string | null;
+  fetchedAt: string | null;
+}> {
+  const started = Date.now();
+  const live = await fetchLiveCatalog(id, 20_000);
+  if (!live) {
+    return {
+      id,
+      label: catalogLabel(id),
+      brandCount: null,
+      persisted: "unavailable",
+      elapsedMs: Date.now() - started,
+      lastModified: null,
+      fetchedAt: null,
+    };
+  }
+  catalogCache.set(id, live, CATALOG_TTL_MS);
+  const persisted = await saveStoredCatalog(live);
+  return {
+    id,
+    label: live.summary.label,
+    brandCount: live.summary.brands.length,
+    persisted,
+    elapsedMs: Date.now() - started,
+    lastModified: live.lastModified,
+    fetchedAt: new Date(live.fetchedAt).toISOString(),
+  };
 }
 
 function located(places: GeoPlace[], origin: Origin) {
@@ -149,7 +250,7 @@ export async function lookupCatalogs(
   ]);
 
   const match = (catalog: CatalogSummary, places: GeoPlace[]) =>
-    matchCatalogPlaces(catalog.titles, located(places, origin));
+    matchCatalogPlaces(catalog.brands, located(places, origin));
 
   let area = firstArea;
   let radius: number = CATALOG_RADII_M[0];

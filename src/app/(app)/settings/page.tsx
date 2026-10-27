@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
@@ -34,6 +34,17 @@ export default function SettingsPage() {
   const [buyMeConnected, setBuyMeConnected] = useState<boolean | null>(null);
   const [connectHint, setConnectHint] = useState<string | null>(null);
   const [waitingConnect, setWaitingConnect] = useState(false);
+  const [picked, setPicked] = useState<"account" | "reminders" | "buyme" | null>(null);
+  const hashSection = useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener("hashchange", onChange);
+      return () => window.removeEventListener("hashchange", onChange);
+    },
+    () => (window.location.hash === "#buyme" ? "buyme" : "account"),
+    () => "account" as const,
+  );
+  const openSection = picked ?? hashSection;
+  const setSection = setPicked;
 
   useEffect(() => {
     let cancelled = false;
@@ -128,13 +139,28 @@ export default function SettingsPage() {
             החשבון, הצבעים, וחיבור BuyMe.
           </p>
         </div>
-        <BagMascot className="h-24 w-24 shrink-0" mood="happy" />
+        <div className="mascot-hello shrink-0">
+          <BagMascot className="h-24 w-24" mood="happy" />
+        </div>
       </div>
 
-      <ThemePicker
-        onPicked={(_id, nameHe) => setMessage(`העיצוב עודכן ל־${nameHe}`)}
-      />
+      <label className="block text-sm">
+        <span className="mb-1 block font-extrabold">מה פותחים</span>
+        <select
+          className="input-field"
+          value={openSection}
+          onChange={(event) =>
+            setSection(event.target.value as "account" | "reminders" | "buyme")
+          }
+        >
+          <option value="account">חשבון</option>
+          <option value="reminders">תזכורות וארנק</option>
+          <option value="buyme">BuyMe</option>
+        </select>
+      </label>
 
+      {openSection === "account" && (
+      <>
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">מצב נוכחי</h2>
         <div className="flex items-center gap-3">
@@ -163,30 +189,25 @@ export default function SettingsPage() {
             התחברות
           </Link>
         )}
-        {app.mode === "supabase" && app.user && (
-          <button
-            type="button"
-            className="btn-secondary px-4 py-2"
-            onClick={() =>
-              void app.signOut().then(() => {
-                router.push("/");
-                router.refresh();
-              })
-            }
-          >
-            התנתקות
-          </button>
-        )}
-        {app.mode === "demo" && (
-          <button
-            type="button"
-            className="btn-secondary px-4 py-2"
-            onClick={() => exitDemoMode()}
-          >
-            יציאה מדמו
-          </button>
-        )}
       </section>
+
+      {(app.mode === "demo" || app.user) && (
+        <button
+          type="button"
+          className="btn-primary px-5 py-3"
+          onClick={() => void handleExport()}
+          disabled={busy}
+        >
+          {busy ? "מייצאים…" : "ייצוא JSON"}
+        </button>
+      )}
+
+      <details className="card-surface p-5">
+        <summary className="min-h-11 cursor-pointer font-extrabold">עוד בחשבון</summary>
+        <div className="mt-4 space-y-4">
+      <ThemePicker
+        onPicked={(_id, nameHe) => setMessage(`העיצוב עודכן ל־${nameHe}`)}
+      />
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">סולם תצוגה אישי לכדור</h2>
@@ -218,68 +239,133 @@ export default function SettingsPage() {
         </button>
       </section>
 
+        {app.mode === "supabase" && app.user && (
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2"
+            onClick={() =>
+              void app.signOut().then(() => {
+                router.push("/");
+                router.refresh();
+              })
+            }
+          >
+            התנתקות
+          </button>
+        )}
+        {app.mode === "demo" && (
+          <button
+            type="button"
+            className="btn-secondary px-4 py-2"
+            onClick={() => exitDemoMode()}
+          >
+            יציאה מדמו
+          </button>
+        )}
+        {app.mode === "demo" ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-secondary px-4 py-2"
+              onClick={() => {
+                app.reset();
+                setMessage("נתוני הדמו אופסו");
+              }}
+            >
+              איפוס נתוני דמו
+            </button>
+            <button
+              type="button"
+              className="btn-danger px-4 py-2"
+              onClick={() => {
+                if (confirm("למחוק את כל נתוני הדמו מהמכשיר?")) {
+                  void Promise.resolve(app.wipe()).then(() => {
+                    app.reset();
+                    setMessage("הנתונים נמחקו ונטענו מחדש");
+                  });
+                }
+              }}
+            >
+              מחיקת נתוני דמו
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn-danger px-4 py-2"
+            disabled={!app.user || busy}
+            onClick={() => {
+              if (confirm("למחוק לצמיתות את החשבון ואת כל הנתונים? לא ניתן לשחזר.")) {
+                setBusy(true);
+                void Promise.resolve(app.wipe())
+                  .then(() => {
+                    router.push("/");
+                    router.refresh();
+                  })
+                  .catch((err: unknown) => {
+                    setMessage(err instanceof Error ? err.message : "מחיקת החשבון נכשלה");
+                    setBusy(false);
+                  });
+              }
+            }}
+          >
+            מחיקת חשבון לצמיתות
+          </button>
+        )}
+        </div>
+      </details>
+      </>
+      )}
+
+      {openSection === "reminders" && (
+      <>
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">תזכורות תוקף</h2>
         <p className="text-sm text-eggplant">
-          רק תאריך מאומת. ברירת המחדל היא 30, 7 ו־1 ימים לפני הפקיעה, ואפשר
-          לשנות. בעמוד הזיכוי עדיין אפשר להוסיף ליומן.
+          רק תאריך מאומת. באייפון ההתראה עובדת אחרי שמוסיפים את האפליקציה למסך הבית.
         </p>
-        <ReminderDaysEditor onMessage={setMessage} />
-        <button
-          type="button"
-          className="btn-secondary min-h-11 px-4 py-2 text-sm"
-          onClick={() => {
-            void Promise.resolve(
-              app.setProfile({ emailReminders: !app.profile.emailReminders }),
-            )
-              .then(() => {
-                setMessage(
-                  app.profile.emailReminders
-                    ? "מייל הגיבוי כבוי. בלי דחיפה לא נשלח תזכורת."
-                    : "אם אין התראת דחיפה, נשלח מייל.",
-                );
-              })
-              .catch((error: unknown) => {
-                setMessage(
-                  error instanceof Error
-                    ? error.message
-                    : "שמירת מייל הגיבוי מחכה למיגרציה ב־Supabase.",
-                );
-              });
-          }}
-        >
-          {app.profile.emailReminders ? "מייל גיבוי פעיל" : "מייל גיבוי כבוי"}
-        </button>
-        <p className="text-xs leading-relaxed text-eggplant">
-          המייל יוצא רק כשאין מנוי דחיפה פעיל
-          {app.profile.email ? ` אל ${app.profile.email}` : ""}. בלי שירות מייל
-          בשרת התזכורת פשוט לא נשלחת.
-        </p>
-        <BrowserNotifyToggle
-          reminderDays={app.profile.reminderDays}
-          onMessage={setMessage}
-        />
         <PushReminderCard onMessage={setMessage} />
       </section>
+      <details className="card-surface p-5">
+        <summary className="min-h-11 cursor-pointer font-extrabold">עוד בתזכורות</summary>
+        <div className="mt-4 space-y-4">
+          <ReminderDaysEditor onMessage={setMessage} />
+          <button
+            type="button"
+            className="btn-secondary min-h-11 px-4 py-2 text-sm"
+            onClick={() => {
+              void Promise.resolve(
+                app.setProfile({ emailReminders: !app.profile.emailReminders }),
+              )
+                .then(() => {
+                  setMessage(
+                    app.profile.emailReminders
+                      ? "מייל הגיבוי כבוי. בלי דחיפה לא נשלח תזכורת."
+                      : "אם אין התראת דחיפה, נשלח מייל.",
+                  );
+                })
+                .catch((error: unknown) => {
+                  setMessage(
+                    error instanceof Error
+                      ? error.message
+                      : "שמירת מייל הגיבוי מחכה למיגרציה ב־Supabase.",
+                  );
+                });
+            }}
+          >
+            {app.profile.emailReminders ? "מייל גיבוי פעיל" : "מייל גיבוי כבוי"}
+          </button>
+          <BrowserNotifyToggle
+            reminderDays={app.profile.reminderDays}
+            onMessage={setMessage}
+          />
+          <HouseholdCard onMessage={setMessage} />
+        </div>
+      </details>
+      </>
+      )}
 
-      <HouseholdCard onMessage={setMessage} />
-
-      <section className="card-surface space-y-3 p-5">
-        <h2 className="font-display text-lg">ייצוא נתונים</h2>
-        <p className="text-sm text-eggplant">
-          הורדת JSON של הזיכויים, המימושים והפעילות. היתרות מסומנות כיתרה לפי
-          הדיווח שלך.
-        </p>
-        <button
-          type="button"
-          className="btn-primary px-5 py-3"
-          onClick={() => void handleExport()}
-          disabled={busy}
-        >
-          ייצוא JSON
-        </button>
-      </section>
-
+      {openSection === "buyme" && (
       <section id="buyme" className="card-surface scroll-mt-24 space-y-3 p-5">
         <h2 className="font-display text-lg">BuyMe</h2>
         <p className="text-sm text-eggplant">
@@ -287,22 +373,10 @@ export default function SettingsPage() {
             ? "BuyMe מחובר. «סנכרן עכשיו» מרענן את הארנק בלי להוסיף שוב את אותן מתנות."
             : "זה המקום היחיד לחיבור. פותחים את BuyMe, מתחברים, וחוזרים לכאן לסנכרון. הסיסמה לא נשמרת אצלנו."}
         </p>
-        <div className="flex flex-wrap gap-2">
-          <BuyMeConnectCard
-            label={buyMeConnected ? "חיבור מחדש" : "חבר את BuyMe"}
-            variant={buyMeConnected ? "secondary" : "primary"}
-            onOpened={(copied) => {
-              setWaitingConnect(true);
-              setConnectHint(
-                copied
-                  ? "חלון BuyMe נפתח והחיבור הועתק. התחברו שם, הדביקו בשורת הכתובת ולחצו מעבר."
-                  : "חלון BuyMe נפתח, אבל ההעתקה נכשלה. לחצו שוב על «חבר את BuyMe».",
-              );
-            }}
-          />
+        {buyMeConnected ? (
           <button
             type="button"
-            className={`${buyMeConnected ? "btn-primary" : "btn-secondary"} px-5 py-3 text-sm`}
+            className="btn-primary px-5 py-3 text-sm"
             disabled={syncBusy}
             onClick={() => {
               void (async () => {
@@ -323,9 +397,7 @@ export default function SettingsPage() {
                     setMessage(json.error || "הסנכרון נכשל");
                     return;
                   }
-                  setMessage(
-                    `הסנכרון הסתיים — ${json.upserted ?? 0} מתנות עודכנו או נוספו`,
-                  );
+                  setMessage(`הסנכרון הסתיים — ${json.upserted ?? 0} מתנות עודכנו או נוספו`);
                   window.setTimeout(() => window.location.reload(), 600);
                 } catch (err) {
                   setMessage(err instanceof Error ? err.message : "הסנכרון נכשל");
@@ -337,6 +409,64 @@ export default function SettingsPage() {
           >
             {syncBusy ? "מסנכרנים…" : "סנכרן עכשיו"}
           </button>
+        ) : (
+          <BuyMeConnectCard
+            label="חבר את BuyMe"
+            variant="primary"
+            onOpened={(copied) => {
+              setWaitingConnect(true);
+              setConnectHint(
+                copied
+                  ? "חלון BuyMe נפתח והחיבור הועתק. התחברו שם, הדביקו בשורת הכתובת ולחצו מעבר."
+                  : "חלון BuyMe נפתח, אבל ההעתקה נכשלה. לחצו שוב על «חבר את BuyMe».",
+              );
+            }}
+          />
+        )}
+        <details>
+          <summary className="min-h-11 cursor-pointer font-extrabold">עוד ב־BuyMe</summary>
+          <div className="mt-3 flex flex-wrap gap-2">
+          {buyMeConnected ? (
+            <BuyMeConnectCard
+              label="חיבור מחדש"
+              variant="secondary"
+              onOpened={(copied) => {
+                setWaitingConnect(true);
+                setConnectHint(
+                  copied
+                    ? "חלון BuyMe נפתח והחיבור הועתק. התחברו שם, הדביקו בשורת הכתובת ולחצו מעבר."
+                    : "חלון BuyMe נפתח, אבל ההעתקה נכשלה. לחצו שוב על «חבר את BuyMe».",
+                );
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="btn-secondary px-5 py-3 text-sm"
+              disabled={syncBusy}
+              onClick={() => {
+                void (async () => {
+                  setMessage(null);
+                  setSyncBusy(true);
+                  try {
+                    const res = await fetch("/api/wallet/buyme/sync", { method: "POST" });
+                    const json = (await res.json()) as { status?: string; error?: string };
+                    if (json.status === "login_required") {
+                      setMessage("BuyMe עדיין לא מחובר. לחצו «חבר את BuyMe».");
+                      return;
+                    }
+                    setMessage(json.error || "הסנכרון נכשל");
+                  } catch (err) {
+                    setMessage(err instanceof Error ? err.message : "הסנכרון נכשל");
+                  } finally {
+                    setSyncBusy(false);
+                  }
+                })();
+              }}
+            >
+              {syncBusy ? "מסנכרנים…" : "סנכרן עכשיו"}
+            </button>
+          )}
           {buyMeConnected && (
             <button
               type="button"
@@ -365,78 +495,14 @@ export default function SettingsPage() {
               {disconnectBusy ? "מנתקים…" : "ניתוק BuyMe"}
             </button>
           )}
-        </div>
+          </div>
+        </details>
         {connectHint && (
           <p className="text-sm font-semibold text-forest" role="status">
             {connectHint}
           </p>
         )}
       </section>
-
-      {app.mode === "demo" ? (
-        <section className="card-surface space-y-3 p-5">
-          <h2 className="font-display text-lg">מצב דמו</h2>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="btn-secondary px-4 py-2"
-              onClick={() => {
-                app.reset();
-                setMessage("נתוני הדמו אופסו");
-              }}
-            >
-              איפוס נתוני דמו
-            </button>
-            <button
-              type="button"
-              className="btn-danger px-4 py-2"
-              onClick={() => {
-                if (confirm("למחוק את כל נתוני הדמו מהמכשיר?")) {
-                  void Promise.resolve(app.wipe()).then(() => {
-                    app.reset();
-                    setMessage("הנתונים נמחקו ונטענו מחדש");
-                  });
-                }
-              }}
-            >
-              מחיקת נתוני דמו
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className="card-surface space-y-3 p-5">
-          <h2 className="font-display text-lg">מחיקת חשבון</h2>
-          <p className="text-sm text-eggplant">
-            מוחק את כל הזיכויים, המסמכים והחשבון מהשרת. פעולה זו בלתי הפיכה.
-          </p>
-          <button
-            type="button"
-            className="btn-danger px-4 py-2"
-            disabled={!app.user || busy}
-            onClick={() => {
-              if (
-                confirm(
-                  "למחוק לצמיתות את החשבון ואת כל הנתונים? לא ניתן לשחזר.",
-                )
-              ) {
-                setBusy(true);
-                void Promise.resolve(app.wipe())
-                  .then(() => {
-                    router.push("/");
-                    router.refresh();
-                  })
-                  .catch((err: unknown) => {
-                    setMessage(
-                      err instanceof Error ? err.message : "מחיקת החשבון נכשלה",
-                    );
-                    setBusy(false);
-                  });
-              }
-            }}
-          >
-            מחיקת חשבון לצמיתות
-          </button>
-        </section>
       )}
 
       {message && (

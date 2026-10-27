@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { BagMascot } from "@/components/illustrations/bag-mascot";
+import { BagMascot, PlayfulBackdrop } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { oauthErrorCode } from "@/lib/auth/oauth-callback";
@@ -43,7 +43,8 @@ function LoginForm() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <div className="play-stage page-enter relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 overflow-hidden px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+        <PlayfulBackdrop />
         <div>
           <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
           <h1 className="font-display mt-2 text-4xl leading-none text-forest">
@@ -55,7 +56,9 @@ function LoginForm() {
             Supabase אינו מוגדר כאן. אפשר להיכנס לדמו ולראות את הזיכויים.
           </p>
         </div>
-        <BagMascot className="mx-auto h-40 w-40" />
+        <div className="mascot-hello mx-auto w-fit">
+          <BagMascot className="h-40 w-40" />
+        </div>
         <DemoEntryButton className="btn-primary w-full py-3.5 text-center text-base" />
         <LegalLinks />
       </div>
@@ -89,8 +92,9 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <div className="page-enter">
+    <div className="play-stage page-enter relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 overflow-hidden px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <PlayfulBackdrop />
+      <div>
         <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
         <h1 className="font-display mt-2 text-4xl leading-none text-forest">
           השקית בבית
@@ -102,7 +106,9 @@ function LoginForm() {
         </p>
       </div>
 
-      <BagMascot className="mx-auto h-44 w-44" />
+      <div className="mascot-hello mx-auto w-fit">
+        <BagMascot className="h-44 w-44" />
+      </div>
 
       <div className="space-y-4">
         <GoogleSignInButton next={next} onStart={() => setError(null)} onError={setError} />

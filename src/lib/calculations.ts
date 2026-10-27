@@ -164,6 +164,27 @@ export function buildDashboardSummary(
   };
 }
 
+export type ExpiryTone = "calm" | "soon" | "now" | "unknown";
+
+/** Short, number-free label for the on-screen expiry meter. */
+export function expiryIndicatorLabel(
+  expiryDate: string | null,
+  confidence: ExpiryConfidence,
+  today = new Date(),
+): { label: string; tone: ExpiryTone } {
+  if (confidence !== "confirmed" || !expiryDate) {
+    return { label: "תוקף לא אומת", tone: "unknown" };
+  }
+  const days = daysUntil(expiryDate, today);
+  if (days === null) return { label: "תוקף לא אומת", tone: "unknown" };
+  if (days < 0) return { label: "התוקף עבר", tone: "now" };
+  if (days === 0) return { label: "פג היום", tone: "now" };
+  if (days === 1) return { label: "פג מחר", tone: "now" };
+  if (days <= EXPIRY_URGENT_DAYS) return { label: "עוד רגע", tone: "now" };
+  if (days <= EXPIRY_UPCOMING_DAYS) return { label: "בקרוב", tone: "soon" };
+  return { label: "יש זמן", tone: "calm" };
+}
+
 export function expiryMessage(voucher: Voucher | null, days: number | null): string {
   if (!voucher) return "אין זיכויים עם תוקף מאומת";
   if (voucher.expiryConfidence !== "confirmed" || !voucher.expiryDate) {

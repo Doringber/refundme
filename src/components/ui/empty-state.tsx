@@ -13,8 +13,10 @@ export function EmptyState({
   actionHref?: string;
 }) {
   return (
-    <div className="ticket-card flex flex-col items-center gap-3 px-6 py-10 text-center">
-      <BagMascot mood="empty" className="h-28 w-28" />
+    <div className="ticket-card empty-stage flex flex-col items-center gap-3 px-6 py-10 text-center">
+      <div className="mascot-hello">
+        <BagMascot mood="empty" className="h-28 w-28" />
+      </div>
       <h3 className="font-display text-2xl text-forest">{title}</h3>
       <p className="max-w-sm text-sm text-eggplant">{description}</p>
       {actionLabel && actionHref && (

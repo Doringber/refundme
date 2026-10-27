@@ -4,6 +4,7 @@ import { haversineKm } from "./nearby";
 import {
   brandMatchesPlace,
   catalogForVoucher,
+  distinctiveAliases,
   matchCatalogPlaces,
   overpassPlacesOrFailure,
   overpassRegex,
@@ -99,6 +100,173 @@ describe("BuyMe store lookup", () => {
     assert.equal(brandMatchesPlace("רשת לנדוור", ["לנדוור"]), true);
     assert.equal(brandMatchesPlace("מסעדות בנדיקט", ["בנדיקט"]), true);
     assert.equal(brandMatchesPlace("FOX", ["FOX"]), true);
+  });
+
+  it("matches a Hebrew BuyMe alias to the English brand title", () => {
+    const aliases = distinctiveAliases(
+      "adidas",
+      JSON.stringify(["אדידס", "ספורט", "samba", "אדידס וריבוק - adidas & reebok"]),
+    );
+    assert.ok(aliases.includes("אדידס"));
+    assert.equal(aliases.includes("ספורט"), false);
+    assert.equal(aliases.includes("samba"), false);
+    assert.equal(aliases.includes("reebok"), false);
+    assert.equal(aliases.includes("וריבוק"), false);
+    const story = distinctiveAliases(
+      "STORY",
+      JSON.stringify(["סטורי", "אופנה", "הרשל", "מליסה", "אולסיינטס", "allsaints", "נעליים"]),
+    );
+    assert.equal(story.includes("allsaints"), false);
+    assert.equal(story.includes("הרשל"), false);
+    assert.equal(story.includes("אולסיינטס"), false);
+    const mac = distinctiveAliases("MAC", JSON.stringify(["צשב", "איפור", "מאק"]));
+    assert.equal(mac.includes("צשב"), false);
+    assert.equal(mac.includes("איפור"), false);
+    assert.ok(mac.includes("מאק"));
+    assert.equal(
+      distinctiveAliases("CASTRO", JSON.stringify(["קסטרו מן"])).includes("קסטרו"),
+      true,
+    );
+    assert.equal(
+      distinctiveAliases("CASTRO", JSON.stringify(["קסטרו", "כסטרו", "אופנה"])).includes("קסטרו"),
+      false,
+    );
+    const winery = distinctiveAliases(
+      "יקב לוינסון",
+      JSON.stringify(["יקב לוינסון פתח תקווה", "מרכז", "נונו"]),
+    );
+    assert.equal(winery.includes("מרכז"), false);
+    assert.equal(winery.includes("פתח"), false);
+    const mall = matchCatalogPlaces(
+      [{ title: "יקב לוינסון", aliases: winery }],
+      [
+        {
+          name: "מרכז עזריאלי",
+          names: ["מרכז עזריאלי"],
+          chainNames: ["מרכז עזריאלי"],
+          address: null,
+          lat: 32.07,
+          lng: 34.79,
+          distanceKm: 0.01,
+        },
+      ],
+    );
+    assert.equal(mall.length, 0);
+    const matches = matchCatalogPlaces(
+      [{ title: "adidas", aliases }],
+      [
+        {
+          name: "אדידס",
+          names: ["אדידס"],
+          chainNames: ["אדידס"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.2,
+        },
+      ],
+    );
+    assert.equal(matches[0]?.brand, "adidas");
+    const fox = matchCatalogPlaces(
+      [
+        { title: "TERMINAL X", aliases: ["פוקס"] },
+        { title: "MANGO", aliases: ["פוקס"] },
+        { title: "Nike", aliases: ["פוקס"] },
+        { title: "The Children's Place", aliases: ["פוקס"] },
+        { title: "FOX", aliases: ["פוקס"] },
+        { title: "מגוון מותגי קבוצת FOX", aliases: ["פוקס"] },
+      ],
+      [
+        {
+          name: "פוקס",
+          names: ["פוקס"],
+          chainNames: ["פוקס"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.1,
+        },
+      ],
+    );
+    assert.equal(fox[0]?.brand, "FOX");
+    const laline = matchCatalogPlaces(
+      [
+        { title: "TERMINAL X", aliases: ["ללין", "טרמינל"] },
+        { title: "Laline", aliases: ["לאלין"] },
+      ],
+      [
+        {
+          name: "ללין",
+          names: ["ללין"],
+          chainNames: ["ללין"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.02,
+        },
+      ],
+    );
+    assert.equal(laline[0]?.brand, "Laline");
+    const summary = slimCatalog("13438757", {
+      supplier: { id: "13438757", name: "BUYME ALL" },
+      brands: [{ title: "adidas", searchTerms: '["אדידס","ספורט"]' }],
+    });
+    assert.equal(summary?.brands[0]?.title, "adidas");
+    assert.deepEqual(summary?.brands[0]?.aliases, ["אדידס"]);
+    assert.equal(summary?.brands[0]?.nameEn, "adidas");
+    assert.equal(summary?.brands[0]?.nameHe, "אדידס");
+    const online = slimCatalog("7565407", {
+      supplier: { id: 7565407, name: "BUYME STYLE" },
+      brands: [
+        {
+          id: 9,
+          title: "Web Only",
+          logo: "siteNewLogo9.jpg",
+          googleMapAddr: "https://example.com/stores",
+          siteAddress: "רחוב המלאכה 22",
+          supplier_regions: [{ name: "מימוש אונליין" }],
+          categories_on_brands: [{ name: "אופנה ושופינג" }],
+          searchTerms: "[]",
+        },
+        {
+          id: 10,
+          title: "Miss Nori",
+          googleMapAddr: "השלושה 3, תל אביב-יפו",
+          supplier_regions: [{ name: "ת\"א והסביבה" }],
+          searchTerms: "[]",
+        },
+      ],
+    });
+    assert.equal(online?.brands[0]?.onlineOnly, true);
+    assert.equal(online?.brands[0]?.address, null);
+    assert.equal(online?.brands[0]?.logo, "https://buyme.co.il/files/siteNewLogo9.jpg");
+    assert.deepEqual(online?.brands[0]?.categories, ["אופנה ושופינג"]);
+    assert.equal(online?.brands[1]?.onlineOnly, false);
+    assert.equal(online?.brands[1]?.address, "השלושה 3, תל אביב-יפו");
+    const hidden = matchCatalogPlaces(
+      online?.brands ?? [],
+      [
+        {
+          name: "Web Only",
+          names: ["Web Only"],
+          chainNames: ["Web Only"],
+          address: null,
+          lat: 32.07,
+          lng: 34.78,
+          distanceKm: 0.05,
+        },
+        {
+          name: "Miss Nori",
+          names: ["Miss Nori"],
+          chainNames: ["Miss Nori"],
+          address: null,
+          lat: 32.07,
+          lng: 34.78,
+          distanceKm: 0.04,
+        },
+      ],
+    );
+    assert.deepEqual(hidden.map((place) => place.brand), ["Miss Nori"]);
   });
 
   it("escapes a merchant name before it is placed in an Overpass regex", () => {

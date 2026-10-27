@@ -266,14 +266,17 @@ export function HouseholdCard({
                   </p>
                 </div>
                 {household.role === "owner" && member.role === "member" && app.mode !== "demo" ? (
-                  <button
-                    type="button"
-                    className="btn-secondary min-h-11 px-3 py-2 text-xs"
-                    disabled={busy}
-                    onClick={() => void run(() => removeMember(member.userId))}
-                  >
-                    הסרה
-                  </button>
+                  <details>
+                    <summary className="min-h-11 cursor-pointer text-xs font-bold text-eggplant">עוד</summary>
+                    <button
+                      type="button"
+                      className="btn-secondary mt-2 min-h-11 px-3 py-2 text-xs"
+                      disabled={busy}
+                      onClick={() => void run(() => removeMember(member.userId))}
+                    >
+                      הסרה
+                    </button>
+                  </details>
                 ) : null}
               </li>
             ))}
@@ -306,13 +309,16 @@ export function HouseholdCard({
             <div className="space-y-2 rounded-2xl bg-[var(--butter)] p-3">
               <p className="text-xs font-extrabold">הקישור מוצג פעם אחת. אל תשלחו אותו לקבוצה.</p>
               <p className="break-all text-sm font-bold">{link}</p>
-              <button
-                type="button"
-                className="btn-secondary min-h-11 px-4 py-2 text-sm"
-                onClick={() => void copyLink()}
-              >
-                העתקת קישור
-              </button>
+              <details>
+                <summary className="min-h-11 cursor-pointer text-sm font-bold">העתקה או ביטול</summary>
+                <button
+                  type="button"
+                  className="btn-secondary mt-2 min-h-11 px-4 py-2 text-sm"
+                  onClick={() => void copyLink()}
+                >
+                  העתקת קישור
+                </button>
+              </details>
             </div>
           ) : null}
           {household.invites.length > 0 ? (
@@ -323,7 +329,7 @@ export function HouseholdCard({
                   {household.role === "owner" ? (
                     <button
                       type="button"
-                      className="min-h-11 px-2 text-xs font-bold text-eggplant"
+                      className="min-h-11 px-2 text-xs font-bold text-eggplant underline"
                       onClick={() => void run(() => revoke(invite.id))}
                     >
                       ביטול
@@ -333,14 +339,17 @@ export function HouseholdCard({
               ))}
             </ul>
           ) : null}
-          <button
-            type="button"
-            className="btn-secondary min-h-11 px-4 py-2 text-sm"
-            disabled={busy}
-            onClick={() => void run(leave)}
-          >
-            יציאה מהארנק
-          </button>
+          <details>
+            <summary className="min-h-11 cursor-pointer text-sm font-bold text-eggplant">יציאה מהארנק</summary>
+            <button
+              type="button"
+              className="btn-secondary mt-2 min-h-11 px-4 py-2 text-sm"
+              disabled={busy}
+              onClick={() => void run(leave)}
+            >
+              אישור יציאה
+            </button>
+          </details>
         </div>
       ) : null}
     </section>

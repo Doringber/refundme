@@ -9,6 +9,7 @@ import {
   VoucherReviewForm,
 } from "@/components/vouchers/voucher-form";
 import { BagMascot } from "@/components/illustrations/bag-mascot";
+import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { useAppData } from "@/lib/app-data/context";
 import { buyMeVoucherKey, vouchersFromBuyMeGifts } from "@/lib/buyme-import";
 import {
@@ -284,14 +285,17 @@ export default function NewVoucherPage() {
             />
           </label>
 
-          <button
-            type="button"
-            className="min-h-11 w-full text-sm font-extrabold text-eggplant underline"
-            onClick={continueManual}
-            disabled={busy}
-          >
-            מילוי ידני בלי צילום
-          </button>
+          <details className="text-sm">
+            <summary className="min-h-11 cursor-pointer font-extrabold text-eggplant">עוד</summary>
+            <button
+              type="button"
+              className="btn-secondary mt-3 min-h-11 w-full"
+              onClick={continueManual}
+              disabled={busy}
+            >
+              מילוי ידני בלי צילום
+            </button>
+          </details>
 
           {(busy || status) && (
             <p className="text-center text-sm text-eggplant" role="status">
@@ -354,8 +358,12 @@ export default function NewVoucherPage() {
       )}
 
       {step === "success" && (
-        <div className="card-surface px-6 py-12 text-center" role="status">
-          <p className="font-display text-2xl text-forest">
+        <div className="celebrate-card card-surface px-6 py-12 text-center" role="status">
+          <ConfettiBurst />
+          <div className="mx-auto w-fit">
+            <BagMascot mood="celebrate" className="mx-auto h-32 w-32" />
+          </div>
+          <p className="font-display mt-3 text-2xl text-forest">
             {importedCount > 1 ? `יובאו ${importedCount} מתנות` : "נשמר בהצלחה"}
           </p>
           <p className="mt-2 text-sm text-eggplant">

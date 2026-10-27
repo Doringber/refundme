@@ -90,6 +90,7 @@ describe("planExpiryReminders", () => {
     assert.equal(at30.length, 1);
     assert.equal(at30[0].threshold, 30);
     assert.equal(at30[0].channel, "push");
+    assert.equal(at30[0].path, "/stores/near");
     assert.equal(at30[0].daysLeft, 30);
 
     const insideWindow = planExpiryReminders({
@@ -121,6 +122,7 @@ describe("planExpiryReminders", () => {
     assert.equal(at1.length, 1);
     assert.equal(at1[0].threshold, 1);
     assert.equal(at1[0].channel, "email");
+    assert.equal(at1[0].path, "/vouchers/v-1");
   });
 
   it("tells a household member only when the voucher is shared", () => {

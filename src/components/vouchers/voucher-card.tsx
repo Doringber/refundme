@@ -34,7 +34,7 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
   }, [app, voucher]);
 
   return (
-    <article className="ticket-card overflow-hidden">
+    <article className="ticket-card voucher-tilt overflow-hidden">
       <div className="flex gap-0">
         {thumb ? (
           <button

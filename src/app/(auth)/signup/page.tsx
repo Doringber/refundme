@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { BagMascot } from "@/components/illustrations/bag-mascot";
+import { BagMascot, PlayfulBackdrop } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { googleRedirectTo, safeInternalPath } from "@/lib/auth/safe-next";
@@ -30,9 +30,12 @@ function SignupForm() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
+      <div className="play-stage page-enter relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 overflow-hidden px-5">
+        <PlayfulBackdrop />
         <h1 className="font-display text-4xl leading-none text-forest">פותחים שקית חדשה</h1>
-        <BagMascot className="mx-auto h-36 w-36" />
+        <div className="mascot-hello mx-auto w-fit">
+          <BagMascot className="h-36 w-36" />
+        </div>
         <p className="text-sm font-semibold text-eggplant">
           Supabase אינו מוגדר. השתמשו במצב הדמו.
         </p>
@@ -86,8 +89,9 @@ function SignupForm() {
   const loginHref = next === "/dashboard" ? "/login" : `/login?${new URLSearchParams({ next })}`;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <div className="page-enter">
+    <div className="play-stage page-enter relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 overflow-hidden px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <PlayfulBackdrop />
+      <div>
         <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
         <h1 className="font-display mt-2 text-4xl leading-none text-forest">
           פותחים שקית
@@ -98,7 +102,9 @@ function SignupForm() {
           חשבון אחד, וכל הזיכויים במקום שאפשר למצוא.
         </p>
       </div>
-      <BagMascot mood="happy" className="mx-auto h-36 w-36" />
+      <div className="mascot-hello mx-auto w-fit">
+        <BagMascot mood="happy" className="h-36 w-36" />
+      </div>
       <div className="space-y-4">
         <GoogleSignInButton
           label="הרשמה עם Google"

@@ -1,6 +1,6 @@
 import { DOCUMENT_TYPE_LABELS, STATUS_LABELS } from "@/lib/constants";
 import type { DocumentType, ExpiryConfidence, VoucherStatus } from "@/lib/types";
-import { expiryUrgency } from "@/lib/calculations";
+import { expiryIndicatorLabel } from "@/lib/calculations";
 
 export function StatusBadge({ status }: { status: VoucherStatus }) {
   const cls =
@@ -25,15 +25,23 @@ export function ExpiryBadge({
   expiryDate: string | null;
   confidence: ExpiryConfidence;
 }) {
-  if (confidence !== "confirmed" || !expiryDate) {
-    return <span className="badge badge-sage">תוקף לא אומת</span>;
-  }
-  const urgency = expiryUrgency(expiryDate, confidence);
-  if (urgency === "urgent" || urgency === "expired") {
-    return <span className="badge badge-poppy">פג בקרוב · {expiryDate}</span>;
-  }
-  if (urgency === "upcoming") {
-    return <span className="badge badge-daffodil">פג בקרוב · {expiryDate}</span>;
-  }
-  return <span className="badge badge-pool">בתוקף עד {expiryDate}</span>;
+  const { label, tone } = expiryIndicatorLabel(expiryDate, confidence);
+  const toneClass =
+    tone === "now"
+      ? "badge-poppy"
+      : tone === "soon"
+        ? "badge-daffodil"
+        : tone === "calm"
+          ? "badge-pool"
+          : "badge-sage";
+  return (
+    <span className={`badge ${toneClass}`}>
+      <span className={`expiry-meter tone-${tone}`} aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      {label}
+    </span>
+  );
 }

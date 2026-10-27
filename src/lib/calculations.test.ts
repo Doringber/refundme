@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   buildDashboardSummary,
   daysUntil,
+  expiryIndicatorLabel,
   expiryMessage,
   expiryUrgency,
   isSpendable,
@@ -76,6 +77,14 @@ describe("credit calculations", () => {
     const v = baseVoucher({ expiryDate: "2026-04-02" });
     assert.equal(daysUntil("2026-04-02", today), 5);
     assert.equal(expiryUrgency(v.expiryDate, "confirmed", today), "urgent");
+    assert.deepEqual(expiryIndicatorLabel("2026-04-02", "confirmed", today), {
+      label: "עוד רגע",
+      tone: "now",
+    });
+    assert.equal(expiryIndicatorLabel("2026-03-28", "confirmed", today).label, "פג היום");
+    assert.equal(expiryIndicatorLabel("2026-03-29", "confirmed", today).label, "פג מחר");
+    assert.equal(expiryIndicatorLabel("2026-06-01", "confirmed", today).label, "יש זמן");
+    assert.equal(expiryIndicatorLabel(null, "missing", today).tone, "unknown");
   });
 
   it("demo seed totals exclude receipt and include partial redemption", () => {

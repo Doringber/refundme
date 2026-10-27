@@ -51,41 +51,39 @@ export function BuyMeGiftImportPanel({
             : "אין מתנות עם יתרה לייבוא"}
       </button>
 
-      <ul className="space-y-2">
-        {gifts.map((gift) => (
-          <li key={`${gift.title}-${gift.amountAgorot ?? "x"}`}>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-start transition hover:bg-white/16 disabled:opacity-50"
-              disabled={busy || gift.amountAgorot == null}
-              onClick={() => onPickOne(gift)}
-            >
-              <span>
-                <span className="block font-display text-base">{gift.title}</span>
-                {gift.fromLabel && (
-                  <span className="text-xs text-eggplant">
-                    מאת {gift.fromLabel}
-                  </span>
-                )}
-              </span>
-              <span className="font-display text-lg">
-                {gift.amountAgorot != null
-                  ? formatIls(gift.amountAgorot)
-                  : "בלי יתרה"}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <button
-        type="button"
-        className="btn-secondary w-full py-3"
-        onClick={onBack}
-        disabled={busy}
-      >
-        חזרה
-      </button>
+      <details>
+        <summary className="min-h-11 cursor-pointer font-extrabold">מתנה אחת, או חזרה</summary>
+        <ul className="mt-3 space-y-2">
+          {gifts.map((gift) => (
+            <li key={`${gift.title}-${gift.amountAgorot ?? "x"}`}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-start transition hover:bg-white/16 disabled:opacity-50"
+                disabled={busy || gift.amountAgorot == null}
+                onClick={() => onPickOne(gift)}
+              >
+                <span>
+                  <span className="block font-display text-base">{gift.title}</span>
+                  {gift.fromLabel && (
+                    <span className="text-xs text-eggplant">מאת {gift.fromLabel}</span>
+                  )}
+                </span>
+                <span className="font-display text-lg">
+                  {gift.amountAgorot != null ? formatIls(gift.amountAgorot) : "בלי יתרה"}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          className="btn-secondary mt-3 w-full py-3"
+          onClick={onBack}
+          disabled={busy}
+        >
+          חזרה
+        </button>
+      </details>
     </div>
   );
 }
