@@ -22,8 +22,17 @@ type PendingCookie = {
   options?: Parameters<NextResponse["cookies"]["set"]>[2];
 };
 
+/**
+ * Same-site redirect with a relative Location. On Netlify, request.url carries
+ * the internal deploy host (main--<site>.netlify.app), so an absolute redirect
+ * built from it sends the browser to a different host than the one that just
+ * received the session cookies, and the user looks signed out.
+ */
 function redirectTo(url: URL, pending: PendingCookie[]) {
-  const response = NextResponse.redirect(url);
+  const response = new NextResponse(null, {
+    status: 307,
+    headers: { Location: `${url.pathname}${url.search}${url.hash}` },
+  });
   response.headers.set("Cache-Control", "private, no-store");
   for (const cookie of pending) {
     response.cookies.set(cookie.name, cookie.value, cookie.options);
