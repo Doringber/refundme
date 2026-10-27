@@ -72,6 +72,8 @@ export function slimCatalog(id: string, data: unknown): CatalogSummary | null {
 export type GeoPlace = {
   name: string;
   names: string[];
+  /** Name, brand and operator values, for exact chain matching. */
+  chainNames: string[];
   address: string | null;
   lat: number;
   lng: number;
@@ -129,25 +131,90 @@ function tokens(value: string): string[] {
  * match "MamaGreg", and "קפה קפה" does not match "קפה שרגא".
  */
 export function brandMatchesPlace(brand: string, placeNames: string[]): boolean {
-  const brandNorm = normalize(brand);
-  if (brandNorm.length < 3) return false;
-  const rawTokens = tokens(brand);
-  const brandTokens = [...new Set(rawTokens)];
-  if (!brandTokens.length) return false;
-  const genericOnly = brandTokens.every((token) => GENERIC_TOKENS.has(token));
-  const phrase = rawTokens.join(" ");
-  for (const placeName of placeNames) {
-    const placeNorm = normalize(placeName);
-    if (!placeNorm) continue;
-    if (brandNorm === placeNorm) return true;
-    if (genericOnly) {
-      if (rawTokens.length >= 2 && placeNorm.includes(phrase)) return true;
-      continue;
-    }
-    const placeSet = new Set(tokens(placeName));
-    if (brandTokens.every((token) => placeSet.has(token))) return true;
+  const prepared = prepareBrand(brand, 0);
+  if (!prepared) return false;
+  return placeNames.some((placeName) => preparedBrandMatches(prepared, preparePlaceName(placeName)));
+}
+
+type PreparedBrand = {
+  title: string;
+  order: number;
+  norm: string;
+  tokens: string[];
+  genericOnly: boolean;
+  phrase: string;
+  rawTokenCount: number;
+};
+
+type PreparedPlaceName = { norm: string; tokens: Set<string> };
+
+function prepareBrand(title: string, order: number): PreparedBrand | null {
+  const norm = normalize(title);
+  if (norm.length < 3) return null;
+  const rawTokens = tokens(title);
+  const unique = [...new Set(rawTokens)];
+  if (!unique.length) return null;
+  return {
+    title,
+    order,
+    norm,
+    tokens: unique,
+    genericOnly: unique.every((token) => GENERIC_TOKENS.has(token)),
+    phrase: rawTokens.join(" "),
+    rawTokenCount: rawTokens.length,
+  };
+}
+
+function preparePlaceName(placeName: string): PreparedPlaceName {
+  return { norm: normalize(placeName), tokens: new Set(tokens(placeName)) };
+}
+
+function preparedBrandMatches(brand: PreparedBrand, place: PreparedPlaceName): boolean {
+  if (!place.norm) return false;
+  if (brand.norm === place.norm) return true;
+  if (brand.genericOnly) {
+    return brand.rawTokenCount >= 2 && place.norm.includes(brand.phrase);
   }
-  return false;
+  return brand.tokens.every((token) => place.tokens.has(token));
+}
+
+/**
+ * Same rule as `brandMatchesPlace`, indexed by each brand's first word: a
+ * 1,300-title catalog against 2,000 nearby places must not compare every pair.
+ */
+function catalogMatcher(titles: string[]): (placeNames: string[]) => string | null {
+  const byNorm = new Map<string, PreparedBrand>();
+  const byToken = new Map<string, PreparedBrand[]>();
+  const generic: PreparedBrand[] = [];
+  titles.forEach((title, order) => {
+    const brand = prepareBrand(title, order);
+    if (!brand) return;
+    if (!byNorm.has(brand.norm)) byNorm.set(brand.norm, brand);
+    if (brand.genericOnly) {
+      generic.push(brand);
+      return;
+    }
+    const bucket = byToken.get(brand.tokens[0]!) ?? [];
+    bucket.push(brand);
+    byToken.set(brand.tokens[0]!, bucket);
+  });
+  return (placeNames) => {
+    let best: PreparedBrand | null = null;
+    const consider = (brand: PreparedBrand | undefined, place: PreparedPlaceName) => {
+      if (!brand || (best && best.order <= brand.order)) return;
+      if (preparedBrandMatches(brand, place)) best = brand;
+    };
+    for (const placeName of placeNames) {
+      const place = preparePlaceName(placeName);
+      if (!place.norm) continue;
+      consider(byNorm.get(place.norm), place);
+      for (const token of place.tokens) {
+        for (const brand of byToken.get(token) ?? []) consider(brand, place);
+      }
+      for (const brand of generic) consider(brand, place);
+    }
+    return (best as PreparedBrand | null)?.title ?? null;
+  };
 }
 
 function asNumber(value: unknown): number | null {
@@ -161,6 +228,72 @@ function addressFromTags(tags: Record<string, string>): string | null {
   const line = [street, number].filter(Boolean).join(" ");
   const full = [line, city].filter(Boolean).join(", ");
   return full || null;
+}
+
+/** Tag keys an exact chain query matches on. */
+export const CHAIN_NAME_KEYS = [
+  "name",
+  "name:he",
+  "name:en",
+  "brand",
+  "brand:he",
+  "brand:en",
+  "operator",
+  "operator:he",
+  "operator:en",
+] as const;
+
+const BUSINESS_KEYS = ["shop", "craft", "office", "tourism", "leisure", "healthcare"];
+
+const NON_BUSINESS_AMENITIES = new Set([
+  "parking",
+  "parking_entrance",
+  "parking_space",
+  "bicycle_parking",
+  "motorcycle_parking",
+  "bus_station",
+  "taxi",
+  "toilets",
+  "bench",
+  "shelter",
+  "waste_basket",
+  "waste_disposal",
+  "recycling",
+  "drinking_water",
+  "fountain",
+  "telephone",
+  "post_box",
+  "charging_station",
+  "car_sharing",
+  "bicycle_rental",
+  "townhall",
+  "loading_dock",
+  "clock",
+]);
+
+const NON_BUSINESS_KEYS = [
+  "place",
+  "boundary",
+  "highway",
+  "public_transport",
+  "railway",
+  "landuse",
+  "natural",
+  "waterway",
+  "aeroway",
+  "route",
+  "admin_level",
+];
+
+/**
+ * Parking lots, bus stops, city and district names share a chain's name on the
+ * map ("חניון סינמה סיטי", "יפו-תל אביב") but are not places to spend a voucher.
+ */
+export function isNonBusinessPlace(tags: Record<string, unknown>): boolean {
+  const amenity = typeof tags.amenity === "string" ? tags.amenity : null;
+  if (amenity && NON_BUSINESS_AMENITIES.has(amenity)) return true;
+  if (amenity || BUSINESS_KEYS.some((key) => typeof tags[key] === "string")) return false;
+  return NON_BUSINESS_KEYS.some((key) => typeof tags[key] === "string");
 }
 
 /** Places from an Overpass `out center` JSON document. */
@@ -181,18 +314,23 @@ export function parseOverpassElements(data: unknown): GeoPlace[] {
     const lng = asNumber(row.lon) ?? asNumber(row.center?.lon);
     if (lat == null || lng == null) continue;
     const tags = row.tags ?? {};
-    const names = ["name", "name:he", "name:en", "brand", "brand:he"]
-      .map((key) => tags[key])
-      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-      .map((value) => value.trim());
+    if (isNonBusinessPlace(tags)) continue;
+    const values = (keys: readonly string[]) =>
+      keys
+        .map((key) => tags[key])
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim());
+    const names = values(["name", "name:he", "name:en", "brand", "brand:he"]);
     if (!names.length) continue;
     const tagStrings: Record<string, string> = {};
     for (const [key, value] of Object.entries(tags)) {
       if (typeof value === "string") tagStrings[key] = value;
     }
+    const hebrewName = typeof tags["name:he"] === "string" ? tags["name:he"].trim() : "";
     places.push({
-      name: names[0]!,
+      name: hebrewName || names[0]!,
       names,
+      chainNames: values(CHAIN_NAME_KEYS),
       address: addressFromTags(tagStrings),
       lat,
       lng,
@@ -223,14 +361,22 @@ export function matchCatalogPlaces(
   limit = 12,
 ): NearbyPlace[] {
   const matches: NearbyPlace[] = [];
-  const seen = new Set<string>();
+  const kept: Array<{ norm: string; lat: number; lng: number }> = [];
+  const brandFor = catalogMatcher(titles);
   const ordered = [...places].sort((a, b) => a.distanceKm - b.distanceKm);
   for (const place of ordered) {
-    const brand = titles.find((title) => brandMatchesPlace(title, place.names));
+    const brand = brandFor(place.names);
     if (!brand) continue;
-    const key = `${normalize(place.name)}:${place.distanceKm.toFixed(2)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const norm = normalize(place.name);
+    // A shop mapped as both a node and a building outline is one branch.
+    const duplicate = kept.some(
+      (other) =>
+        other.norm === norm &&
+        Math.abs(other.lat - place.lat) < 0.003 &&
+        Math.abs(other.lng - place.lng) < 0.003,
+    );
+    if (duplicate) continue;
+    kept.push({ norm, lat: place.lat, lng: place.lng });
     matches.push({
       name: place.name,
       address: place.address,
