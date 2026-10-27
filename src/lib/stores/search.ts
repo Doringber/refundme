@@ -228,6 +228,9 @@ export type NearbyPlaceRow = {
   address: string | null;
   distanceKm: number | null;
   brand?: string | null;
+  /** Present only when the caller asked for coordinates (Apple Wallet). */
+  lat?: number;
+  lng?: number;
 };
 
 /**
@@ -237,7 +240,12 @@ export type NearbyPlaceRow = {
 export function rankPlaces(
   places: StoredPlace[],
   origin: { lat: number; lng: number } | null,
-  options: { brand?: string | null; maxKm?: number; limit?: number } = {},
+  options: {
+    brand?: string | null;
+    maxKm?: number;
+    limit?: number;
+    coordinates?: boolean;
+  } = {},
 ): NearbyPlaceRow[] {
   const maxKm = options.maxKm ?? MAX_PLACE_KM;
   const limit = options.limit ?? 8;
@@ -268,6 +276,7 @@ export function rankPlaces(
     address: place.address,
     distanceKm,
     brand: options.brand ?? null,
+    ...(options.coordinates ? { lat: place.lat, lng: place.lng } : {}),
   }));
 }
 
