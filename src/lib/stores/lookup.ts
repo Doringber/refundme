@@ -226,10 +226,28 @@ export function matchCatalogPlaces(
   return matches;
 }
 
+/** Clip before escaping so the cut never splits an escape sequence. */
 export function overpassRegex(value: string): string {
-  return value
-    .replace(/[.*+?^${}()|[\]\\"]/g, "\\$&")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40);
+  const clipped = Array.from(value.replace(/\s+/g, " ").trim())
+    .slice(0, 40)
+    .join("")
+    .trim();
+  return clipped.replace(/[.*+?^${}()|[\]\\"]/g, "\\$&");
+}
+
+const MERCHANT_NAME_KEYS = ["name", "name:he", "name:en", "brand"];
+
+/**
+ * Collect shops, amenities and hotels in the radius first, then match names
+ * inside that set only. A bare `["name"~...]` filter scans every name in the
+ * Overpass database and does not finish within the route timeout.
+ */
+export function merchantQuery(lat: number, lng: number, name: string): string {
+  const pattern = overpassRegex(name);
+  const around = `(around:8000,${lat},${lng})`;
+  const candidates = `nwr["shop"]${around};nwr["amenity"]${around};nwr["tourism"~"^(hotel|guest_house)$"]${around};`;
+  const matches = MERCHANT_NAME_KEYS.map(
+    (key) => `nwr.c["${key}"~"${pattern}",i];`,
+  ).join("");
+  return `[out:json][timeout:25];(${candidates})->.c;(${matches});out center 40;`;
 }

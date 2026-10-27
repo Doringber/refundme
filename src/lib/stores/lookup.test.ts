@@ -5,6 +5,7 @@ import {
   brandMatchesPlace,
   catalogForVoucher,
   matchCatalogPlaces,
+  merchantQuery,
   overpassRegex,
   parseOverpassElements,
   slimCatalog,
@@ -94,5 +95,34 @@ describe("BuyMe store lookup", () => {
 
   it("escapes a merchant name before it is placed in an Overpass regex", () => {
     assert.equal(overpassRegex('A."B"'), "A\\.\\\"B\\\"");
+  });
+
+  it("clips a long merchant name without cutting an escape sequence", () => {
+    const head = "a".repeat(39);
+    assert.equal(overpassRegex(`${head}.tail`), `${head}\\.`);
+    assert.equal(overpassRegex(`${head}"tail`), `${head}\\"`);
+    assert.equal(overpassRegex(`${head}😀tail`), `${head}😀`);
+    assert.equal(overpassRegex(`${head}  b`), head);
+    for (const special of [".", '"', "\\", "(", "|"]) {
+      for (const input of [special.repeat(60), `${head}${special}x`]) {
+        const trailing = /\\*$/.exec(overpassRegex(input))?.[0] ?? "";
+        assert.equal(trailing.length % 2, 0, input);
+      }
+    }
+  });
+
+  it("matches merchant names only inside nearby shops, amenities and hotels", () => {
+    const query = merchantQuery(32.0853, 34.7818, "Aroma");
+    const around = "(around:8000,32.0853,34.7818)";
+    assert.ok(query.includes(`nwr["shop"]${around};`));
+    assert.ok(query.includes(`nwr["amenity"]${around};`));
+    assert.ok(query.includes(`nwr["tourism"~"^(hotel|guest_house)$"]${around};`));
+    assert.ok(query.includes(")->.c;"));
+    for (const key of ["name", "name:he", "name:en", "brand"]) {
+      assert.ok(query.includes(`nwr.c["${key}"~"Aroma",i];`), key);
+    }
+    const regexFilters = query.match(/nwr[^;]*"~"Aroma"/g) ?? [];
+    assert.equal(regexFilters.length, 4);
+    assert.ok(regexFilters.every((filter) => filter.startsWith("nwr.c[")));
   });
 });
