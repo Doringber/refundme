@@ -242,10 +242,11 @@ export function matchCatalogPlaces(
   return matches;
 }
 
+/** Clip before escaping so the cut never splits an escape sequence. */
 export function overpassRegex(value: string): string {
-  return value
-    .replace(/[.*+?^${}()|[\]\\"]/g, "\\$&")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40);
+  const clipped = Array.from(value.replace(/\s+/g, " ").trim())
+    .slice(0, 40)
+    .join("")
+    .trim();
+  return clipped.replace(/[.*+?^${}()|[\]\\"]/g, "\\$&");
 }

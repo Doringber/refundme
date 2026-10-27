@@ -105,6 +105,20 @@ describe("BuyMe store lookup", () => {
     assert.equal(overpassRegex('A."B"'), "A\\.\\\"B\\\"");
   });
 
+  it("clips a long merchant name without cutting an escape sequence", () => {
+    const head = "a".repeat(39);
+    assert.equal(overpassRegex(`${head}.tail`), `${head}\\.`);
+    assert.equal(overpassRegex(`${head}"tail`), `${head}\\"`);
+    assert.equal(overpassRegex(`${head}😀tail`), `${head}😀`);
+    assert.equal(overpassRegex(`${head}  b`), head);
+    for (const special of [".", '"', "\\", "(", "|"]) {
+      for (const input of [special.repeat(60), `${head}${special}x`]) {
+        const trailing = /\\*$/.exec(overpassRegex(input))?.[0] ?? "";
+        assert.equal(trailing.length % 2, 0, input);
+      }
+    }
+  });
+
   it("treats an Overpass runtime remark as a failure and an empty list as none", () => {
     assert.equal(
       overpassPlacesOrFailure({ remark: "runtime error: Query timed out", elements: [] }),
@@ -132,6 +146,13 @@ describe("nearby query shape", () => {
     assert.doesNotMatch(query, /Shufersal/);
     assert.doesNotMatch(query, /nwr\["name"~/);
     assert.doesNotMatch(query, /around:8000/);
+  });
+
+  it("keeps whole escape sequences in a long scoped merchant pattern", () => {
+    const name = `${"א".repeat(39)}"tail`;
+    const query = scopedMerchantQuery(32.08, 34.77, name);
+    assert.ok(query.includes(`"name"~"${overpassRegex(name)}",i]`));
+    assert.ok(query.includes(`${"א".repeat(39)}\\"",i]`));
   });
 
   it("uses one shop-scoped query for a Hebrew chain and an exact query for FOX", () => {

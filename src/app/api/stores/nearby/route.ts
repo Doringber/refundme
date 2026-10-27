@@ -53,7 +53,8 @@ async function loadCatalog(id: string): Promise<CachedCatalog | null> {
       "user-agent": "refundme-catalog",
     },
     signal: AbortSignal.timeout(8_000),
-    next: { revalidate: 60 * 60 * 6 },
+    // Payloads run 2-10MB, over the Next data cache limit; catalogCache holds the slim summary.
+    cache: "no-store",
   });
   if (!response.ok) return null;
   const summary = slimCatalog(id, await response.json());

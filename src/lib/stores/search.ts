@@ -94,7 +94,7 @@ export function scopedMerchantQuery(
   radius = 6000,
 ): string {
   // One token. An alias alternation (שופרסל|Shufersal) made Overpass time out.
-  const pattern = overpassRegex(name).slice(0, 40);
+  const pattern = overpassRegex(name);
   const box = around(lat, lng, radius);
   return `[out:json][timeout:8];(nwr["shop"]["name"~"${pattern}",i]${box};nwr["amenity"]["name"~"${pattern}",i]${box};nwr["shop"]["brand"~"${pattern}",i]${box};nwr["name:he"~"${pattern}"]["shop"]${box};);out center 20;`;
 }
