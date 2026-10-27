@@ -4,7 +4,7 @@ import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: `תנאים · ${APP_NAME}`,
-  description: "תנאי שימוש בזיכוי שלי — מעקב אישי אחרי זיכויים, לא מימוש בקופה.",
+  description: `תנאי שימוש ב־${APP_NAME} — מעקב אישי אחרי זיכויים, לא מימוש בקופה.`,
 };
 
 export default function TermsPage() {

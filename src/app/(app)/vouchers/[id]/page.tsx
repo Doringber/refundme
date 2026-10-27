@@ -17,6 +17,7 @@ import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls, expiryIndicatorLabel, parseShekelInput } from "@/lib/calculations";
 import { ConfettiBurst } from "@/components/ui/confetti-burst";
+import { APP_NAME } from "@/lib/constants";
 import { buyMeOpenUrl, checkoutKind } from "@/lib/vouchers/checkout-display";
 
 export default function VoucherDetailPage() {
@@ -217,8 +218,8 @@ export default function VoucherDetailPage() {
           {!voucher.voucherCode && !voucher.barcodeValue && (
             <p className="text-xs leading-relaxed text-eggplant">
               {buyMeUrl
-                ? "BuyMe לא החזיר קוד קופה לרשימה. הקוד או ה־QR, אם BuyMe הנפיק אחד, נמצאים בקישור למעלה. RefundMe לא ממציא ברקוד."
-                : "BuyMe לא החזיר קוד, ברקוד או קישור לשובר. RefundMe לא ממציא ברקוד. אפשר להוסיף קוד ידנית אם הוא מודפס על השובר."}
+                ? `BuyMe לא החזיר קוד קופה לרשימה. הקוד או ה־QR, אם BuyMe הנפיק אחד, נמצאים בקישור למעלה. ${APP_NAME} לא ממציא ברקוד.`
+                : `BuyMe לא החזיר קוד, ברקוד או קישור לשובר. ${APP_NAME} לא ממציא ברקוד. אפשר להוסיף קוד ידנית אם הוא מודפס על השובר.`}
             </p>
           )}
         </section>

@@ -1,6 +1,6 @@
 {
-  "name": "זיכוי שלי",
-  "short_name": "זיכוי שלי",
+  "name": "Refunds Bag",
+  "short_name": "Refunds Bag",
   "description": "זיכויי חנות ושוברי קנייה — עם תזכורת לפני הפקיעה.",
   "start_url": "/dashboard",
   "scope": "/",

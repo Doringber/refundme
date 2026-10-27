@@ -119,7 +119,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "zikuy-sheli-export.json";
+      a.download = "refunds-bag-export.json";
       a.click();
       URL.revokeObjectURL(url);
       setMessage("הייצוא הורד למכשיר");

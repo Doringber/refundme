@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { APP_NAME } from "@/lib/constants";
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -38,7 +40,7 @@ export function PushReminderCard({
         return;
       }
       if (iosDevice() && !installedToHomeScreen()) {
-        onMessage("באייפון צריך קודם להוסיף את זיכוי שלי למסך הבית, ואז לפתוח מהאייקון.");
+        onMessage(`באייפון צריך קודם להוסיף את ${APP_NAME} למסך הבית, ואז לפתוח מהאייקון.`);
         return;
       }
       if (!publicKey) {
@@ -104,7 +106,7 @@ export function PushReminderCard({
     <div className="space-y-3 rounded-2xl bg-white/60 p-4">
       <p className="text-sm font-extrabold text-forest">התראה גם כשהשקית סגורה</p>
       <p className="text-sm leading-relaxed text-eggplant">
-        באייפון זה עובד רק אחרי שמוסיפים את זיכוי שלי למסך הבית (שתף ← הוספה
+        באייפון זה עובד רק אחרי שמוסיפים את {APP_NAME} למסך הבית (שתף ← הוספה
         למסך הבית) ופותחים מהאייקון. צריך iOS 16.4 ומעלה. מספארי הרגיל אי אפשר
         לקבל Web Push. אם אין דחיפה, נשלח מייל במקום — כשהגיבוי פעיל ויש שירות מייל.
       </p>

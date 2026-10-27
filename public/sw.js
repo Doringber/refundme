@@ -7,7 +7,7 @@ self.addEventListener("push", (event) => {
   } catch {
     payload = {};
   }
-  const title = payload.title || "זיכוי שלי";
+  const title = payload.title || "Refunds Bag";
   const options = {
     body: payload.body || "",
     lang: "he",
