@@ -1,0 +1,26 @@
+{
+  "name": "זיכוי שלי",
+  "short_name": "זיכוי שלי",
+  "description": "זיכויי חנות ושוברי קנייה — עם תזכורת לפני הפקיעה.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "he",
+  "background_color": "#f6f1e4",
+  "theme_color": "#f6f1e4",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

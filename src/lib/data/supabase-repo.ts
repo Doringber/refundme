@@ -45,16 +45,20 @@ export async function updateProfile(
   userId: string,
   patch: Partial<UserProfile>,
 ): Promise<UserProfile> {
+  const row: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (patch.displayName !== undefined) row.display_name = patch.displayName;
+  if (patch.email !== undefined) row.email = patch.email;
+  if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
+  if (patch.orbScaleAgorot !== undefined) row.orb_scale_agorot = patch.orbScaleAgorot;
+  if (patch.reminderDays !== undefined) row.reminder_days = patch.reminderDays;
+  if (typeof patch.emailReminders === "boolean") {
+    row.email_reminders = patch.emailReminders;
+  }
   const { data, error } = await supabase
     .from("profiles")
-    .update({
-      display_name: patch.displayName,
-      email: patch.email,
-      avatar_url: patch.avatarUrl,
-      orb_scale_agorot: patch.orbScaleAgorot,
-      reminder_days: patch.reminderDays,
-      updated_at: new Date().toISOString(),
-    })
+    .update(row)
     .eq("id", userId)
     .select("*")
     .single();
@@ -65,25 +69,49 @@ export async function updateProfile(
 export async function fetchVouchers(
   supabase: SupabaseClient,
   userId: string,
+  options?: { ownOnly?: boolean },
 ): Promise<Voucher[]> {
-  const { data, error } = await supabase
+  const ownOnly = options?.ownOnly !== false;
+  let query = supabase
     .from("vouchers")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false });
+  if (ownOnly) query = query.eq("user_id", userId);
+  const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map(mapVoucher);
+  const vouchers = (data ?? []).map(mapVoucher);
+  if (ownOnly) return vouchers;
+
+  const otherIds = [...new Set(vouchers.map((voucher) => voucher.userId))].filter(
+    (id) => id !== userId,
+  );
+  if (otherIds.length === 0) return vouchers;
+  const profiles = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", otherIds);
+  if (profiles.error || !profiles.data) return vouchers;
+  const names = new Map(
+    profiles.data.map((row) => [row.id as string, (row.display_name as string | null) ?? null]),
+  );
+  return vouchers.map((voucher) =>
+    voucher.userId === userId
+      ? voucher
+      : { ...voucher, ownerName: names.get(voucher.userId) ?? null },
+  );
 }
 
 export async function fetchRedemptions(
   supabase: SupabaseClient,
   userId: string,
+  options?: { ownOnly?: boolean },
 ): Promise<Redemption[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("redemptions")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false });
+  if (options?.ownOnly !== false) query = query.eq("user_id", userId);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map(mapRedemption);
 }
@@ -181,6 +209,33 @@ export async function createVoucher(
   });
 
   return mapVoucher(data);
+}
+
+export async function updateVoucherShared(
+  supabase: SupabaseClient,
+  userId: string,
+  voucherId: string,
+  shared: boolean,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("vouchers")
+    .update({
+      shared,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", voucherId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (/does not exist|schema cache|Could not find the/i.test(error.message)) {
+      throw new Error("שיתוף זיכויים מחכה למיגרציה ב־Supabase. היא עדיין לא הופעלה.");
+    }
+    throw error;
+  }
+  if (!data) {
+    throw new Error("רק מי שהוסיף את הזיכוי יכול לשתף אותו.");
+  }
 }
 
 export async function updateVoucherCode(

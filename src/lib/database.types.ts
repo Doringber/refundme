@@ -21,6 +21,7 @@ export interface Database {
           avatar_url: string | null;
           orb_scale_agorot: number | null;
           reminder_days: number[];
+          email_reminders: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +32,7 @@ export interface Database {
           avatar_url?: string | null;
           orb_scale_agorot?: number | null;
           reminder_days?: number[];
+          email_reminders?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -118,14 +120,16 @@ export interface Database {
           document_file_name: string | null;
           extraction_raw: Json | null;
           fields_confirmed: boolean;
+          shared: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["vouchers"]["Row"],
-          "id" | "created_at" | "updated_at"
+          "id" | "created_at" | "updated_at" | "shared"
         > & {
           id?: string;
+          shared?: boolean;
           created_at?: string;
           updated_at?: string;
         };

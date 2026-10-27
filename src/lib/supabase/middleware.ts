@@ -15,6 +15,7 @@ const PROTECTED_PREFIXES = [
   "/settings",
   "/stores",
   "/vouchers",
+  "/join",
 ];
 
 function isProtectedPath(pathname: string): boolean {

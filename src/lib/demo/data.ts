@@ -491,7 +491,8 @@ export function createDemoSeed(): {
     email: null,
     avatarUrl: null,
     orbScaleAgorot: 100000,
-    reminderDays: [30, 14, 7, 3, 1],
+    reminderDays: [30, 7, 1],
+    emailReminders: true,
     createdAt: now,
     updatedAt: now,
   };

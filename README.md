@@ -108,13 +108,19 @@ npx supabase db push
 | `SUPABASE_SERVICE_ROLE_KEY` | שרת בלבד | לא | alias ישן ל־service_role |
 | `BUYME_SESSION_KEY` | שרת בלבד | מומלץ | הצפנת סשן BuyMe ב־DB. בלי זה נופלים ל־`SUPABASE_SECRET_KEY`, ורוטציה של המפתח מנתקת את כולם. בלי מפתח הצפנה בכלל השמירה נכשלת והסנכרון המתוזמן לא רץ |
 | `NEXT_PUBLIC_SITE_URL` | לקוח+שרת | לא | בסיס מטא־דאטה (OG). ברירת מחדל: האתר בפרודקשן |
-| `CRON_SECRET` | שרת בלבד | לסנכרון מתוזמן | סוד ל־`POST /api/cron/buyme-sync` בכותרת `x-cron-secret`. בלי ערך הנתיב נעול |
+| `CRON_SECRET` | שרת בלבד | לסנכרון מתוזמן | סוד ל־`POST /api/cron/buyme-sync` ול־`POST /api/cron/expiry-reminders` בכותרת `x-cron-secret`. בלי ערך הנתיב נעול |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | לקוח+שרת | להתראות דחיפה | המפתח הציבורי של Web Push. נצרב בבילד. אותו ערך כמו `VAPID_PUBLIC_KEY` |
+| `VAPID_PUBLIC_KEY` | שרת בלבד | להתראות דחיפה | עותק שרת של המפתח הציבורי, אם לא משתמשים רק ב־`NEXT_PUBLIC_` |
+| `VAPID_PRIVATE_KEY` | שרת בלבד | להתראות דחיפה | המפתח הפרטי. לא `NEXT_PUBLIC_` |
+| `VAPID_SUBJECT` | שרת בלבד | להתראות דחיפה | `mailto:` או כתובת `https:` ליצירת קשר |
+| `RESEND_API_KEY` | שרת בלבד | למייל גיבוי | בלי המפתח ו־`REMINDER_EMAIL_FROM` המייל לא נשלח |
+| `REMINDER_EMAIL_FROM` | שרת בלבד | למייל גיבוי | כתובת שולח מאומתת ב־Resend |
 | `GEMINI_API_KEY` | שרת בלבד | לא | חילוץ מתמונה מקומי. `GOOGLE_API_KEY` הוא alias |
 | `GOOGLE_GEMINI_BASE_URL` | שרת בלבד | לא | מוגדר אוטומטית כש־Netlify AI Gateway פעיל |
 | `DOCUMENT_OCR_API_KEY` | שרת בלבד | לא | מפתח OCR ישן; לא בשימוש כש־Gemini זמין |
 | `GOOGLE_PLACES_API_KEY` | שרת בלבד | לא | גיבוי לחיפוש סניף בודד כש־OpenStreetMap לא מחזיר תוצאה. כרטיסי BuyMe מרובי־מותגים משתמשים ברשימה הציבורית של BuyMe וב־OSM. המיקום לא נשמר |
 
-כש־Supabase מוגדר, `src/proxy.ts` שולח את מסכי האפליקציה (`/dashboard`, `/vouchers`, `/stores`, `/settings`, `/activity`) ל־`/login` בלי סשן ובלי עוגיית דמו. `/api/extract` קורא ל־Gemini רק למשתמש מחובר. בלי Supabase (דמו מקומי) Gemini רץ אם המפתח מוגדר.
+כש־Supabase מוגדר, `src/proxy.ts` שולח את מסכי האפליקציה (`/dashboard`, `/vouchers`, `/stores`, `/settings`, `/activity`, `/join`) ל־`/login` בלי סשן ובלי עוגיית דמו. `/api/extract` קורא ל־Gemini רק למשתמש מחובר. בלי Supabase (דמו מקומי) Gemini רץ אם המפתח מוגדר.
 
 Next.js 16 מריץ את זה כ־`proxy` (Node), לא כ־middleware על Edge. אחרי השדרוג צריך לוודא ש־deploy ב־Netlify באמת מפעיל את `src/proxy.ts` (רענון סשן והפניה ל־login).
 
@@ -167,7 +173,12 @@ supabase/migrations/    # סכמה + RLS + storage
 ```bash
 curl -X POST "$SITE_URL/api/cron/buyme-sync" \
   -H "x-cron-secret: $CRON_SECRET"
+
+curl -X POST "$SITE_URL/api/cron/expiry-reminders" \
+  -H "x-cron-secret: $CRON_SECRET"
 ```
+
+תזכורות תוקף רצות פעם ביום (בוקר לפי שעון ישראל מתאים). בלי מפתחות VAPID הדחיפה מדווחת כ־`pushUnconfigured`. בלי Resend המייל מדווח כ־`emailUnconfigured` והעבודה לא נכשלת. מיגרציית הארנק וההתראות (`supabase/migrations/20261027120000_household_push_reminders.sql`) לא רצה לבד — מריצים אותה ב־SQL Editor.
 
 בלי `CRON_SECRET` הקריאה נדחית. ניתוק BuyMe מוחק את האסימון המוצפן מהמסד, לא רק את עוגיית הדפדפן — אחרת הסנכרון המתוזמן ממשיך. שרת Node רגיל: `npm run build && npm start`.
 
