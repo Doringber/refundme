@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { proxySkipsSessionRefresh, signedInEntryRedirect } from "@/lib/auth/oauth-callback";
+import {
+  loginLocationFor,
+  proxySkipsSessionRefresh,
+  signedInEntryRedirect,
+} from "@/lib/auth/oauth-callback";
 import { DEMO_COOKIE } from "@/lib/constants";
 import { logServerError } from "@/lib/log";
 import { getSupabasePublicEnv } from "./config";
@@ -65,20 +69,19 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const entry = signedInEntryRedirect(request.nextUrl.pathname, userId);
+  const entry = signedInEntryRedirect(
+    request.nextUrl.pathname,
+    userId,
+    request.nextUrl.searchParams.get("next"),
+  );
   if (entry) {
-    const url = request.nextUrl.clone();
-    url.pathname = entry;
-    url.search = "";
-    return redirectKeepingCookies(url, supabaseResponse);
+    return redirectKeepingCookies(new URL(entry, request.url), supabaseResponse);
   }
 
   const demo = request.cookies.get(DEMO_COOKIE)?.value === "1";
   if (!userId && !demo && isProtectedPath(request.nextUrl.pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
-    return redirectKeepingCookies(url, supabaseResponse);
+    const location = loginLocationFor(request.nextUrl.pathname, request.nextUrl.search);
+    return redirectKeepingCookies(new URL(location, request.url), supabaseResponse);
   }
 
   return supabaseResponse;

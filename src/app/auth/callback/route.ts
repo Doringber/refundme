@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 import {
   isOAuthPrefetch,
   loginErrorLocation,
+  oauthErrorCode,
   pkceFlowId,
   shouldExchangeOAuthCode,
 } from "@/lib/auth/oauth-callback";
 import { safeInternalPath } from "@/lib/auth/safe-next";
+import { DEMO_COOKIE } from "@/lib/constants";
 import { logServerError } from "@/lib/log";
 import { getSupabasePublicEnv } from "@/lib/supabase/config";
 
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
 
   const failureUrl = new URL(
     loginErrorLocation({
-      error: code ? null : searchParams.get("error"),
+      error: code ? null : oauthErrorCode(searchParams),
       description: code ? null : searchParams.get("error_description"),
     }),
     origin,
@@ -108,7 +110,10 @@ export async function GET(request: Request) {
       return redirectTo(failureUrl, pending);
     }
 
-    return redirectTo(new URL(nextPath, origin), pending);
+    // A real session replaces leftover demo mode, or the app keeps showing demo data.
+    const success = redirectTo(new URL(nextPath, origin), pending);
+    success.cookies.set(DEMO_COOKIE, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    return success;
   } catch (error) {
     logServerError("auth-callback", error);
     return redirectTo(failureUrl, pending);

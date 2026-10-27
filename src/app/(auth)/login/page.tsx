@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
+import { authErrorMessage } from "@/lib/auth/auth-errors";
+import { oauthErrorCode } from "@/lib/auth/oauth-callback";
 import { oauthErrorMessage } from "@/lib/auth/oauth-errors";
+import { safeInternalPath } from "@/lib/auth/safe-next";
 import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
@@ -21,13 +24,22 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const next = safeInternalPath(searchParams.get("next"));
   const [error, setError] = useState<string | null>(() =>
     oauthErrorMessage(
-      searchParams.get("error"),
+      oauthErrorCode(searchParams),
       searchParams.get("error_description"),
     ),
   );
   const [busy, setBusy] = useState(false);
+
+  // Drop ?error= once shown so a refresh or shared link doesn't repeat it.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("error") && !url.searchParams.has("error_code")) return;
+    for (const key of ["error", "error_code", "error_description"]) url.searchParams.delete(key);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+  }, []);
 
   if (!isSupabaseConfigured()) {
     return (
@@ -52,24 +64,26 @@ function LoginForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
       clearDemoCookie();
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
       if (authError) {
-        setError(authError.message);
+        setError(authErrorMessage(authError));
+        setBusy(false);
         return;
       }
-      router.push("/dashboard");
+      // Stay busy until the next page replaces this one.
+      router.replace(next);
       router.refresh();
-    } catch {
-      setError("ההתחברות נכשלה");
-    } finally {
+    } catch (caught) {
+      setError(authErrorMessage(caught));
       setBusy(false);
     }
   }
@@ -91,7 +105,7 @@ function LoginForm() {
       <BagMascot className="mx-auto h-44 w-44" />
 
       <div className="space-y-4">
-        <GoogleSignInButton onError={setError} />
+        <GoogleSignInButton next={next} onStart={() => setError(null)} onError={setError} />
         {error && (
           <p className="text-sm font-bold text-[#a33a28]" role="alert">
             {error}
@@ -107,6 +121,10 @@ function LoginForm() {
               <input
                 type="email"
                 className="input-field"
+                dir="ltr"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -118,6 +136,7 @@ function LoginForm() {
               <input
                 type="password"
                 className="input-field"
+                dir="ltr"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -133,7 +152,10 @@ function LoginForm() {
 
       <p className="text-center text-sm">
         אין חשבון?{" "}
-        <Link href="/signup" className="font-semibold text-forest">
+        <Link
+          href={next === "/dashboard" ? "/signup" : `/signup?${new URLSearchParams({ next })}`}
+          className="font-semibold text-forest"
+        >
           הרשמה
         </Link>
       </p>

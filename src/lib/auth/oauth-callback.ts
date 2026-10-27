@@ -70,14 +70,27 @@ export function oauthCallbackDestination(input: {
   return "/login";
 }
 
-/** Signed-in visitors should not stay on the auth screens. */
+/** Signed-in visitors should not stay on the auth screens; honour a safe `next`. */
 export function signedInEntryRedirect(
   pathname: string,
   userId: string | null,
-): "/dashboard" | null {
+  next: string | null = null,
+): string | null {
   if (!userId) return null;
-  if (pathname === "/login" || pathname === "/signup") return "/dashboard";
+  if (pathname === "/login" || pathname === "/signup") return safeInternalPath(next);
   return null;
+}
+
+/** Login URL for a signed-out visit to a protected page, keeping where it was headed. */
+export function loginLocationFor(pathname: string, search: string): string {
+  const target = safeInternalPath(`${pathname}${search}`);
+  if (target === "/dashboard") return "/login";
+  return `/login?${new URLSearchParams({ next: target }).toString()}`;
+}
+
+/** Supabase sends a specific `error_code` next to a generic `error`. */
+export function oauthErrorCode(params: URLSearchParams): string | null {
+  return params.get("error_code") || params.get("error");
 }
 
 /** Session refresh on the PKCE callback can drop the Set-Cookie on the redirect. */

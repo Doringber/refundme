@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { authErrorMessage } from "@/lib/auth/auth-errors";
+import { googleRedirectTo } from "@/lib/auth/safe-next";
 import { DEMO_COOKIE } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +14,7 @@ type Props = {
   label?: string;
   next?: string;
   className?: string;
+  onStart?: () => void;
   onError?: (message: string) => void;
 };
 
@@ -19,16 +22,29 @@ export function GoogleSignInButton({
   label = "המשך עם Google",
   next = "/dashboard",
   className = "btn-primary w-full py-3.5 text-base",
+  onStart,
   onError,
 }: Props) {
   const [busy, setBusy] = useState(false);
 
+  // Back from Google restores this page from the back-forward cache with
+  // busy=true, which left the button disabled on iOS Safari.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setBusy(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   async function handleClick() {
+    if (busy) return;
     setBusy(true);
+    onStart?.();
     try {
       clearDemoCookie();
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const redirectTo = googleRedirectTo(window.location.origin, next);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -40,12 +56,12 @@ export function GoogleSignInButton({
         },
       });
       if (error) {
-        onError?.(error.message);
+        onError?.(authErrorMessage(error, "התחברות עם Google נכשלה. נסו שוב או השתמשו באימייל."));
         setBusy(false);
       }
       // On success the browser navigates to Google; keep busy until then.
-    } catch {
-      onError?.("התחברות עם Google נכשלה");
+    } catch (error) {
+      onError?.(authErrorMessage(error, "התחברות עם Google נכשלה. נסו שוב או השתמשו באימייל."));
       setBusy(false);
     }
   }
@@ -55,8 +71,8 @@ export function GoogleSignInButton({
       type="button"
       className={className}
       disabled={busy}
+      aria-busy={busy}
       onClick={() => void handleClick()}
-      aria-label={label}
     >
       <span className="inline-flex items-center justify-center gap-2">
         <GoogleGlyph />
