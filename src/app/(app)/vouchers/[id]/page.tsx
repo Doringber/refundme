@@ -15,7 +15,8 @@ import { AddVoucherCodeForm } from "@/components/vouchers/add-voucher-code";
 import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
 import { useAppData } from "@/lib/app-data/context";
-import { formatIls, parseShekelInput } from "@/lib/calculations";
+import { formatIls, expiryIndicatorLabel, parseShekelInput } from "@/lib/calculations";
+import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { buyMeOpenUrl, checkoutKind } from "@/lib/vouchers/checkout-display";
 
 export default function VoucherDetailPage() {
@@ -28,6 +29,7 @@ export default function VoucherDetailPage() {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [burst, setBurst] = useState(0);
   const [busy, setBusy] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
 
@@ -96,6 +98,7 @@ export default function VoucherDetailPage() {
       setAmount("");
       setNote("");
       setOk("המימוש נרשם. היתרה עודכנה לפי הדיווח שלך.");
+      setBurst((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "המימוש נכשל");
     } finally {
@@ -103,8 +106,11 @@ export default function VoucherDetailPage() {
     }
   }
 
+  const expiryCopy = expiryIndicatorLabel(voucher.expiryDate, voucher.expiryConfidence);
+
   return (
     <div className="mx-auto max-w-xl space-y-5">
+      {burst > 0 ? <ConfettiBurst key={burst} /> : null}
       <BackLink href="/vouchers" />
 
       <header className="space-y-3">
@@ -299,14 +305,7 @@ export default function VoucherDetailPage() {
       <section className="card-surface space-y-2 p-5 text-sm">
         <h2 className="font-display text-lg">פרטים</h2>
         <Row label="תאריך הנפקה" value={voucher.issueDate ?? "—"} />
-        <Row
-          label="תוקף"
-          value={
-            voucher.expiryConfidence === "confirmed" && voucher.expiryDate
-              ? voucher.expiryDate
-              : "תוקף לא אומת"
-          }
-        />
+        <Row label="תוקף" value={expiryCopy.label} />
         <Row label="תנאים" value={voucher.usageTerms ?? "—"} />
         <Row label="הערות" value={voucher.notes ?? "—"} />
       </section>

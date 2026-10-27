@@ -139,7 +139,9 @@ export default function SettingsPage() {
             החשבון, הצבעים, וחיבור BuyMe.
           </p>
         </div>
-        <BagMascot className="h-24 w-24 shrink-0" mood="happy" />
+        <div className="mascot-hello shrink-0">
+          <BagMascot className="h-24 w-24" mood="happy" />
+        </div>
       </div>
 
       <label className="block text-sm">

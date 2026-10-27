@@ -3,7 +3,7 @@
  * Bold outline, saturated fills — the same language as the mifal reference.
  */
 
-type Mood = "happy" | "empty" | "walk";
+type Mood = "happy" | "empty" | "walk" | "celebrate";
 
 export function BagMascot({
   className = "",
@@ -15,10 +15,11 @@ export function BagMascot({
   title?: string;
 }) {
   const blinking = mood !== "empty";
+  const motion = mood === "celebrate" ? "mascot-jump" : "mascot-bob";
   return (
     <svg
       viewBox="0 0 220 200"
-      className={`mascot-bob ${className}`}
+      className={`${motion} ${className}`}
       role="img"
       aria-label={title}
     >
@@ -69,7 +70,13 @@ export function BagMascot({
           </>
         )}
         <path
-          d={mood === "empty" ? "M98 150h24" : "M96 148c8 10 20 10 28 0"}
+          d={
+            mood === "empty"
+              ? "M98 150h24"
+              : mood === "celebrate"
+                ? "M94 146c10 14 22 14 32 0"
+                : "M96 148c8 10 20 10 28 0"
+          }
           fill="none"
           stroke="#1c1c1c"
           strokeWidth="3.5"
@@ -92,13 +99,23 @@ export function BagMascot({
           strokeLinecap="round"
         />
       </g>
-      {mood === "happy" && (
+      {(mood === "happy" || mood === "celebrate") && (
         <g className="sparkle" fill="#f5c518" stroke="#1c1c1c" strokeWidth="1.5">
           <path d="M178 42l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" />
           <path d="M40 58l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
         </g>
       )}
     </svg>
+  );
+}
+
+export function PlayfulBackdrop() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <span className="float-blob blob-a" />
+      <span className="float-blob blob-b" />
+      <span className="float-blob blob-c" />
+    </div>
   );
 }
 

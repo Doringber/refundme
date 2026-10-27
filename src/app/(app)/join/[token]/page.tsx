@@ -39,7 +39,9 @@ export default function JoinHouseholdPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-5">
-      <BagMascot className="mx-auto h-36 w-36" mood="happy" />
+      <div className="mascot-hello mx-auto w-fit">
+        <BagMascot className="h-36 w-36" mood="celebrate" />
+      </div>
       <h1 className="text-center font-display text-4xl leading-none text-forest">
         מזמינים אתכם
         <br />

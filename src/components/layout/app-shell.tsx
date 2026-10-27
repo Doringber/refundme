@@ -90,7 +90,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="page-enter flex-1">{children}</main>
+      <main className="flex-1">
+        <div key={pathname} className="page-enter">
+          {children}
+        </div>
+      </main>
 
       <nav
         className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 md:static md:inset-auto md:bottom-auto md:mt-10"
@@ -105,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex min-h-11 flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold transition md:flex-row md:gap-2 md:px-4 md:text-sm ${
+                  className={`pressable flex min-h-11 flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold md:flex-row md:gap-2 md:px-4 md:text-sm ${
                     active ? "nav-link-active" : "nav-link-idle"
                   }`}
                   aria-current={active ? "page" : undefined}
@@ -119,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <li className="relative">
             <button
               type="button"
-              className={`flex min-h-11 w-full flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold md:flex-row md:gap-2 md:px-4 md:text-sm ${
+              className={`pressable flex min-h-11 w-full flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold md:flex-row md:gap-2 md:px-4 md:text-sm ${
                 moreOpen || moreActive ? "nav-link-active" : "nav-link-idle"
               }`}
               aria-expanded={moreOpen}
@@ -132,14 +136,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {moreOpen && (
               <div
                 role="menu"
-                className="card-surface absolute bottom-[calc(100%+0.5rem)] left-0 z-50 w-44 space-y-1 p-2 md:left-auto md:right-0"
+                className="menu-pop card-surface absolute bottom-[calc(100%+0.5rem)] left-0 z-50 w-44 space-y-1 p-2 md:left-auto md:right-0"
               >
                 {MORE.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     role="menuitem"
-                    className="block min-h-11 rounded-2xl px-3 py-2 text-sm font-extrabold text-forest"
+                    className="pressable block min-h-11 rounded-2xl px-3 py-2 text-sm font-extrabold text-forest"
                     onClick={() => setMoreOpen(false)}
                   >
                     {item.label}

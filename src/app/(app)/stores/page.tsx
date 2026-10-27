@@ -435,7 +435,7 @@ export default function StoresPage() {
   const anyLoading = cards.some((card) => card.lookup?.status === "loading");
 
   return (
-    <div className="page-enter space-y-6">
+    <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-4xl leading-none text-forest">איפה לממש</h1>
@@ -443,7 +443,9 @@ export default function StoresPage() {
             רק בתי עסק שמתאימים לזיכויים שלכם. המיקום לא נשמר אצלנו.
           </p>
         </div>
-        <BagMascot mood={origin ? "walk" : "happy"} className="h-28 w-28 shrink-0" />
+        <div className="mascot-hello shrink-0">
+          <BagMascot mood={origin ? "walk" : "happy"} className="h-28 w-28" />
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -526,7 +528,9 @@ export default function StoresPage() {
 
       {spendable.length === 0 ? (
         <div className="ticket-card flex flex-col items-center px-6 py-8 text-center">
-          <BagMascot mood="empty" className="h-28 w-28" />
+          <div className="mascot-hello">
+            <BagMascot mood="empty" className="h-28 w-28" />
+          </div>
           <p className="mt-2 font-display text-xl">השקית ריקה</p>
           <p className="mt-1 text-sm text-eggplant">
             אחרי שיופיע זיכוי, נראה איפה אפשר לממש אותו.
@@ -585,7 +589,7 @@ export default function StoresPage() {
                         )}
                       </div>
                       {row.distanceKm != null && (
-                        <p className="shrink-0 rounded-full bg-[var(--butter)] px-2 py-1 text-sm font-extrabold text-[#1c1c1c]">
+                        <p className="distance-tag shrink-0 rounded-full bg-[var(--butter)] px-2 py-1 text-sm font-extrabold text-[#1c1c1c]">
                           {formatDistanceKm(row.distanceKm)}
                         </p>
                       )}

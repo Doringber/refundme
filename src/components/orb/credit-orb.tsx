@@ -8,6 +8,8 @@ import {
   formatIls,
 } from "@/lib/calculations";
 import type { Voucher } from "@/lib/types";
+import { ConfettiBurst } from "@/components/ui/confetti-burst";
+import { ExpiryBadge } from "@/components/ui/status-badge";
 
 export interface CreditOrbProps {
   totalAgorot: number;
@@ -288,6 +290,7 @@ export function CreditOrb({
             +{formatIls(gainFlash)}
           </div>
         )}
+        {gainFlash != null && gainFlash > 0 && !reducedMotion && <ConfettiBurst />}
       </Link>
 
       {isEmpty ? (
@@ -309,9 +312,12 @@ export function CreditOrb({
           }}
           aria-label={`${message}. תאריך: ${nearestExpiring.expiryDate}`}
         >
-          {message}
-          <span className="mt-1 block text-xs font-medium opacity-80">
-            תאריך: {nearestExpiring.expiryDate}
+          <span className="block font-extrabold">{nearestExpiring.merchantName}</span>
+          <span className="mt-2 inline-flex">
+            <ExpiryBadge
+              expiryDate={nearestExpiring.expiryDate}
+              confidence={nearestExpiring.expiryConfidence}
+            />
           </span>
         </Link>
       ) : nearestExpiring ? (
