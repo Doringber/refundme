@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BagMascot, TicketSlip } from "@/components/illustrations/bag-mascot";
 import { CreditOrb } from "@/components/orb/credit-orb";
+import { NearCreditBanner } from "@/components/stores/near-credit-banner";
 import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
 import { formatIls, isSpendable } from "@/lib/calculations";
@@ -52,15 +53,10 @@ export default function DashboardPage() {
           />
         </div>
 
-        <Link href="/vouchers/new" className="btn-primary mt-6 flex w-full items-center justify-center text-base">
-          צילום זיכוי
-        </Link>
-        <Link
-          href="/vouchers"
-          className="mt-3 flex min-h-11 items-center justify-center text-sm font-extrabold text-forest underline"
-        >
-          כל הזיכויים
-        </Link>
+        <NearCreditBanner />
+        <p className="mt-4 text-sm font-semibold text-eggplant">
+          צילום זיכוי חדש נמצא תחת «עוד».
+        </p>
 
         <div
           className={`mt-4 grid items-center gap-4 ${
@@ -90,24 +86,13 @@ export default function DashboardPage() {
           <h2 className="sheet-title font-display text-xl">
             {hasCredits ? "פעילות אחרונה" : "התחילו כאן"}
           </h2>
-          {hasCredits && (
-            <Link href="/activity" className="sheet-link text-sm font-extrabold">
-              הכל
-            </Link>
-          )}
         </div>
 
         {!hasCredits ? (
           <div className="space-y-4 py-2 text-center">
             <p className="sheet-muted text-sm font-semibold">
-              עדיין אין זיכויים. צלמו שובר — והיתרה תופיע בעיגול.
+              עדיין אין זיכויים. צילום שובר נמצא תחת «עוד», והיתרה תופיע בעיגול.
             </p>
-            <Link
-              href="/vouchers/new"
-              className="btn-primary inline-flex px-7 py-3 text-sm"
-            >
-              הוספת זיכוי ראשון
-            </Link>
           </div>
         ) : recent.length > 0 ? (
           <ul className="space-y-2">

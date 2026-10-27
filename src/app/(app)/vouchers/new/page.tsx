@@ -284,14 +284,17 @@ export default function NewVoucherPage() {
             />
           </label>
 
-          <button
-            type="button"
-            className="min-h-11 w-full text-sm font-extrabold text-eggplant underline"
-            onClick={continueManual}
-            disabled={busy}
-          >
-            מילוי ידני בלי צילום
-          </button>
+          <details className="text-sm">
+            <summary className="min-h-11 cursor-pointer font-extrabold text-eggplant">עוד</summary>
+            <button
+              type="button"
+              className="btn-secondary mt-3 min-h-11 w-full"
+              onClick={continueManual}
+              disabled={busy}
+            >
+              מילוי ידני בלי צילום
+            </button>
+          </details>
 
           {(busy || status) && (
             <p className="text-center text-sm text-eggplant" role="status">

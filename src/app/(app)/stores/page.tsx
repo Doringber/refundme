@@ -461,47 +461,67 @@ export default function StoresPage() {
               : "הצגת בתי עסק קרובים"}
         </button>
         {origin && (
-          <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-            <p className="font-bold text-eggplant" role="status">
-              {fromLabel ? `מחפשים ליד ${fromLabel}` : "מחפשים לפי המיקום שלכם"}
-            </p>
-            <button
-              type="button"
-              className="min-h-11 shrink-0 font-bold text-eggplant underline"
-              onClick={() => setOrigin(null)}
-            >
-              בלי מיקום
-            </button>
-          </div>
+          <p className="font-bold text-eggplant" role="status">
+            {fromLabel ? `מחפשים ליד ${fromLabel}` : "מחפשים לפי המיקום שלכם"}
+          </p>
         )}
         {locError && (
           <p className="text-sm font-bold text-[#a33a28]" role="alert">
             {locError}
           </p>
         )}
-        <form className="space-y-2" onSubmit={(event) => void searchNearTypedPlace(event)}>
-          <label className="block text-sm">
-            <span className="sr-only">סינון לפי שם בית עסק או כתובת</span>
-            <input
-              className="input-field"
-              type="search"
-              enterKeyHint="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="שם בית עסק או כתובת"
-            />
-          </label>
-          {needle.length >= 2 && (
+        <label className="block text-sm">
+          <span className="sr-only">סינון לפי שם בית עסק או כתובת</span>
+          <input
+            className="input-field"
+            type="search"
+            enterKeyHint="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="סינון לפי שם או כתובת"
+          />
+        </label>
+        <details className="text-sm">
+          <summary className="min-h-11 cursor-pointer font-extrabold text-forest">עוד</summary>
+          <div className="mt-3 space-y-3">
+            <form className="space-y-2" onSubmit={(event) => void searchNearTypedPlace(event)}>
+              <label className="block">
+                <span className="mb-1 block font-bold">חיפוש ליד עיר או כתובת</span>
+                <input
+                  className="input-field"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="למשל דיזנגוף סנטר"
+                />
+              </label>
+              <button
+                type="submit"
+                className="btn-secondary min-h-11 w-full"
+                disabled={placeBusy || needle.length < 2}
+                aria-busy={placeBusy}
+              >
+                {placeBusy ? "מחפשים את המקום…" : "חיפוש לפי המקום הזה"}
+              </button>
+            </form>
+            {origin && (
+              <button
+                type="button"
+                className="btn-secondary min-h-11 w-full"
+                onClick={() => setOrigin(null)}
+              >
+                בלי מיקום
+              </button>
+            )}
             <button
-              type="submit"
-              className="min-h-11 w-full text-sm font-bold text-forest underline"
-              disabled={placeBusy}
-              aria-busy={placeBusy}
+              type="button"
+              className="btn-secondary min-h-11 w-full"
+              onClick={() => setRetry((count) => count + 1)}
             >
-              {placeBusy ? "מחפשים את המקום…" : `חיפוש בתי עסק ליד „${needle}”`}
+              לנסות שוב
             </button>
-          )}
-        </form>
+          </div>
+        </details>
       </div>
 
       {spendable.length === 0 ? (
@@ -511,9 +531,7 @@ export default function StoresPage() {
           <p className="mt-1 text-sm text-eggplant">
             אחרי שיופיע זיכוי, נראה איפה אפשר לממש אותו.
           </p>
-          <Link href="/vouchers/new" className="btn-primary mt-4 px-6">
-            צילום זיכוי
-          </Link>
+          <p className="mt-3 text-sm font-extrabold text-forest">צילום זיכוי נמצא תחת «עוד».</p>
         </div>
       ) : visibleCards.length === 0 ? (
         <p className="text-sm font-semibold text-eggplant" role="status">
@@ -527,19 +545,16 @@ export default function StoresPage() {
             <section key={voucher.id} className="ticket-card space-y-3 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="font-display text-2xl leading-none break-words text-forest">
+                  <Link
+                    href={`/vouchers/${voucher.id}`}
+                    className="font-display text-2xl leading-none break-words text-forest"
+                  >
                     {voucher.merchantName}
-                  </h2>
+                  </Link>
                   <p className="mt-2 text-sm font-bold text-eggplant">
                     נשאר {formatIls(voucher.remainingAmountAgorot)}
                   </p>
                 </div>
-                <Link
-                  href={`/vouchers/${voucher.id}`}
-                  className="inline-flex min-h-11 shrink-0 items-center text-sm font-extrabold text-forest underline"
-                >
-                  לשובר
-                </Link>
               </div>
               <VoucherNote
                 catalog={Boolean(catalog)}
@@ -549,7 +564,6 @@ export default function StoresPage() {
                 fromLabel={fromLabel}
                 rowCount={rows.length}
                 knownCount={knownCount}
-                onRetry={() => setRetry((count) => count + 1)}
               />
               {lookup?.status === "loading" && rows.length === 0 && (
                 <div className="space-y-2" aria-hidden>
@@ -587,18 +601,6 @@ export default function StoresPage() {
   );
 }
 
-function RetryButton({ onRetry }: { onRetry: () => void }) {
-  return (
-    <button
-      type="button"
-      className="ms-1 inline-flex min-h-11 items-center font-bold text-forest underline"
-      onClick={onRetry}
-    >
-      לנסות שוב
-    </button>
-  );
-}
-
 function VoucherNote({
   catalog,
   merchantName,
@@ -607,7 +609,6 @@ function VoucherNote({
   fromLabel,
   rowCount,
   knownCount,
-  onRetry,
 }: {
   catalog: boolean;
   merchantName: string;
@@ -616,7 +617,6 @@ function VoucherNote({
   fromLabel: string | null;
   rowCount: number;
   knownCount: number;
-  onRetry: () => void;
 }) {
   const fromWhere = fromLabel ? `מ${fromLabel}` : "אליכם";
   const radius = lookup?.radiusKm ?? MAX_PLACE_KM;
@@ -634,8 +634,7 @@ function VoucherNote({
     if (lookup.status === "catalog_unavailable") {
       return (
         <p className="text-sm text-eggplant" role="status">
-          לא הצלחנו לטעון את הרשימה הציבורית של BuyMe לשובר הזה.
-          <RetryButton onRetry={onRetry} />
+          לא הצלחנו לטעון את הרשימה הציבורית של BuyMe לשובר הזה. אפשר לנסות שוב מ«עוד».
         </p>
       );
     }
@@ -650,8 +649,7 @@ function VoucherNote({
     if (lookup.status === "places_unavailable" && rowCount === 0) {
       return (
         <p className="text-sm text-eggplant" role="status">
-          הרשימה כוללת {lookup.brandCount ?? "כמה"} בתי עסק, אבל המפה הפתוחה לא הגיבה בזמן.
-          <RetryButton onRetry={onRetry} />
+          הרשימה כוללת {lookup.brandCount ?? "כמה"} בתי עסק, אבל המפה הפתוחה לא הגיבה בזמן. אפשר לנסות שוב מ«עוד».
         </p>
       );
     }
@@ -690,8 +688,7 @@ function VoucherNote({
   if (lookup?.status === "places_unavailable" && rowCount === 0) {
     return (
       <p className="text-sm text-eggplant" role="status">
-        המפה הפתוחה לא הגיבה בזמן עבור {merchantName}. לא מציגים רשת אחרת.
-        <RetryButton onRetry={onRetry} />
+        המפה הפתוחה לא הגיבה בזמן עבור {merchantName}. לא מציגים רשת אחרת. אפשר לנסות שוב מ«עוד».
       </p>
     );
   }

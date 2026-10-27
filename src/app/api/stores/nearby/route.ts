@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { isBuyMeCatalogId } from "@/lib/stores/lookup";
 import {
   catalogLabel,
@@ -6,6 +6,7 @@ import {
   loadCatalog,
   lookupCatalogs,
   lookupMerchant,
+  refreshStaleCatalogs,
 } from "@/lib/stores/nearby-service";
 import { NEARBY_BUDGET_MS } from "@/lib/stores/search";
 import { getSupabasePublicEnv } from "@/lib/supabase/config";
@@ -142,7 +143,9 @@ export async function POST(request: Request) {
     if (!ids.length || !ids.every(isBuyMeCatalogId)) {
       return NextResponse.json({ error: "unknown_catalog" }, { status: 400 });
     }
-    return NextResponse.json({ catalogs: await lookupCatalogs(ids, origin, deadline) });
+    const catalogs = await lookupCatalogs(ids, origin, deadline);
+    after(() => refreshStaleCatalogs(ids));
+    return NextResponse.json({ catalogs });
   }
 
   const catalogId = typeof body.catalogId === "string" ? body.catalogId.trim() : "";
@@ -151,6 +154,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "unknown_catalog" }, { status: 400 });
     }
     const results = await lookupCatalogs([catalogId], origin, deadline);
+    after(() => refreshStaleCatalogs([catalogId]));
     return NextResponse.json(results[catalogId]);
   }
 

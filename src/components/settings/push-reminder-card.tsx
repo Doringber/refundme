@@ -117,14 +117,19 @@ export function PushReminderCard({
         >
           {busy ? "רגע…" : "הפעלת התראות"}
         </button>
-        <button
-          type="button"
-          className="btn-secondary min-h-11 px-4 py-2 text-sm"
-          disabled={busy}
-          onClick={() => void disable()}
-        >
-          כיבוי במכשיר הזה
-        </button>
+        <details>
+          <summary className="min-h-11 cursor-pointer text-sm font-bold text-eggplant">
+            כיבוי במכשיר הזה
+          </summary>
+          <button
+            type="button"
+            className="btn-secondary mt-2 min-h-11 px-4 py-2 text-sm"
+            disabled={busy}
+            onClick={() => void disable()}
+          >
+            כיבוי התראות הדחיפה
+          </button>
+        </details>
       </div>
     </div>
   );

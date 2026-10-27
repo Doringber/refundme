@@ -71,9 +71,11 @@ export default function JoinHouseholdPage() {
           {message}
         </p>
       ) : null}
-      <Link href="/settings" className="btn-secondary flex min-h-11 items-center justify-center">
-        להגדרות
-      </Link>
+      <p className="text-center text-sm">
+        <Link href="/settings" className="font-extrabold text-forest">
+          להגדרות
+        </Link>
+      </p>
     </div>
   );
 }

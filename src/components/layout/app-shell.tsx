@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { ExpiryNotifier } from "@/components/notifications/expiry-notifier";
 import { BuyMeAutoSync } from "@/components/wallet/buyme-auto-sync";
 import { useAppData } from "@/lib/app-data/context";
@@ -9,10 +10,14 @@ import { APP_NAME } from "@/lib/constants";
 
 const NAV = [
   { href: "/dashboard", label: "בית", icon: "home" },
-  { href: "/vouchers", label: "זיכויים", icon: "ticket" },
-  { href: "/vouchers/new", label: "הוספה", icon: "plus" },
-  { href: "/stores", label: "חנויות", icon: "pin" },
-  { href: "/settings", label: "הגדרות", icon: "gear" },
+  { href: "/stores", label: "איפה", icon: "pin" },
+] as const;
+
+const MORE = [
+  { href: "/vouchers/new", label: "צילום זיכוי" },
+  { href: "/vouchers", label: "הזיכויים" },
+  { href: "/activity", label: "פעילות" },
+  { href: "/settings", label: "הגדרות" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -35,6 +40,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isHome = pathname === "/dashboard";
   const shortName = displayName?.trim().split(/[\s@._-]+/)[0] || null;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreActive = MORE.some(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
 
   return (
     <div
@@ -43,10 +52,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ExpiryNotifier />
       <BuyMeAutoSync />
       <header className="mb-5 flex items-center justify-between gap-3">
-        <Link
-          href="/settings"
-          className="chrome-hover flex min-w-0 items-center gap-2 rounded-full py-1 pe-2 ps-1 transition"
-          aria-label={displayName ? `הגדרות — ${displayName}` : "הגדרות"}
+        <div
+          className="flex min-w-0 items-center gap-2 rounded-full py-1 pe-2 ps-1"
         >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -73,19 +80,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </span>
           )}
-        </Link>
+        </div>
         <div className="flex items-center gap-2">
           {demo && (
             <span className="badge bg-butter text-black" title="נתוני דמו מקומיים">
               דמו
             </span>
           )}
-          <Link
-            href="/vouchers/new"
-            className="btn-primary hidden px-5 py-2.5 text-sm md:inline-flex"
-          >
-            צילום
-          </Link>
         </div>
       </header>
 
@@ -95,15 +96,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 md:static md:inset-auto md:bottom-auto md:mt-10"
         aria-label="ניווט ראשי"
       >
-        <ul className="pill-nav mx-auto grid max-w-3xl grid-cols-5 gap-1 px-2 py-2 md:flex md:justify-center md:gap-2 md:px-3">
+        <ul className="pill-nav mx-auto grid max-w-3xl grid-cols-3 gap-1 px-2 py-2 md:flex md:justify-center md:gap-2 md:px-3">
           {NAV.map((item) => {
             const active =
-              item.href === "/vouchers"
-                ? pathname === "/vouchers" ||
-                  (pathname.startsWith("/vouchers/") &&
-                    !pathname.startsWith("/vouchers/new"))
-                : pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <li key={item.href}>
                 <Link
@@ -119,13 +116,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </li>
             );
           })}
+          <li className="relative">
+            <button
+              type="button"
+              className={`flex min-h-11 w-full flex-col items-center justify-center rounded-full px-2 py-2 text-xs font-extrabold md:flex-row md:gap-2 md:px-4 md:text-sm ${
+                moreOpen || moreActive ? "nav-link-active" : "nav-link-idle"
+              }`}
+              aria-expanded={moreOpen}
+              aria-haspopup="menu"
+              onClick={() => setMoreOpen((open) => !open)}
+            >
+              <NavIcon name="more" />
+              עוד
+            </button>
+            {moreOpen && (
+              <div
+                role="menu"
+                className="card-surface absolute bottom-[calc(100%+0.5rem)] left-0 z-50 w-44 space-y-1 p-2 md:left-auto md:right-0"
+              >
+                {MORE.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    className="block min-h-11 rounded-2xl px-3 py-2 text-sm font-extrabold text-forest"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </li>
         </ul>
       </nav>
     </div>
   );
 }
 
-function NavIcon({ name }: { name: (typeof NAV)[number]["icon"] }) {
+function NavIcon({ name }: { name: (typeof NAV)[number]["icon"] | "more" }) {
   const common = {
     width: 18,
     height: 18,
@@ -145,25 +174,20 @@ function NavIcon({ name }: { name: (typeof NAV)[number]["icon"] }) {
       </svg>
     );
   }
-  if (name === "ticket") {
-    return (
-      <svg {...common}>
-        <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8z" />
-      </svg>
-    );
-  }
-  if (name === "plus") {
-    return (
-      <svg {...common}>
-        <path d="M12 5v14M5 12h14" />
-      </svg>
-    );
-  }
   if (name === "pin") {
     return (
       <svg {...common}>
         <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
         <circle cx="12" cy="10" r="2.2" />
+      </svg>
+    );
+  }
+  if (name === "more") {
+    return (
+      <svg {...common}>
+        <circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="18" cy="12" r="1.4" fill="currentColor" stroke="none" />
       </svg>
     );
   }

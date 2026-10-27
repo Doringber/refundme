@@ -4,6 +4,7 @@ import { haversineKm } from "./nearby";
 import {
   brandMatchesPlace,
   catalogForVoucher,
+  distinctiveAliases,
   matchCatalogPlaces,
   overpassPlacesOrFailure,
   overpassRegex,
@@ -99,6 +100,76 @@ describe("BuyMe store lookup", () => {
     assert.equal(brandMatchesPlace("רשת לנדוור", ["לנדוור"]), true);
     assert.equal(brandMatchesPlace("מסעדות בנדיקט", ["בנדיקט"]), true);
     assert.equal(brandMatchesPlace("FOX", ["FOX"]), true);
+  });
+
+  it("matches a Hebrew BuyMe alias to the English brand title", () => {
+    const aliases = distinctiveAliases(
+      "adidas",
+      JSON.stringify(["אדידס", "ספורט", "samba", "אדידס וריבוק - adidas & reebok"]),
+    );
+    assert.ok(aliases.includes("אדידס"));
+    assert.equal(aliases.includes("ספורט"), false);
+    assert.equal(aliases.includes("samba"), false);
+    const matches = matchCatalogPlaces(
+      [{ title: "adidas", aliases }],
+      [
+        {
+          name: "אדידס",
+          names: ["אדידס"],
+          chainNames: ["אדידס"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.2,
+        },
+      ],
+    );
+    assert.equal(matches[0]?.brand, "adidas");
+    const fox = matchCatalogPlaces(
+      [
+        { title: "TERMINAL X", aliases: ["פוקס"] },
+        { title: "MANGO", aliases: ["פוקס"] },
+        { title: "Nike", aliases: ["פוקס"] },
+        { title: "The Children's Place", aliases: ["פוקס"] },
+        { title: "FOX", aliases: ["פוקס"] },
+        { title: "מגוון מותגי קבוצת FOX", aliases: ["פוקס"] },
+      ],
+      [
+        {
+          name: "פוקס",
+          names: ["פוקס"],
+          chainNames: ["פוקס"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.1,
+        },
+      ],
+    );
+    assert.equal(fox[0]?.brand, "FOX");
+    const laline = matchCatalogPlaces(
+      [
+        { title: "TERMINAL X", aliases: ["ללין", "טרמינל"] },
+        { title: "Laline", aliases: ["לאלין"] },
+      ],
+      [
+        {
+          name: "ללין",
+          names: ["ללין"],
+          chainNames: ["ללין"],
+          address: null,
+          lat: 32.07,
+          lng: 34.77,
+          distanceKm: 0.02,
+        },
+      ],
+    );
+    assert.equal(laline[0]?.brand, "Laline");
+    const summary = slimCatalog("13438757", {
+      supplier: { id: "13438757", name: "BUYME ALL" },
+      brands: [{ title: "adidas", searchTerms: '["אדידס","ספורט"]' }],
+    });
+    assert.deepEqual(summary?.brands, [{ title: "adidas", aliases: ["אדידס"] }]);
   });
 
   it("escapes a merchant name before it is placed in an Overpass regex", () => {
