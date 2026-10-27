@@ -128,6 +128,17 @@ describe("merchant ranking", () => {
     assert.equal(rows[0]!.brand, "סינמה סיטי");
   });
 
+  it("keeps coordinates only when a wallet pass asks for them", () => {
+    const withPins = rankPlaces(places.map(toStoredPlace), TEL_AVIV, {
+      coordinates: true,
+      limit: 10,
+    });
+    assert.equal(typeof withPins[0]!.lat, "number");
+    assert.equal(typeof withPins[0]!.lng, "number");
+    const plain = rankPlaces(places.map(toStoredPlace), TEL_AVIV);
+    assert.equal("lat" in plain[0]!, false);
+  });
+
   it("lists known branches by name when there is no location", () => {
     const rows = rankPlaces(places.map(toStoredPlace), null);
     assert.ok(rows.every((row) => row.distanceKm == null));

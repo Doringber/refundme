@@ -11,6 +11,7 @@ import {
   StatusBadge,
   TypeBadge,
 } from "@/components/ui/status-badge";
+import { AddToAppleWallet } from "@/components/vouchers/add-to-apple-wallet";
 import { AddVoucherCodeForm } from "@/components/vouchers/add-voucher-code";
 import { CalendarReminders } from "@/components/vouchers/calendar-reminders";
 import { DocumentPreview } from "@/components/vouchers/document-preview";
@@ -185,6 +186,8 @@ export default function VoucherDetailPage() {
           הצגת התעודה
         </Link>
       )}
+
+      <AddToAppleWallet voucher={voucher} />
 
       {buyMeData && (
         <section className="card-surface space-y-3 p-5">

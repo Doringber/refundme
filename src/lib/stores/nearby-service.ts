@@ -291,12 +291,26 @@ export async function lookupMerchant(input: {
   origin: Origin | null;
   deadline: number;
   mayPersist: () => Promise<boolean>;
+  /** Wallet passes need lat/lng. The nearby screen leaves this off. */
+  includeCoordinates?: boolean;
+  placeLimit?: number;
+  maxKm?: number;
 }): Promise<NearbyPayload> {
   const { merchantName, origin, deadline } = input;
   const key = merchantKey(merchantName);
-  const cacheKey = origin
+  const baseKey = origin
     ? placeCacheKey(`merchant:${key}`, origin.lat, origin.lng)
     : `merchant:${key}`;
+  const cacheKey =
+    input.includeCoordinates || input.placeLimit != null || input.maxKm != null
+      ? `${baseKey}|${input.includeCoordinates ? "xy" : ""}|${input.placeLimit ?? ""}|${input.maxKm ?? ""}`
+      : baseKey;
+  const ranked = {
+    brand: merchantName,
+    ...(input.includeCoordinates ? { coordinates: true } : {}),
+    ...(input.placeLimit != null ? { limit: input.placeLimit } : {}),
+    ...(input.maxKm != null ? { maxKm: input.maxKm } : {}),
+  };
   const cached = resultCache.get(cacheKey);
   if (cached) return cached;
 
@@ -321,7 +335,7 @@ export async function lookupMerchant(input: {
       ? {
           label: merchantName,
           brandCount: null,
-          places: rankPlaces(chain, null, { brand: merchantName, limit: 12 }),
+          places: rankPlaces(chain, null, { ...ranked, limit: ranked.limit ?? 12 }),
           status: chain.length ? "ok" : "no_places",
         }
       : { label: merchantName, brandCount: null, places: [], status: "places_unavailable" };
@@ -373,11 +387,11 @@ export async function lookupMerchant(input: {
   }
   await Promise.all(saves);
 
-  let places = rankPlaces(found, origin, { brand: merchantName });
+  let places = rankPlaces(found, origin, ranked);
   if (!places.length) {
     const google = await googlePlaces(origin, merchantName, deadline);
     if (google?.length) {
-      places = rankPlaces(google, origin, { brand: merchantName });
+      places = rankPlaces(google, origin, ranked);
       failed = false;
     }
   }
