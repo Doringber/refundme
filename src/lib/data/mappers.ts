@@ -1,3 +1,4 @@
+import { DEFAULT_REMINDER_DAYS } from "../notifications/reminder-days";
 import type {
   ActivityEvent,
   Merchant,
@@ -33,6 +34,7 @@ export function mapVoucher(row: any): Voucher {
     documentDataUrl: null,
     extractionRaw: row.extraction_raw,
     fieldsConfirmed: row.fields_confirmed,
+    shared: row.shared === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -69,7 +71,8 @@ export function mapProfile(row: any): UserProfile {
     email: row.email ?? null,
     avatarUrl: row.avatar_url ?? null,
     orbScaleAgorot: row.orb_scale_agorot,
-    reminderDays: row.reminder_days ?? [30, 14, 7, 3, 1],
+    reminderDays: row.reminder_days ?? [...DEFAULT_REMINDER_DAYS],
+    emailReminders: row.email_reminders !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

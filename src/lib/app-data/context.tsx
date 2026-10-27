@@ -12,6 +12,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { buildDashboardSummary, filterVouchers } from "@/lib/calculations";
 import { DEMO_COOKIE } from "@/lib/constants";
+import { DEFAULT_REMINDER_DAYS } from "@/lib/notifications/reminder-days";
 import { DemoProvider, useDemo } from "@/lib/demo/context";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +36,7 @@ import {
   getDocumentSignedUrl,
   updateProfile,
   updateVoucherCode,
+  updateVoucherShared,
 } from "@/lib/data/supabase-repo";
 
 type AppDataValue = {
@@ -66,6 +68,7 @@ type AppDataValue = {
   getRedemptions: (voucherId: string) => Redemption[];
   resolveDocumentUrl: (voucher: Voucher) => Promise<string | null>;
   saveVoucherCode: (voucherId: string, code: string) => Promise<void> | void;
+  setVoucherShared: (voucherId: string, shared: boolean) => Promise<void> | void;
   signOut: () => Promise<void>;
 };
 
@@ -96,7 +99,8 @@ function defaultProfile(uid: string): UserProfile {
     email: null,
     avatarUrl: null,
     orbScaleAgorot: 100000,
-    reminderDays: [30, 14, 7, 3, 1],
+    reminderDays: [...DEFAULT_REMINDER_DAYS],
+    emailReminders: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -117,8 +121,8 @@ function SupabaseAppProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     const [p, v, r, a] = await Promise.all([
       fetchProfile(supabase, uid),
-      fetchVouchers(supabase, uid),
-      fetchRedemptions(supabase, uid),
+      fetchVouchers(supabase, uid, { ownOnly: false }),
+      fetchRedemptions(supabase, uid, { ownOnly: false }),
       fetchActivity(supabase, uid),
     ]);
     setProfileState(p ?? defaultProfile(uid));
@@ -246,10 +250,7 @@ function SupabaseAppProvider({ children }: { children: React.ReactNode }) {
       setProfile: async (patch) => {
         if (!user) return;
         const supabase = createClient();
-        const updated = await updateProfile(supabase, user.id, {
-          ...fallbackProfile,
-          ...patch,
-        });
+        const updated = await updateProfile(supabase, user.id, patch);
         setProfileState(updated);
       },
       clearGain: () => setLastGainAgorot(null),
@@ -285,6 +286,16 @@ function SupabaseAppProvider({ children }: { children: React.ReactNode }) {
         const supabase = createClient();
         await updateVoucherCode(supabase, user.id, voucherId, code);
         await loadAll(user.id);
+      },
+      setVoucherShared: async (voucherId, shared) => {
+        if (!user) throw new Error("יש להתחבר כדי לשתף");
+        const supabase = createClient();
+        await updateVoucherShared(supabase, user.id, voucherId, shared);
+        setVouchers((current) =>
+          current.map((voucher) =>
+            voucher.id === voucherId ? { ...voucher, shared } : voucher,
+          ),
+        );
       },
       signOut: async () => {
         const supabase = createClient();
@@ -352,6 +363,15 @@ function DemoAppBridge({ children }: { children: React.ReactNode }) {
         demo.saveVoucher({
           ...voucher,
           voucherCode: code,
+          updatedAt: new Date().toISOString(),
+        });
+      },
+      setVoucherShared: (voucherId, shared) => {
+        const voucher = demo.getVoucher(voucherId);
+        if (!voucher) return;
+        demo.saveVoucher({
+          ...voucher,
+          shared,
           updatedAt: new Date().toISOString(),
         });
       },

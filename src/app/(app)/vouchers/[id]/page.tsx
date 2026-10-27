@@ -52,6 +52,8 @@ export default function VoucherDetailPage() {
     );
   }
 
+  const viewerId = app.user?.id ?? app.profile.id;
+  const isOwner = voucher.userId === viewerId;
   const isReceipt = voucher.documentType === "receipt";
   const buyMeData =
     voucher.extractionRaw?.provider === "buyme"
@@ -123,6 +125,13 @@ export default function VoucherDetailPage() {
           className="inline-block"
         />
         <div className="flex flex-wrap gap-2">
+          {voucher.shared ? (
+            <span className="rounded-full bg-[var(--butter)] px-3 py-1 text-xs font-extrabold text-[#1c1c1c]">
+              {isOwner
+                ? "בארנק המשותף"
+                : `של ${voucher.ownerName || "בן/בת הזוג"}`}
+            </span>
+          ) : null}
           <TypeBadge type={voucher.documentType} />
           <StatusBadge status={voucher.status} />
           <ExpiryBadge
@@ -209,7 +218,45 @@ export default function VoucherDetailPage() {
         </section>
       )}
 
-      {!voucher.voucherCode && !voucher.barcodeValue && !isReceipt && (
+      {isOwner ? (
+        <section className="card-surface space-y-3 p-5">
+          <h2 className="font-display text-lg">שיתוף עם הבית</h2>
+          <p className="text-sm leading-relaxed text-eggplant">
+            {voucher.shared
+              ? "בני הבית רואים את הזיכוי ויכולים לרשום מימוש. רק אתם עורכים או מוחקים."
+              : "כבוי כרגע. אחרי שמצטרפים לארנק, בני הבית יראו את הזיכוי רק אם תדליקו את זה."}
+          </p>
+          <button
+            type="button"
+            className="btn-secondary min-h-11 w-full py-3"
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              setBusy(true);
+              void Promise.resolve(app.setVoucherShared(voucher.id, !voucher.shared))
+                .then(() => {
+                  setOk(voucher.shared ? "הזיכוי חזר להיות פרטי." : "הזיכוי בארנק המשותף.");
+                })
+                .catch((err: unknown) => {
+                  setError(err instanceof Error ? err.message : "השיתוף נכשל");
+                })
+                .finally(() => setBusy(false));
+            }}
+          >
+            {voucher.shared ? "הסרה מהארנק המשותף" : "שיתוף עם הבית"}
+          </button>
+        </section>
+      ) : (
+        <section className="card-surface space-y-2 p-5">
+          <h2 className="font-display text-lg">זיכוי משותף</h2>
+          <p className="text-sm leading-relaxed text-eggplant">
+            זה זיכוי של {voucher.ownerName || "בן/בת הזוג"}. אפשר לרשום מימוש.
+            אי אפשר לערוך או למחוק.
+          </p>
+        </section>
+      )}
+
+      {!voucher.voucherCode && !voucher.barcodeValue && !isReceipt && isOwner && (
         <section className="card-surface space-y-3 p-5">
           <h2 className="font-display text-lg">קוד לקופה</h2>
           <p className="text-xs leading-relaxed text-eggplant">
@@ -323,6 +370,7 @@ export default function VoucherDetailPage() {
                   <p className="font-medium">{formatIls(r.amountAgorot)}</p>
                   <p className="text-xs text-eggplant">
                     {r.redeemedAt}
+                    {r.userId === viewerId ? " · אתם" : " · בן/בת הזוג"}
                     {r.note ? ` · ${r.note}` : ""}
                   </p>
                 </div>
@@ -332,19 +380,21 @@ export default function VoucherDetailPage() {
         )}
       </section>
 
-      <button
-        type="button"
-        className="btn-danger w-full py-3"
-        onClick={() => {
-          if (confirm("למחוק את המסמך ואת היסטוריית המימושים שלו?")) {
-            void Promise.resolve(app.removeVoucher(voucher.id)).then(() => {
-              router.push("/vouchers");
-            });
-          }
-        }}
-      >
-        מחיקת מסמך
-      </button>
+      {isOwner ? (
+        <button
+          type="button"
+          className="btn-danger w-full py-3"
+          onClick={() => {
+            if (confirm("למחוק את המסמך ואת היסטוריית המימושים שלו?")) {
+              void Promise.resolve(app.removeVoucher(voucher.id)).then(() => {
+                router.push("/vouchers");
+              });
+            }
+          }}
+        >
+          מחיקת מסמך
+        </button>
+      ) : null}
     </div>
   );
 }

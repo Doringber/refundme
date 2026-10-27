@@ -64,6 +64,10 @@ export interface Voucher {
   documentDataUrl: string | null;
   extractionRaw: Record<string, unknown> | null;
   fieldsConfirmed: boolean;
+  /** Shared with the owner's household. Omitted means not shared. */
+  shared?: boolean;
+  /** Display name of the owner when this voucher belongs to someone else. */
+  ownerName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +100,8 @@ export interface UserProfile {
   /** Personal display scale for Credit Orb liquid, in agorot */
   orbScaleAgorot: number | null;
   reminderDays: number[];
+  /** Email fallback when this person has no Web Push subscription. */
+  emailReminders: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -120,6 +126,29 @@ export interface VoucherFilters {
   status?: VoucherStatus | "all";
   expiryBefore?: string;
   expiryAfter?: string;
+}
+
+export type HouseholdRole = "owner" | "member";
+
+export interface HouseholdMemberView {
+  userId: string;
+  role: HouseholdRole;
+  displayName: string | null;
+  email: string | null;
+}
+
+export interface HouseholdInviteView {
+  id: string;
+  email: string | null;
+  expiresAt: string;
+}
+
+export interface HouseholdSnapshot {
+  id: string;
+  name: string;
+  role: HouseholdRole;
+  members: HouseholdMemberView[];
+  invites: HouseholdInviteView[];
 }
 
 export interface DashboardSummary {

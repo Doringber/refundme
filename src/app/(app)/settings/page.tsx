@@ -6,6 +6,9 @@ import Link from "next/link";
 import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
+import { HouseholdCard } from "@/components/settings/household-card";
+import { PushReminderCard } from "@/components/settings/push-reminder-card";
+import { ReminderDaysEditor } from "@/components/settings/reminder-days-editor";
 import { ThemePicker } from "@/components/settings/theme-picker";
 import { LoadingBlock } from "@/components/ui/loading";
 import { BuyMeConnectCard } from "@/components/vouchers/buyme-connect-card";
@@ -218,18 +221,48 @@ export default function SettingsPage() {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">תזכורות תוקף</h2>
         <p className="text-sm text-eggplant">
-          תזכורות מבוססות על תאריך מאומת בלבד. בעמוד הזיכוי אפשר להוסיף ליומן
-          iPhone / Apple (קובץ .ics) או ליומן Google — עם תזכורות{" "}
-          {app.profile.reminderDays.join(", ")} ימים לפני הפקיעה.
+          רק תאריך מאומת. ברירת המחדל היא 30, 7 ו־1 ימים לפני הפקיעה, ואפשר
+          לשנות. בעמוד הזיכוי עדיין אפשר להוסיף ליומן.
         </p>
-        <p className="text-sm font-medium">
-          ימים לפני פקיעה: {app.profile.reminderDays.join(", ")}
+        <ReminderDaysEditor onMessage={setMessage} />
+        <button
+          type="button"
+          className="btn-secondary min-h-11 px-4 py-2 text-sm"
+          onClick={() => {
+            void Promise.resolve(
+              app.setProfile({ emailReminders: !app.profile.emailReminders }),
+            )
+              .then(() => {
+                setMessage(
+                  app.profile.emailReminders
+                    ? "מייל הגיבוי כבוי. בלי דחיפה לא נשלח תזכורת."
+                    : "אם אין התראת דחיפה, נשלח מייל.",
+                );
+              })
+              .catch((error: unknown) => {
+                setMessage(
+                  error instanceof Error
+                    ? error.message
+                    : "שמירת מייל הגיבוי מחכה למיגרציה ב־Supabase.",
+                );
+              });
+          }}
+        >
+          {app.profile.emailReminders ? "מייל גיבוי פעיל" : "מייל גיבוי כבוי"}
+        </button>
+        <p className="text-xs leading-relaxed text-eggplant">
+          המייל יוצא רק כשאין מנוי דחיפה פעיל
+          {app.profile.email ? ` אל ${app.profile.email}` : ""}. בלי שירות מייל
+          בשרת התזכורת פשוט לא נשלחת.
         </p>
         <BrowserNotifyToggle
           reminderDays={app.profile.reminderDays}
           onMessage={setMessage}
         />
+        <PushReminderCard onMessage={setMessage} />
       </section>
+
+      <HouseholdCard onMessage={setMessage} />
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg">ייצוא נתונים</h2>

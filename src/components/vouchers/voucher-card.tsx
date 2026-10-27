@@ -11,6 +11,8 @@ import { InvoiceLightbox } from "./invoice-lightbox";
 export function VoucherCard({ voucher }: { voucher: Voucher }) {
   const app = useAppData();
   const isReceipt = voucher.documentType === "receipt";
+  const viewerId = app.user?.id ?? app.profile.id;
+  const mine = voucher.userId === viewerId;
   const [remoteThumb, setRemoteThumb] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState(false);
   const thumb =
@@ -62,6 +64,16 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
               {voucher.merchantName}
             </h3>
             <div className="mt-2 flex flex-wrap gap-2">
+              {voucher.shared && mine ? (
+                <span className="rounded-full bg-[var(--butter)] px-2 py-1 text-[10px] font-extrabold text-[#1c1c1c]">
+                  בארנק המשותף
+                </span>
+              ) : null}
+              {!mine ? (
+                <span className="rounded-full bg-[var(--butter)] px-2 py-1 text-[10px] font-extrabold text-[#1c1c1c]">
+                  של {voucher.ownerName || "בן/בת הזוג"}
+                </span>
+              ) : null}
               <TypeBadge type={voucher.documentType} />
               <StatusBadge status={voucher.status} />
               <ExpiryBadge

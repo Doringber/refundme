@@ -30,7 +30,8 @@ export const SERVER_DEMO_SNAPSHOT: DemoState = {
     email: null,
     avatarUrl: null,
     orbScaleAgorot: 100000,
-    reminderDays: [30, 14, 7, 3, 1],
+    reminderDays: [30, 7, 1],
+    emailReminders: true,
     createdAt: "",
     updatedAt: "",
   },
@@ -77,6 +78,12 @@ export function getClientDemoSnapshot(): DemoState {
       return cachedClientState;
     }
     const parsed = JSON.parse(raw) as DemoState;
+    if (typeof parsed.profile?.emailReminders !== "boolean") {
+      parsed.profile.emailReminders = true;
+    }
+    if (!parsed.profile?.reminderDays?.length) {
+      parsed.profile.reminderDays = [30, 7, 1];
+    }
     cachedClientState = parsed;
     cachedSerialized = raw;
     return parsed;

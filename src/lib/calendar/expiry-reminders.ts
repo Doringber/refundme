@@ -105,7 +105,7 @@ export function canAddExpiryCalendar(voucher: Voucher): boolean {
 
 export function buildExpiryCalendarReminder(
   voucher: Voucher,
-  reminderDays: number[] = [30, 14, 7, 3, 1],
+  reminderDays: number[] = [30, 7, 1],
 ): CalendarReminderBuild | null {
   if (!canAddExpiryCalendar(voucher) || !voucher.expiryDate) return null;
 
