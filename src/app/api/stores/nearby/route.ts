@@ -4,7 +4,7 @@ import {
   BUYME_CATALOGS,
   isBuyMeCatalogId,
   matchCatalogPlaces,
-  overpassRegex,
+  merchantQuery,
   parseOverpassElements,
   slimCatalog,
   type GeoPlace,
@@ -39,7 +39,8 @@ async function loadCatalog(id: string): Promise<CachedCatalog | null> {
       "user-agent": "refundme-catalog",
     },
     signal: AbortSignal.timeout(20_000),
-    next: { revalidate: 60 * 60 * 6 },
+    // Payloads run 2-10MB, over the Next data cache limit; catalogCache holds the slim summary.
+    cache: "no-store",
   });
   if (!response.ok) return null;
   const summary = slimCatalog(id, await response.json());
@@ -86,12 +87,6 @@ function locate(places: GeoPlace[], lat: number, lng: number) {
 function areaQuery(lat: number, lng: number): string {
   const around = `(around:3000,${lat},${lng})`;
   return `[out:json][timeout:20];(nwr["name"]["shop"]${around};nwr["name"]["amenity"~"^(restaurant|cafe|fast_food|bar|pharmacy|ice_cream|food_court)$"]${around};nwr["name"]["tourism"~"^(hotel|guest_house)$"]${around};);out center 150;`;
-}
-
-function merchantQuery(lat: number, lng: number, name: string): string {
-  const pattern = overpassRegex(name);
-  const around = `(around:8000,${lat},${lng})`;
-  return `[out:json][timeout:25];(nwr["name"~"${pattern}",i]${around};nwr["name:he"~"${pattern}"]${around};nwr["brand"~"${pattern}",i]${around};);out center 40;`;
 }
 
 async function googlePlaces(
