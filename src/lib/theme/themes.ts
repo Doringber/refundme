@@ -2,6 +2,7 @@ export const THEME_STORAGE_KEY = "zikuy-theme";
 
 /** Color-only themes inspired by MiaAI gallery palettes. */
 export const THEME_IDS = [
+  "mifal",
   "neon",
   "tend",
   "aurora",
@@ -11,7 +12,7 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "neon";
+export const DEFAULT_THEME: ThemeId = "mifal";
 
 /** Old scenic packs → nearest color palette */
 const LEGACY_THEME_MAP: Record<string, ThemeId> = {
@@ -30,6 +31,13 @@ export type ThemeMeta = {
 };
 
 export const THEMES: ThemeMeta[] = [
+  {
+    id: "mifal",
+    nameHe: "מפעל",
+    sourceHe: "קרם, כחול וצהוב",
+    swatches: ["#f6f1e4", "#2f6bff", "#f5c518"],
+    className: "theme-mifal",
+  },
   {
     id: "neon",
     nameHe: "ניאון כהה",

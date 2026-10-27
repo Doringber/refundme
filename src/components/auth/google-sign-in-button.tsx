@@ -18,7 +18,7 @@ type Props = {
 export function GoogleSignInButton({
   label = "המשך עם Google",
   next = "/dashboard",
-  className = "btn-secondary w-full py-3",
+  className = "btn-primary w-full py-3.5 text-base",
   onError,
 }: Props) {
   const [busy, setBusy] = useState(false);

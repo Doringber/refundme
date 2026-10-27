@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LoadingBlock } from "@/components/ui/loading";
 import { useAppData } from "@/lib/app-data/context";
 import { formatIls } from "@/lib/calculations";
@@ -12,21 +13,14 @@ import {
   formatDistanceKm,
   haversineKm,
   isRedeemableVoucher,
+  NEARBY_RADIUS_KM,
   voucherMatchesBranch,
 } from "@/lib/stores/nearby";
+import { parseNearbyPayload, type NearbyPayload } from "@/lib/stores/search";
 import type { MerchantBranch, Voucher } from "@/lib/types";
 
-type PlaceHit = {
-  name: string;
-  address: string | null;
-  distanceKm: number;
-};
-
-type LookupState = {
-  label: string | null;
-  brandCount: number | null;
-  places: PlaceHit[];
-  status: "idle" | "loading" | "ok" | "no_places" | "catalog_unavailable" | "places_unavailable";
+type LookupState = Omit<NearbyPayload, "status"> & {
+  status: NearbyPayload["status"] | "idle" | "loading";
 };
 
 function asNumber(value: unknown): number | null {
@@ -40,6 +34,29 @@ function asNumber(value: unknown): number | null {
 function lookupKey(voucher: Voucher): string {
   const catalog = catalogForVoucher(voucher);
   return catalog ? `catalog:${catalog.id}` : `merchant:${voucher.merchantName}`;
+}
+
+function fold(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+async function fetchLookup(url: string, init?: RequestInit): Promise<LookupState> {
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(16_000),
+    });
+    const contentType = res.headers.get("content-type");
+    const body = contentType?.includes("json") ? await res.json() : null;
+    return parseNearbyPayload({ contentType, body });
+  } catch {
+    return {
+      label: null,
+      brandCount: null,
+      places: [],
+      status: "places_unavailable",
+    };
+  }
 }
 
 export default function StoresPage() {
@@ -118,42 +135,23 @@ export default function StoresPage() {
     const catalogIds = targets.catalogs.map(([id]) => id);
     if (!catalogIds.length && !(coords && targets.merchants.length)) return;
 
-    void (async () => {
-      const next: Record<string, LookupState> = {};
-      await Promise.all([
-        ...catalogIds.map(async (id) => {
-          const key = `catalog:${id}`;
-          if (!coords) {
-            const res = await fetch(`/api/stores/nearby?id=${id}`);
-            const json = (await res.json()) as {
-              label?: string | null;
-              brandCount?: number | null;
-              status?: LookupState["status"];
-            };
-            next[key] = {
-              label: json.label ?? null,
-              brandCount: json.brandCount ?? null,
-              places: [],
-              status: res.ok ? "ok" : "catalog_unavailable",
-            };
-            return;
-          }
-          const res = await fetch("/api/stores/nearby", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ lat: coords.lat, lng: coords.lng, catalogId: id }),
-          });
-          const json = (await res.json()) as LookupState;
-          next[key] = {
-            label: json.label ?? null,
-            brandCount: json.brandCount ?? null,
-            places: json.places ?? [],
-            status: json.status ?? "places_unavailable",
-          };
-        }),
-        ...(coords
-          ? targets.merchants.map(async (name) => {
-              const res = await fetch("/api/stores/nearby", {
+    const jobs: Array<{ key: string; run: () => Promise<LookupState> }> = [
+      ...catalogIds.map((id) => ({
+        key: `catalog:${id}`,
+        run: () =>
+          coords
+            ? fetchLookup("/api/stores/nearby", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ lat: coords.lat, lng: coords.lng, catalogId: id }),
+              })
+            : fetchLookup(`/api/stores/nearby?id=${id}`),
+      })),
+      ...(coords
+        ? targets.merchants.map((name) => ({
+            key: `merchant:${name}`,
+            run: () =>
+              fetchLookup("/api/stores/nearby", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({
@@ -161,21 +159,36 @@ export default function StoresPage() {
                   lng: coords.lng,
                   merchantName: name,
                 }),
-              });
-              const json = (await res.json()) as LookupState;
-              next[`merchant:${name}`] = {
-                label: json.label ?? name,
-                brandCount: null,
-                places: json.places ?? [],
-                status: json.status ?? "places_unavailable",
-              };
-            })
-          : []),
-      ]);
+              }),
+          }))
+        : []),
+    ];
+
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setLookups((current) => {
+        const next = { ...current };
+        for (const job of jobs) {
+          next[job.key] = {
+            label: current[job.key]?.label ?? null,
+            brandCount: current[job.key]?.brandCount ?? null,
+            places: current[job.key]?.places ?? [],
+            status: "loading",
+          };
+        }
+        return next;
+      });
+      const next: Record<string, LookupState> = {};
+      await Promise.all(
+        jobs.map(async (job, index) => {
+          if (index > 0) await new Promise((resolve) => setTimeout(resolve, index * 120));
+          if (cancelled) return;
+          next[job.key] = await job.run();
+        }),
+      );
       if (!cancelled) setLookups(next);
-    })().catch(() => {
-      if (!cancelled) setLookups({});
-    });
+    })();
     return () => {
       cancelled = true;
     };
@@ -206,42 +219,40 @@ export default function StoresPage() {
       (err) => {
         setLocError(
           err.code === 1
-            ? "המיקום לא אושר. בלי מיקום אי אפשר למיין לפי מרחק."
-            : "לא הצלחנו לקבל מיקום.",
+            ? "בלי אישור מיקום אי אפשר להראות מה באמת קרוב. אפשר לאשר שוב מההגדרות של הדפדפן."
+            : "לא הצלחנו לקבל מיקום. נסו שוב בעוד רגע.",
         );
         setLocBusy(false);
       },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
+      { enableHighAccuracy: false, timeout: 12_000, maximumAge: 5 * 60_000 },
     );
   }
 
   const waitingForBranches = Boolean(userId) && remoteFor !== userId;
-  if (!app.ready || waitingForBranches) return <LoadingBlock />;
+  if (!app.ready || waitingForBranches) return <LoadingBlock label="פותחים את המפה…" />;
 
   const needle = query.trim().toLowerCase();
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl text-forest">איפה אפשר לממש</h1>
-        <p className="text-sm text-eggplant">
-          לפי הזיכויים שלכם. כרטיס BuyMe מרובה־מותגים משתמש ברשימה הציבורית של
-          BuyMe, והמרחק מגיע מהמפה הפתוחה. המיקום נשאר במכשיר ולא נשמר.
-        </p>
+    <div className="page-enter space-y-6">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl leading-none text-forest">איפה לממש</h1>
+          <p className="mt-3 max-w-sm text-sm font-semibold text-eggplant">
+            רק בתי עסק שמתאימים לזיכויים שלכם. המיקום נשאר במכשיר.
+          </p>
+        </div>
+        <BagMascot mood={coords ? "walk" : "happy"} className="h-28 w-28 shrink-0" />
       </div>
 
-      <div className="card-surface space-y-3 p-4">
+      <div className="space-y-3">
         <button
           type="button"
-          className="btn-primary w-full"
+          className="btn-primary w-full text-base"
           onClick={requestLocation}
           disabled={locBusy}
         >
-          {locBusy
-            ? "מאתר…"
-            : coords
-              ? "המיקום פעיל — עדכון"
-              : "מציאת בתי עסק לפי המיקום שלי"}
+          {locBusy ? "מחפשים סביבתכם…" : coords ? "עדכון המיקום" : "הצגת בתי עסק קרובים"}
         </button>
         {coords && (
           <button
@@ -249,50 +260,57 @@ export default function StoresPage() {
             className="min-h-11 w-full text-sm font-bold text-eggplant underline"
             onClick={() => setCoords(null)}
           >
-            ניקוי המיקום מהמסך
+            בלי מיקום
           </button>
         )}
         {locError && (
-          <p className="text-sm text-[#a33a28]" role="alert">
+          <p className="text-sm font-bold text-[#a33a28]" role="alert">
             {locError}
           </p>
         )}
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">סינון</span>
+          <span className="sr-only">סינון</span>
           <input
             className="input-field"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="שם בית עסק או כתובת"
+            placeholder="חיפוש בית עסק"
           />
         </label>
       </div>
 
       {spendable.length === 0 ? (
-        <p className="card-surface px-4 py-6 text-center text-sm text-eggplant">
-          אין זיכויים פעילים. אחרי שיופיע זיכוי, נציג בתי עסק שמקבלים אותו.
-        </p>
+        <div className="ticket-card flex flex-col items-center px-6 py-8 text-center">
+          <BagMascot mood="empty" className="h-28 w-28" />
+          <p className="mt-2 font-display text-xl">השקית ריקה</p>
+          <p className="mt-1 text-sm text-eggplant">
+            אחרי שיופיע זיכוי, נראה איפה אפשר לממש אותו.
+          </p>
+          <Link href="/vouchers/new" className="btn-primary mt-4 px-6">
+            צילום זיכוי
+          </Link>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="stagger-list space-y-4">
           {spendable.map((voucher) => {
             const catalog = catalogForVoucher(voucher);
-            const lookup = lookups[lookupKey(voucher)];
+            const key = lookupKey(voucher);
+            const stored = lookups[key];
+            const lookup =
+              !coords && key.startsWith("merchant:") ? undefined : stored;
             const local = catalog
               ? []
               : sourceBranches
                   .filter(
                     (branch) =>
                       branch.acceptance !== "not_accepted" &&
-                      voucherMatchesBranch(
-                        voucher,
-                        {
-                          ...branch,
-                          merchantNameHe:
-                            branch.merchantNameHe ??
-                            demoNames.get(branch.merchantId) ??
-                            undefined,
-                        },
-                      ),
+                      voucherMatchesBranch(voucher, {
+                        ...branch,
+                        merchantNameHe:
+                          branch.merchantNameHe ??
+                          demoNames.get(branch.merchantId) ??
+                          undefined,
+                      }),
                   )
                   .map((branch) => ({
                     ...branch,
@@ -303,46 +321,53 @@ export default function StoresPage() {
                         ? haversineKm(coords.lat, coords.lng, branch.lat, branch.lng)
                         : null,
                   }))
-                  .filter((branch) => branch.distanceKm == null || branch.distanceKm <= 40)
-                  .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+                  .filter(
+                    (branch) =>
+                      branch.distanceKm == null || branch.distanceKm <= NEARBY_RADIUS_KM,
+                  );
 
-            const remotePlaces =
-              catalog || local.length === 0 ? (lookup?.places ?? []) : [];
+            const remotePlaces = lookup?.places ?? [];
+            const seen = new Set<string>();
             const rows = [
               ...local.map((branch) => ({
                 key: branch.id,
-                name: branch.merchantNameHe || branch.nameHe,
-                detail: `${branch.nameHe} · ${branch.city} · ${branch.addressHe}`,
+                name: branch.nameHe,
+                detail: [branch.city, branch.addressHe].filter(Boolean).join(" · "),
                 distanceKm: branch.distanceKm,
               })),
               ...remotePlaces.map((place, index) => ({
-                key: `${place.name}-${index}`,
+                key: `osm-${place.name}-${index}`,
                 name: place.name,
-                detail: place.address ?? "כתובת לא פורסמה",
+                detail: place.address ?? "כתובת לא פורסמה במפה",
                 distanceKm: place.distanceKm,
               })),
-            ].filter((row) => {
-              if (!needle) return true;
-              return (
-                row.name.toLowerCase().includes(needle) ||
-                row.detail.toLowerCase().includes(needle)
-              );
-            });
+            ]
+              .filter((row) => {
+                const stamp = `${fold(row.name)}:${row.distanceKm == null ? "x" : Math.round(row.distanceKm * 5)}`;
+                if (seen.has(stamp)) return false;
+                seen.add(stamp);
+                if (!needle) return true;
+                return (
+                  row.name.toLowerCase().includes(needle) ||
+                  row.detail.toLowerCase().includes(needle)
+                );
+              })
+              .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
 
             return (
-              <section key={voucher.id} className="card-surface space-y-3 p-4">
+              <section key={voucher.id} className="ticket-card space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="font-display text-lg text-forest">
+                    <h2 className="font-display text-2xl leading-none text-forest">
                       {voucher.merchantName}
                     </h2>
-                    <p className="text-sm text-eggplant">
-                      יתרה {formatIls(voucher.remainingAmountAgorot)}
+                    <p className="mt-2 text-sm font-bold text-eggplant">
+                      נשאר {formatIls(voucher.remainingAmountAgorot)}
                     </p>
                   </div>
                   <Link
                     href={`/vouchers/${voucher.id}`}
-                    className="min-h-11 text-sm font-extrabold text-forest"
+                    className="inline-flex min-h-11 items-center text-sm font-extrabold text-forest underline"
                   >
                     לשובר
                   </Link>
@@ -352,21 +377,27 @@ export default function StoresPage() {
                   merchantName={voucher.merchantName}
                   lookup={lookup}
                   hasLocation={coords != null}
-                  localCount={local.length}
+                  rowCount={rows.length}
                 />
+                {lookup?.status === "loading" && rows.length === 0 && (
+                  <div className="space-y-2" aria-hidden>
+                    <div className="skeleton h-16 w-full" />
+                    <div className="skeleton h-16 w-full" />
+                  </div>
+                )}
                 {rows.length > 0 && (
                   <ul className="space-y-2">
                     {rows.map((row) => (
                       <li
                         key={row.key}
-                        className="flex items-start justify-between gap-3 rounded-2xl bg-white/10 px-3 py-3"
+                        className="flex items-start justify-between gap-3 rounded-2xl bg-[color:var(--sage-ll)] px-3 py-3"
                       >
                         <div>
                           <p className="font-extrabold text-night">{row.name}</p>
                           <p className="text-sm text-eggplant">{row.detail}</p>
                         </div>
                         {row.distanceKm != null && (
-                          <p className="text-sm font-extrabold text-forest">
+                          <p className="rounded-full bg-[var(--butter)] px-2 py-1 text-sm font-extrabold text-[#1c1c1c]">
                             {formatDistanceKm(row.distanceKm)}
                           </p>
                         )}
@@ -388,19 +419,20 @@ function VoucherNote({
   merchantName,
   lookup,
   hasLocation,
-  localCount,
+  rowCount,
 }: {
   catalog: boolean;
   merchantName: string;
   lookup: LookupState | undefined;
   hasLocation: boolean;
-  localCount: number;
+  rowCount: number;
 }) {
+  if (lookup?.status === "loading" && rowCount === 0) {
+    return <p className="text-sm text-eggplant">מחפשים בתי עסק על המפה…</p>;
+  }
   if (catalog) {
-    if (!lookup || lookup.status === "loading" || lookup.status === "idle") {
-      return (
-        <p className="text-sm text-eggplant">טוענים את רשימת בתי העסק של BuyMe…</p>
-      );
+    if (!lookup || lookup.status === "idle") {
+      return <p className="text-sm text-eggplant">טוענים את רשימת בתי העסק של BuyMe…</p>;
     }
     if (lookup.status === "catalog_unavailable") {
       return (
@@ -413,64 +445,56 @@ function VoucherNote({
       return (
         <p className="text-sm text-eggplant">
           BuyMe מפרסם {lookup.brandCount ?? "רשימת"} בתי עסק שמקבלים את{" "}
-          {lookup.label ?? merchantName}. אשרו מיקום כדי לראות מה קרוב.
+          {lookup.label ?? merchantName}. לחצו למעלה כדי לראות מה קרוב אליכם.
         </p>
       );
     }
     if (lookup.status === "places_unavailable") {
       return (
-        <p className="text-sm text-eggplant">
-          הרשימה הציבורית כוללת {lookup.brandCount ?? "כמה"} בתי עסק, אבל חיפוש
-          המרחק לא זמין כרגע.
+        <p className="text-sm text-eggplant" role="status">
+          הרשימה הציבורית כוללת {lookup.brandCount ?? "כמה"} בתי עסק, אבל המפה
+          הפתוחה לא הגיבה בזמן. נסו לעדכן את המיקום שוב.
         </p>
       );
     }
-    if (lookup.status === "no_places" || lookup.places.length === 0) {
+    if (lookup.status === "no_places" || rowCount === 0) {
       return (
         <p className="text-sm text-eggplant">
-          לא נמצא סניף קרוב מתוך {lookup.brandCount ?? "רשימת"} בתי העסק. ל־BuyMe
-          אין נקודת מפה לכל סניף, וההתאמה היא לפי שם מול המפה הפתוחה.
+          לא נמצא סניף קרוב מתוך {lookup.brandCount ?? "רשימת"} בתי העסק. ההתאמה
+          היא לפי שם מול המפה הפתוחה, ואין נקודה לכל סניף.
         </p>
       );
     }
     return (
       <p className="text-sm text-eggplant">
-        בתי עסק מהרשימה הציבורית של {lookup.label ?? merchantName}, לפי מרחק.
+        בתי עסק מהרשימה של {lookup.label ?? merchantName}, לפי המרחק אליכם.
       </p>
     );
   }
 
-  if (localCount > 0) {
-    return (
-      <p className="text-sm text-eggplant">
-        {hasLocation
-          ? "סניפים של הרשת הזו לפי מרחק."
-          : "סניפים של הרשת הזו. מרחק יופיע אחרי אישור מיקום."}
-      </p>
-    );
-  }
   if (!hasLocation) {
     return (
       <p className="text-sm text-eggplant">
-        אין רשימת סניפים שמורה ל־{merchantName}. אשרו מיקום כדי לחפש במפה.
+        {rowCount > 0
+          ? "סניפים ששמורים אצלנו. מרחק יופיע אחרי אישור מיקום."
+          : `אין רשימת סניפים שמורה ל־${merchantName}. אשרו מיקום כדי לחפש במפה.`}
       </p>
     );
   }
-  if (!lookup || lookup.status === "places_unavailable") {
+  if (lookup?.status === "places_unavailable" && rowCount === 0) {
+    return (
+      <p className="text-sm text-eggplant" role="status">
+        המפה הפתוחה לא הגיבה בזמן עבור {merchantName}. לא מציגים רשת אחרת. נסו שוב
+        בעוד רגע.
+      </p>
+    );
+  }
+  if (rowCount === 0) {
     return (
       <p className="text-sm text-eggplant">
-        אין מידע על סניפים של {merchantName} ליד המיקום. לא מציגים רשימת רשתות אחרת.
+        לא נמצאו סניפים של {merchantName} בטווח של {NEARBY_RADIUS_KM} ק״מ.
       </p>
     );
   }
-  if (lookup.places.length === 0) {
-    return (
-      <p className="text-sm text-eggplant">
-        לא נמצאו סניפים של {merchantName} ליד המיקום.
-      </p>
-    );
-  }
-  return (
-    <p className="text-sm text-eggplant">מקומות במפה הפתוחה שתואמים ל־{merchantName}.</p>
-  );
+  return <p className="text-sm text-eggplant">סניפים של {merchantName} לפי המרחק אליכם.</p>;
 }

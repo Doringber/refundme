@@ -5,10 +5,19 @@ import {
   brandMatchesPlace,
   catalogForVoucher,
   matchCatalogPlaces,
+  overpassPlacesOrFailure,
   overpassRegex,
   parseOverpassElements,
   slimCatalog,
 } from "./lookup";
+import {
+  catalogAreaQuery,
+  exactMerchantQuery,
+  merchantAliases,
+  merchantOverpassQuery,
+  parseNearbyPayload,
+  scopedMerchantQuery,
+} from "./search";
 
 describe("BuyMe store lookup", () => {
   it("maps multi-brand cards to the public catalog and leaves a single shop alone", () => {
@@ -94,5 +103,61 @@ describe("BuyMe store lookup", () => {
 
   it("escapes a merchant name before it is placed in an Overpass regex", () => {
     assert.equal(overpassRegex('A."B"'), "A\\.\\\"B\\\"");
+  });
+
+  it("treats an Overpass runtime remark as a failure and an empty list as none", () => {
+    assert.equal(
+      overpassPlacesOrFailure({ remark: "runtime error: Query timed out", elements: [] }),
+      null,
+    );
+    assert.deepEqual(overpassPlacesOrFailure({ elements: [] }), []);
+  });
+});
+
+describe("nearby query shape", () => {
+  it("searches FOX by the exact Hebrew and English names", () => {
+    const query = exactMerchantQuery(32.08, 34.77, "FOX");
+    assert.match(query, /\[timeout:6\]/);
+    assert.match(query, /\["name"="FOX"\]/);
+    assert.match(query, /\["name:he"="פוקס"\]/);
+    assert.deepEqual(merchantAliases("FOX"), ["FOX", "פוקס", "Fox"]);
+    assert.doesNotMatch(query, /nwr\["name"~/);
+  });
+
+  it("keeps a fuzzy chain search on shops so it does not scan the whole map", () => {
+    const query = scopedMerchantQuery(32.0804, 34.7741, "שופרסל");
+    assert.match(query, /\[timeout:8\]/);
+    assert.match(query, /nwr\["shop"\]\["name"~/);
+    assert.match(query, /שופרסל/);
+    assert.doesNotMatch(query, /Shufersal/);
+    assert.doesNotMatch(query, /nwr\["name"~/);
+    assert.doesNotMatch(query, /around:8000/);
+  });
+
+  it("uses one shop-scoped query for a Hebrew chain and an exact query for FOX", () => {
+    assert.equal(
+      merchantOverpassQuery(32.08, 34.77, "שופרסל"),
+      scopedMerchantQuery(32.08, 34.77, "שופרסל"),
+    );
+    assert.equal(
+      merchantOverpassQuery(32.08, 34.77, "FOX"),
+      exactMerchantQuery(32.08, 34.77, "FOX"),
+    );
+  });
+
+  it("limits the catalog area query so a function can answer before Netlify drops it", () => {
+    const query = catalogAreaQuery(32.08, 34.77);
+    assert.match(query, /\[timeout:8\]/);
+    assert.match(query, /\["shop"\]/);
+    assert.match(query, /around:3500/);
+  });
+
+  it("turns an HTML inactivity page into an empty places status instead of throwing", () => {
+    const payload = parseNearbyPayload({
+      contentType: "text/html",
+      body: "<HTML><TITLE>Inactivity Timeout</TITLE></HTML>",
+    });
+    assert.equal(payload.status, "places_unavailable");
+    assert.deepEqual(payload.places, []);
   });
 });

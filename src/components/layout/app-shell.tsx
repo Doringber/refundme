@@ -8,12 +8,12 @@ import { useAppData } from "@/lib/app-data/context";
 import { APP_NAME } from "@/lib/constants";
 
 const NAV = [
-  { href: "/dashboard", label: "בית", icon: "◎" },
-  { href: "/vouchers", label: "זיכויים", icon: "◇" },
-  { href: "/vouchers/new", label: "הוספה", icon: "+" },
-  { href: "/stores", label: "חנויות", icon: "⌖" },
-  { href: "/settings", label: "הגדרות", icon: "⚙" },
-];
+  { href: "/dashboard", label: "בית", icon: "home" },
+  { href: "/vouchers", label: "זיכויים", icon: "ticket" },
+  { href: "/vouchers/new", label: "הוספה", icon: "plus" },
+  { href: "/stores", label: "חנויות", icon: "pin" },
+  { href: "/settings", label: "הגדרות", icon: "gear" },
+] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] md:max-w-5xl md:pt-6 md:pb-10"
+      className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(8rem+env(safe-area-inset-bottom))] md:max-w-5xl md:pt-6 md:pb-10"
     >
       <ExpiryNotifier />
       <BuyMeAutoSync />
@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="page-enter flex-1">{children}</main>
 
       <nav
         className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 md:static md:inset-auto md:bottom-auto md:mt-10"
@@ -113,9 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }`}
                   aria-current={active ? "page" : undefined}
                 >
-                  <span aria-hidden className="text-base md:text-lg">
-                    {item.icon}
-                  </span>
+                  <NavIcon name={item.icon} />
                   {item.label}
                 </Link>
               </li>
@@ -124,5 +122,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </ul>
       </nav>
     </div>
+  );
+}
+
+function NavIcon({ name }: { name: (typeof NAV)[number]["icon"] }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.4,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (name === "home") {
+    return (
+      <svg {...common}>
+        <path d="M4 11.5 12 4l8 7.5" />
+        <path d="M7 10.5V20h10v-9.5" />
+      </svg>
+    );
+  }
+  if (name === "ticket") {
+    return (
+      <svg {...common}>
+        <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8z" />
+      </svg>
+    );
+  }
+  if (name === "plus") {
+    return (
+      <svg {...common}>
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    );
+  }
+  if (name === "pin") {
+    return (
+      <svg {...common}>
+        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+        <circle cx="12" cy="10" r="2.2" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" />
+    </svg>
   );
 }

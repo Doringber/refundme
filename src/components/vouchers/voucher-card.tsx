@@ -32,7 +32,7 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
   }, [app, voucher]);
 
   return (
-    <article className="card-surface overflow-hidden">
+    <article className="ticket-card overflow-hidden">
       <div className="flex gap-0">
         {thumb ? (
           <button
@@ -71,19 +71,14 @@ export function VoucherCard({ voucher }: { voucher: Voucher }) {
             </div>
           </div>
           <div className="flex items-end justify-between gap-2">
-            <p className="text-xs font-bold text-eggplant">פרטים ←</p>
-            <div className="text-left">
-              <p className="font-display text-xl text-forest">
-                {formatIls(
-                  isReceipt
-                    ? voucher.originalAmountAgorot
-                    : voucher.remainingAmountAgorot,
-                )}
-              </p>
-              <p className="text-xs text-eggplant">
-                {isReceipt ? "סכום קבלה" : "יתרה לפי הדיווח שלך"}
-              </p>
-            </div>
+            <p className="text-xs font-bold text-eggplant">לפרטים</p>
+            <p className="rounded-full bg-[var(--butter)] px-3 py-1 font-display text-lg text-[#1c1c1c]">
+              {formatIls(
+                isReceipt
+                  ? voucher.originalAmountAgorot
+                  : voucher.remainingAmountAgorot,
+              )}
+            </p>
           </div>
         </Link>
       </div>

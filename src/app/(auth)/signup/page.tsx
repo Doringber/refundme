@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -63,21 +64,28 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
-      <div>
-        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
-        <p className="text-sm text-eggplant">יצירת חשבון</p>
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <div className="page-enter">
+        <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
+        <h1 className="font-display mt-2 text-4xl leading-none text-forest">
+          פותחים שקית
+          <br />
+          חדשה.
+        </h1>
+        <p className="mt-3 text-sm font-semibold text-eggplant">
+          חשבון אחד, וכל הזיכויים במקום שאפשר למצוא.
+        </p>
       </div>
-
-      <div className="card-surface space-y-4 p-5">
+      <BagMascot mood="happy" className="mx-auto h-36 w-36" />
+      <div className="space-y-4">
         <GoogleSignInButton label="הרשמה עם Google" onError={setError} />
         {error && (
-          <p className="text-sm text-[#a33a28]" role="alert">
+          <p className="text-sm font-bold text-[#a33a28]" role="alert">
             {error}
           </p>
         )}
         <details className="text-sm">
-          <summary className="cursor-pointer font-bold text-eggplant">
+          <summary className="min-h-11 cursor-pointer font-bold text-eggplant">
             הרשמה עם אימייל
           </summary>
           <form onSubmit={onSubmit} className="mt-3 space-y-3">

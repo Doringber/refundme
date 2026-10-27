@@ -4,25 +4,39 @@ import {
   BUYME_CATALOGS,
   isBuyMeCatalogId,
   matchCatalogPlaces,
-  overpassRegex,
-  parseOverpassElements,
+  overpassPlacesOrFailure,
   slimCatalog,
   type GeoPlace,
   type NearbyPlace,
 } from "@/lib/stores/lookup";
+import {
+  NEARBY_BUDGET_MS,
+  OVERPASS_ATTEMPT_MS,
+  OVERPASS_MIRRORS,
+  catalogAreaQuery,
+  merchantOverpassQuery,
+  placeCacheKey,
+} from "@/lib/stores/search";
 
 export const runtime = "nodejs";
+export const maxDuration = 15;
 
-const OVERPASS_URLS = [
-  "https://overpass.openstreetmap.fr/api/interpreter",
-  "https://overpass-api.de/api/interpreter",
-];
 const CATALOG_TTL_MS = 6 * 60 * 60 * 1000;
+const PLACE_TTL_MS = 30 * 60 * 1000;
 
 type CachedCatalog = { expires: number; label: string; titles: string[] };
 const catalogCache = new Map<string, CachedCatalog>();
 
 type LookupStatus = "ok" | "no_places" | "catalog_unavailable" | "places_unavailable";
+
+type PlaceCacheEntry = {
+  expires: number;
+  label: string | null;
+  brandCount: number | null;
+  places: NearbyPlace[];
+  status: LookupStatus;
+};
+const placeCache = new Map<string, PlaceCacheEntry>();
 
 function finiteCoord(value: unknown, min: number, max: number): number | null {
   const number = typeof value === "number" ? value : Number(value);
@@ -38,7 +52,7 @@ async function loadCatalog(id: string): Promise<CachedCatalog | null> {
       accept: "application/json",
       "user-agent": "refundme-catalog",
     },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(8_000),
     next: { revalidate: 60 * 60 * 6 },
   });
   if (!response.ok) return null;
@@ -53,8 +67,10 @@ async function loadCatalog(id: string): Promise<CachedCatalog | null> {
   return cached;
 }
 
-async function overpass(query: string): Promise<GeoPlace[] | null> {
-  for (const url of OVERPASS_URLS) {
+async function overpass(query: string, deadline: number): Promise<GeoPlace[] | null> {
+  for (const url of OVERPASS_MIRRORS) {
+    const left = deadline - Date.now();
+    if (left < 1_200) break;
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -64,11 +80,12 @@ async function overpass(query: string): Promise<GeoPlace[] | null> {
           accept: "application/json",
         },
         body: `data=${encodeURIComponent(query)}`,
-        signal: AbortSignal.timeout(18_000),
+        signal: AbortSignal.timeout(Math.min(OVERPASS_ATTEMPT_MS, left)),
         cache: "no-store",
       });
       if (!response.ok) continue;
-      return parseOverpassElements(await response.json());
+      const places = overpassPlacesOrFailure(await response.json());
+      if (places) return places;
     } catch {
       /* try the next mirror */
     }
@@ -81,17 +98,6 @@ function locate(places: GeoPlace[], lat: number, lng: number) {
     ...place,
     distanceKm: haversineKm(lat, lng, place.lat, place.lng),
   }));
-}
-
-function areaQuery(lat: number, lng: number): string {
-  const around = `(around:3000,${lat},${lng})`;
-  return `[out:json][timeout:20];(nwr["name"]["shop"]${around};nwr["name"]["amenity"~"^(restaurant|cafe|fast_food|bar|pharmacy|ice_cream|food_court)$"]${around};nwr["name"]["tourism"~"^(hotel|guest_house)$"]${around};);out center 150;`;
-}
-
-function merchantQuery(lat: number, lng: number, name: string): string {
-  const pattern = overpassRegex(name);
-  const around = `(around:8000,${lat},${lng})`;
-  return `[out:json][timeout:25];(nwr["name"~"${pattern}",i]${around};nwr["name:he"~"${pattern}"]${around};nwr["brand"~"${pattern}",i]${around};);out center 40;`;
 }
 
 async function googlePlaces(
@@ -120,7 +126,7 @@ async function googlePlaces(
           },
         },
       }),
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(4_000),
       cache: "no-store",
     });
     if (!response.ok) return null;
@@ -148,6 +154,31 @@ async function googlePlaces(
   } catch {
     return null;
   }
+}
+
+function toNearby(
+  places: GeoPlace[],
+  lat: number,
+  lng: number,
+  brand: string,
+): NearbyPlace[] {
+  return places
+    .map((place) => ({
+      name: place.name,
+      address: place.address,
+      distanceKm: haversineKm(lat, lng, place.lat, place.lng),
+      brand,
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+function readPlaceCache(key: string): PlaceCacheEntry | null {
+  const hit = placeCache.get(key);
+  if (!hit || hit.expires <= Date.now()) {
+    if (hit) placeCache.delete(key);
+    return null;
+  }
+  return hit;
 }
 
 function payload(input: {
@@ -204,10 +235,15 @@ export async function POST(request: Request) {
   const merchantName =
     typeof body.merchantName === "string" ? body.merchantName.trim().slice(0, 80) : "";
 
+  const deadline = Date.now() + NEARBY_BUDGET_MS;
+
   if (catalogId) {
     if (!isBuyMeCatalogId(catalogId)) {
       return NextResponse.json({ error: "unknown_catalog" }, { status: 400 });
     }
+    const cacheKey = placeCacheKey(`catalog:${catalogId}`, lat, lng);
+    const cached = readPlaceCache(cacheKey);
+    if (cached) return payload(cached);
     let catalog: CachedCatalog | null = null;
     try {
       catalog = await loadCatalog(catalogId);
@@ -222,7 +258,7 @@ export async function POST(request: Request) {
         status: "catalog_unavailable",
       });
     }
-    const places = await overpass(areaQuery(lat, lng));
+    const places = await overpass(catalogAreaQuery(lat, lng), deadline);
     if (!places) {
       return payload({
         label: catalog.label,
@@ -232,42 +268,46 @@ export async function POST(request: Request) {
       });
     }
     const matched = matchCatalogPlaces(catalog.titles, locate(places, lat, lng));
-    return payload({
+    const result = {
       label: catalog.label,
       brandCount: catalog.titles.length,
       places: matched,
-      status: matched.length ? "ok" : "no_places",
-    });
+      status: (matched.length ? "ok" : "no_places") as LookupStatus,
+    };
+    placeCache.set(cacheKey, { ...result, expires: Date.now() + PLACE_TTL_MS });
+    return payload(result);
   }
 
   if (!merchantName || merchantName.length < 2) {
     return NextResponse.json({ error: "missing_target" }, { status: 400 });
   }
-  const places = await overpass(merchantQuery(lat, lng, merchantName));
-  let nearby: NearbyPlace[] =
-    places?.map((place) => ({
-      name: place.name,
-      address: place.address,
-      distanceKm: haversineKm(lat, lng, place.lat, place.lng),
-      brand: merchantName,
-    })) ?? [];
-  nearby.sort((a, b) => a.distanceKm - b.distanceKm);
-  if (!nearby.length) {
+
+  const cacheKey = placeCacheKey(`merchant:${merchantName}`, lat, lng);
+  const cached = readPlaceCache(cacheKey);
+  if (cached) return payload(cached);
+
+  const found = await overpass(merchantOverpassQuery(lat, lng, merchantName), deadline);
+  let overpassFailed = found == null;
+  let nearby = toNearby(found ?? [], lat, lng, merchantName).slice(0, 8);
+  if (!nearby.length && deadline - Date.now() > 1_500) {
     const google = await googlePlaces(lat, lng, merchantName);
-    if (google?.length) nearby = google;
+    if (google?.length) {
+      nearby = google.slice(0, 8);
+      overpassFailed = false;
+    }
   }
-  if (!places && !nearby.length) {
-    return payload({
-      label: merchantName,
-      brandCount: null,
-      places: [],
-      status: "places_unavailable",
-    });
-  }
-  return payload({
+  const result = {
     label: merchantName,
     brandCount: null,
-    places: nearby.slice(0, 8),
-    status: nearby.length ? "ok" : "no_places",
-  });
+    places: nearby,
+    status: (nearby.length
+      ? "ok"
+      : overpassFailed
+        ? "places_unavailable"
+        : "no_places") as LookupStatus,
+  };
+  if (result.status !== "places_unavailable") {
+    placeCache.set(cacheKey, { ...result, expires: Date.now() + PLACE_TTL_MS });
+  }
+  return payload(result);
 }

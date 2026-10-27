@@ -201,6 +201,22 @@ export function parseOverpassElements(data: unknown): GeoPlace[] {
   return places;
 }
 
+/**
+ * A 200 with `remark: runtime error` and no elements is a failure, not
+ * "no stores nearby". An empty `elements` array is a real empty answer.
+ */
+export function overpassPlacesOrFailure(data: unknown): GeoPlace[] | null {
+  if (!data || typeof data !== "object") return null;
+  const record = data as { remark?: unknown; elements?: unknown };
+  const places = parseOverpassElements(data);
+  if (places.length) return places;
+  if (typeof record.remark === "string" && /error|timeout|runtime/i.test(record.remark)) {
+    return null;
+  }
+  if (!Array.isArray(record.elements)) return null;
+  return places;
+}
+
 export function matchCatalogPlaces(
   titles: string[],
   places: Array<GeoPlace & { distanceKm: number }>,

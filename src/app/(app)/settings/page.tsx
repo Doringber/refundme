@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { BrowserNotifyToggle } from "@/components/settings/browser-notify-toggle";
 import { ThemePicker } from "@/components/settings/theme-picker";
@@ -117,11 +118,14 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <div>
-        <h1 className="font-display text-2xl text-forest">הגדרות וחשבון</h1>
-        <p className="text-sm text-eggplant">
-          תזכורות, סולם כדור הזיכוי, ייצוא ומחיקה
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl leading-none text-forest">הגדרות</h1>
+          <p className="mt-2 text-sm font-semibold text-eggplant">
+            החשבון, הצבעים, וחיבור BuyMe.
+          </p>
+        </div>
+        <BagMascot className="h-24 w-24 shrink-0" mood="happy" />
       </div>
 
       <ThemePicker

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { DemoEntryButton } from "@/components/auth/demo-entry-button";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { LegalLinks } from "@/components/legal-links";
 import { oauthErrorMessage } from "@/lib/auth/oauth-errors";
 import { APP_NAME, DEMO_COOKIE } from "@/lib/constants";
@@ -66,21 +67,30 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
-      <div>
-        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
-        <p className="text-sm text-eggplant">התחברות לחשבון</p>
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <div className="page-enter">
+        <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
+        <h1 className="font-display mt-2 text-4xl leading-none text-forest">
+          השקית בבית
+          <br />
+          עוד מחכה.
+        </h1>
+        <p className="mt-3 max-w-xs text-sm font-semibold text-eggplant">
+          זיכויים שנשכחים במגירה — עד שפג התוקף. בואו נשמור אותם במקום אחד.
+        </p>
       </div>
 
-      <div className="card-surface space-y-4 p-5">
+      <BagMascot className="mx-auto h-44 w-44" />
+
+      <div className="space-y-4">
         <GoogleSignInButton onError={setError} />
         {error && (
-          <p className="text-sm text-[#a33a28]" role="alert">
+          <p className="text-sm font-bold text-[#a33a28]" role="alert">
             {error}
           </p>
         )}
         <details className="text-sm">
-          <summary className="cursor-pointer font-bold text-eggplant">
+          <summary className="min-h-11 cursor-pointer font-bold text-eggplant">
             התחברות עם אימייל
           </summary>
           <form onSubmit={onSubmit} className="mt-3 space-y-3">

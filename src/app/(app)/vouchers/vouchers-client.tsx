@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { BagMascot } from "@/components/illustrations/bag-mascot";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading";
 import { VoucherCard } from "@/components/vouchers/voucher-card";
@@ -43,23 +44,29 @@ export function VouchersClient() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl text-forest">הזיכויים שלי</h1>
-        <p className="text-sm text-eggplant">
-          לחצו על התמונה להצגת תעודת הזיכוי · או על הפרטים לעריכה
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl leading-none text-forest">השקית</h1>
+          <p className="mt-2 text-sm font-semibold text-eggplant">
+            כל שובר הוא כרטיס. לחצו לתעודה, או על הכרטיס לפרטים.
+          </p>
+        </div>
+        <BagMascot className="h-24 w-24 shrink-0" mood={filtered.length ? "happy" : "empty"} />
       </div>
 
-      <div className="card-surface grid gap-3 p-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">חיפוש</span>
-          <input
-            className="input-field"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חנות, קוד, הערות…"
-          />
-        </label>
+      <label className="block text-sm">
+        <span className="sr-only">חיפוש</span>
+        <input
+          className="input-field"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="חיפוש חנות, קוד או הערה"
+        />
+      </label>
+
+      <details className="ticket-card p-4">
+        <summary className="min-h-11 cursor-pointer font-extrabold">סינון</summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="mb-1 block font-medium">חנות</span>
           <select
@@ -116,7 +123,8 @@ export function VouchersClient() {
             onChange={(e) => setExpiryBefore(e.target.value)}
           />
         </label>
-      </div>
+        </div>
+      </details>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -126,7 +134,7 @@ export function VouchersClient() {
           actionHref="/vouchers/new"
         />
       ) : (
-        <div className="space-y-3">
+        <div className="stagger-list space-y-3">
           {filtered.map((v) => (
             <VoucherCard key={v.id} voucher={v} />
           ))}

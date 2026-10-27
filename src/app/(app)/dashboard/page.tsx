@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BagMascot, TicketSlip } from "@/components/illustrations/bag-mascot";
 import { CreditOrb } from "@/components/orb/credit-orb";
 import { NeonCardStack } from "@/components/ui/neon-card-stack";
 import { LoadingBlock } from "@/components/ui/loading";
@@ -34,31 +35,35 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-5">
-      {/* Hero balance + orb */}
-      <section className="relative overflow-hidden rounded-[2rem] px-1 pt-2">
-        <h1 className="chrome-ink font-display text-2xl leading-snug tracking-tight md:text-3xl">
+    <div className="space-y-6">
+      <section className="px-1 pt-1">
+        <h1 className="chrome-ink font-display text-4xl leading-none md:text-5xl">
           {title}
         </h1>
-        <p className="chrome-muted mt-4 text-sm font-bold">יתרה כוללת</p>
-        <p className="chrome-ink font-display mt-1 text-5xl tracking-tight md:text-6xl">
-          {formatIls(summary.totalActiveCreditAgorot)}
-        </p>
-        <p className="chrome-faint mt-1 text-xs font-semibold">
-          לפי הדיווח שלך
-        </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/vouchers/new" className="btn-primary inline-flex px-6 py-2.5 text-sm">
-            צילום זיכוי
-          </Link>
-          <Link href="/vouchers" className="btn-secondary inline-flex px-6 py-2.5 text-sm">
-            כל הזיכויים
-          </Link>
+        <div className="mt-6 flex items-end justify-between gap-3">
+          <BagMascot
+            mood={hasCredits ? "happy" : "empty"}
+            className="h-36 w-36 shrink-0"
+          />
+          <TicketSlip
+            amount={formatIls(summary.totalActiveCreditAgorot)}
+            caption="לפי הדיווח שלך"
+          />
         </div>
 
+        <Link href="/vouchers/new" className="btn-primary mt-6 flex w-full items-center justify-center text-base">
+          צילום זיכוי
+        </Link>
+        <Link
+          href="/vouchers"
+          className="mt-3 flex min-h-11 items-center justify-center text-sm font-extrabold text-forest underline"
+        >
+          כל הזיכויים
+        </Link>
+
         <div
-          className={`mt-6 grid items-center gap-4 ${
+          className={`mt-4 grid items-center gap-4 ${
             showStack
               ? "md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
               : ""
