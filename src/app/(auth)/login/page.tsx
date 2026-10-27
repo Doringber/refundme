@@ -31,12 +31,20 @@ function LoginForm() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">
-        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
-        <p className="text-sm text-eggplant">
-          Supabase אינו מוגדר. השתמשו במצב הדמו או הגדירו משתני סביבה.
-        </p>
-        <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+        <div>
+          <p className="text-sm font-extrabold text-eggplant">{APP_NAME}</p>
+          <h1 className="font-display mt-2 text-4xl leading-none text-forest">
+            השקית בבית
+            <br />
+            עוד מחכה.
+          </h1>
+          <p className="mt-3 text-sm font-semibold text-eggplant">
+            Supabase אינו מוגדר כאן. אפשר להיכנס לדמו ולראות את הזיכויים.
+          </p>
+        </div>
+        <BagMascot className="mx-auto h-40 w-40" />
+        <DemoEntryButton className="btn-primary w-full py-3.5 text-center text-base" />
         <LegalLinks />
       </div>
     );

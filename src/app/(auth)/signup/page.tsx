@@ -25,12 +25,13 @@ export default function SignupPage() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">
-        <h1 className="font-display text-3xl text-forest">{APP_NAME}</h1>
-        <p className="text-sm text-eggplant">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5">
+        <h1 className="font-display text-4xl leading-none text-forest">פותחים שקית חדשה</h1>
+        <BagMascot className="mx-auto h-36 w-36" />
+        <p className="text-sm font-semibold text-eggplant">
           Supabase אינו מוגדר. השתמשו במצב הדמו.
         </p>
-        <DemoEntryButton className="btn-primary px-5 py-3 text-center" />
+        <DemoEntryButton className="btn-primary w-full py-3.5 text-center" />
         <LegalLinks />
       </div>
     );
