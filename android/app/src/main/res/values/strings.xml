@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Relationship between this app and the site. Chrome still requires the
+      matching statement at https://HOST/.well-known/assetlinks.json.
+    -->
+    <string name="assetStatements">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {
+                \"namespace\": \"web\",
+                \"site\": \"https://justrefundme.netlify.app\"
+            }
+        }]
+    </string>
+</resources>

@@ -20,3 +20,10 @@
 # Enable Netlify AI Gateway in the site UI so signed-in users can use Gemini
 # on /api/extract. There is no schedule in this file: point an external cron
 # at POST /api/cron/buyme-sync with header x-cron-secret.
+
+# TWA Digital Asset Links. Chrome rejects the file if the type is not JSON.
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=3600"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The maskable web icon already keeps the mark inside the safe zone and
+    fills the canvas with the cream background, so the adaptive icon uses it
+    full-bleed. The system mask crops to the safe zone.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_maskable" />
+    <foreground android:drawable="@android:color/transparent" />
+</adaptive-icon>

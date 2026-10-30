@@ -87,6 +87,7 @@ describe("OAuth callback planning", () => {
     assert.equal(signedInEntryRedirect("/login", null), null);
     assert.equal(signedInEntryRedirect("/dashboard", "user-1"), null);
     assert.equal(proxySkipsSessionRefresh("/auth/callback"), true);
+    assert.equal(proxySkipsSessionRefresh("/.well-known/assetlinks.json"), true);
     assert.equal(proxySkipsSessionRefresh("/dashboard"), false);
   });
 
