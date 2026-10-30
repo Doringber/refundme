@@ -50,3 +50,12 @@ __pycache__/
 *.tsbuildinfo
 next-env.d.ts
 supabase/.temp/
+
+# Android TWA signing material and local SDK files. Never commit.
+android/.signing/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.jks
+*.keystore

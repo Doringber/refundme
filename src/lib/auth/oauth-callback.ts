@@ -93,7 +93,10 @@ export function oauthErrorCode(params: URLSearchParams): string | null {
   return params.get("error_code") || params.get("error");
 }
 
-/** Session refresh on the PKCE callback can drop the Set-Cookie on the redirect. */
+/**
+ * Session refresh on the PKCE callback can drop the Set-Cookie on the redirect.
+ * `/.well-known/` (Digital Asset Links) must stay a public file, with no auth hop.
+ */
 export function proxySkipsSessionRefresh(pathname: string): boolean {
-  return pathname === "/auth/callback";
+  return pathname === "/auth/callback" || pathname.startsWith("/.well-known/");
 }

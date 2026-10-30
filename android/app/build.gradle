@@ -1,0 +1,99 @@
+import groovy.xml.MarkupBuilder
+
+plugins {
+    id "com.android.application"
+}
+
+def signingPropsFile = rootProject.file(".signing/signing.properties")
+def signingProps = new Properties()
+if (signingPropsFile.exists()) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
+}
+
+android {
+    namespace "app.refundsbag"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId APP_ID
+        minSdk 24
+        targetSdk 36
+        versionCode APP_VERSION_CODE.toInteger()
+        versionName APP_VERSION_NAME
+
+        resValue "string", "appName", APP_NAME
+        resValue "string", "launcherName", APP_LAUNCHER_NAME
+        resValue "string", "launchUrl", "https://${APP_HOST}${APP_START_PATH}"
+        resValue "string", "hostName", APP_HOST
+        resValue "string", "webManifestUrl", "https://${APP_HOST}/manifest.webmanifest"
+        resValue "color", "colorPrimary", APP_THEME_COLOR
+        resValue "color", "colorPrimaryDark", APP_THEME_COLOR_DARK
+        resValue "color", "navigationColor", APP_NAV_COLOR
+        resValue "color", "navigationColorDark", APP_NAV_COLOR_DARK
+        resValue "color", "navigationDividerColor", APP_NAV_DIVIDER
+        resValue "color", "navigationDividerColorDark", APP_NAV_DIVIDER_DARK
+        resValue "color", "backgroundColor", APP_BACKGROUND_COLOR
+        resValue "string", "providerAuthority", "${APP_ID}.fileprovider"
+        resValue "bool", "enableNotification", "true"
+        resValue "integer", "splashScreenFadeOutDuration", "300"
+        resValue "string", "generatorApp", "bubblewrap-template"
+        resValue "string", "fallbackType", "customtabs"
+        resValue "bool", "enableSiteSettingsShortcut", "true"
+        resValue "string", "orientation", "default"
+    }
+
+    if (signingPropsFile.exists()) {
+        signingConfigs {
+            test {
+                storeFile rootProject.file(signingProps.getProperty("storeFile", ".signing/test.keystore"))
+                storePassword signingProps.getProperty("storePassword")
+                keyAlias signingProps.getProperty("keyAlias")
+                keyPassword signingProps.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (signingPropsFile.exists()) {
+                signingConfig signingConfigs.test
+            }
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            if (signingPropsFile.exists()) {
+                signingConfig signingConfigs.test
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+    }
+}
+
+tasks.register("generateShortcutsFile") {
+    doLast {
+        def shortcutsFile = new File(projectDir, "src/main/res/xml/shortcuts.xml")
+        shortcutsFile.parentFile.mkdirs()
+        def xmlWriter = new StringWriter()
+        def xmlMarkup = new MarkupBuilder(new IndentPrinter(xmlWriter, "    ", true))
+        xmlMarkup."shortcuts"("xmlns:android": "http://schemas.android.com/apk/res/android")
+        shortcutsFile.text = xmlWriter.toString() + "\n"
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("generateShortcutsFile")
+}
+
+dependencies {
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.4"
+    implementation "com.google.androidbrowserhelper:locationdelegation:1.1.2"
+}

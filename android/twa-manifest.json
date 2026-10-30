@@ -1,0 +1,37 @@
+{
+  "packageId": "app.refundsbag",
+  "host": "justrefundme.netlify.app",
+  "name": "Refunds Bag",
+  "launcherName": "Refunds Bag",
+  "display": "standalone",
+  "themeColor": "#f6f1e4",
+  "themeColorDark": "#f6f1e4",
+  "navigationColor": "#f6f1e4",
+  "navigationColorDark": "#f6f1e4",
+  "navigationDividerColor": "#00000000",
+  "navigationDividerColorDark": "#00000000",
+  "backgroundColor": "#f6f1e4",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://justrefundme.netlify.app/icons/icon-512.png",
+  "maskableIconUrl": "https://justrefundme.netlify.app/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": ".signing/test.keystore",
+    "alias": "test"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-template",
+  "webManifestUrl": "https://justrefundme.netlify.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "enableSiteSettingsShortcut": true,
+  "orientation": "default",
+  "minSdkVersion": 24
+}

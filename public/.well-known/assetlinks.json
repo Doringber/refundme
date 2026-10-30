@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.refundsbag",
+      "sha256_cert_fingerprints": [
+        "B0:6C:CF:F1:E3:0E:23:31:C8:E2:2A:1E:12:BD:EA:CD:0E:40:B3:88:E7:AF:2E:95:51:F6:73:76:F1:69:3B:C0"
+      ]
+    }
+  }
+]
